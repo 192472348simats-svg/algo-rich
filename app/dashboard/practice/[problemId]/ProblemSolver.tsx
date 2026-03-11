@@ -688,10 +688,10 @@ export default function ProblemSolver({ problem, isSolved, userId, relatedLesson
                       </span>
                       <div className="flex-1 min-w-0">
                         <p className="text-gray-light/80 group-hover:text-gold-light truncate text-xs font-medium">
-                          {lesson.title}
+                          {lesson?.title ?? ""}
                         </p>
                         <p className="text-xs text-gray-light/40 truncate">
-                          {lesson.course.title}
+                          {lesson?.course?.title ?? ""}
                         </p>
                       </div>
                       <svg

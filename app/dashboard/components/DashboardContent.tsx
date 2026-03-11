@@ -1249,7 +1249,7 @@ function ProblemOfTheDay() {
         <span className="text-[10px] text-white/30">🧑‍💻 {data.totalSolvedToday} solved today</span>
       </div>
       <div className="flex items-center gap-2 mb-3">
-        <span className="text-sm font-medium text-white">{data.problem.title}</span>
+        <span className="text-sm font-medium text-white">{data.problem?.title ?? "Untitled"}</span>
         <span className={`text-[10px] px-2 py-0.5 rounded-full capitalize ${diffColor[data.problem.difficulty] ?? "text-white/40 bg-white/10"}`}>
           {data.problem.difficulty}
         </span>
