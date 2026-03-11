@@ -4,6 +4,7 @@ import prisma from "@/lib/prisma";
 import { parseProblem } from "@/lib/types/problem";
 import { enrollProblemForReview } from "@/lib/reviewEngine";
 import { checkPatternDiscovery } from "@/lib/patternDiscovery";
+import { checkAhaMoment } from "@/lib/ahaDetector";
 
 const submissionRateLimit = new Map<string, { count: number; resetAt: number }>();
 
@@ -146,17 +147,24 @@ export async function POST(request: NextRequest) {
 
     // Calculate XP based on difficulty
     const xpMap: Record<string, number> = {
-      easy: 10,
-      medium: 25,
-      hard: 50,
+      easy: 25,
+      medium: 50,
+      hard: 100,
     };
     const xpEarned = isFirstSolve
       ? xpMap[problem.difficulty] || 10
       : Math.floor((xpMap[problem.difficulty] || 10) / 4);
 
+    // Update user totalXP
+    await prisma.user.update({
+      where: { id: session.user.id },
+      data: { totalXP: { increment: xpEarned } },
+    });
+
     // Update pattern progress if applicable
+    let ahaMoment = null;
     if (problem.pattern) {
-      await prisma.patternProgress.upsert({
+      const updatedPattern = await prisma.patternProgress.upsert({
         where: {
           userId_patternSlug: {
             userId: session.user.id,
@@ -174,6 +182,9 @@ export async function POST(request: NextRequest) {
           problemsSolved: 1,
         },
       });
+      if (isFirstSolve) {
+        ahaMoment = checkAhaMoment(problem.pattern, updatedPattern.problemsSolved);
+      }
     }
 
     // Update lesson mastery to "practiced" for all connected lessons
@@ -288,6 +299,7 @@ export async function POST(request: NextRequest) {
       difficulty: problem.difficulty,
       pattern: problem.pattern,
       patternDiscovery,
+      ahaMoment,
     };
   }
 

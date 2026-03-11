@@ -933,3 +933,5 @@ main()
   .finally(async () => {
     await prisma.$disconnect();
   });
+
+export { main as seedCourses };

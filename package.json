@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "prisma generate && next build",
     "start": "next start",
     "lint": "eslint",
     "postinstall": "prisma generate",
@@ -12,7 +12,7 @@
     "seed:problems": "node prisma/seed-problems.js",
     "seed:problems-v2": "node prisma/seed-problems-v2.js",
     "seed:ds": "node prisma/seed-ds.js",
-    "seed:all": "node prisma/seed.js && node prisma/seed-ds.js && node prisma/seed-problems-v2.js",
+    "seed:all": "ts-node --compiler-options {\"module\":\"CommonJS\"} prisma/seed-runner.ts",
     "seed-phases-3-5": "ts-node --compiler-options {\"module\":\"CommonJS\"} prisma/seed-phases-3-5.ts"
   },
   "dependencies": {

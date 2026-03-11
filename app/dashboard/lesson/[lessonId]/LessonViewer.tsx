@@ -7,6 +7,7 @@ import MarkdownContent from "@/app/components/MarkdownContent";
 import ConceptConnectionCard from "@/app/components/learning/ConceptConnectionCard";
 import { triggerSuccessConfetti } from "@/app/components/feedback/Confetti";
 import { difficultyColor } from "@/lib/utils";
+import { getVisualizerForLesson } from "@/lib/lessonVisualizerMap";
 
 interface ConnectedProblem {
   id: string;
@@ -450,6 +451,14 @@ export default function LessonViewer({
                 >
                   🏠 Dashboard
                 </Link>
+                {getVisualizerForLesson(lesson.title, course.title) && (
+                  <Link
+                    href={`/dashboard/visualize?type=${getVisualizerForLesson(lesson.title, course.title)}`}
+                    className="flex items-center gap-2 text-sm text-purple-400/70 hover:text-purple-300 transition-colors"
+                  >
+                    🎬 Visualize This
+                  </Link>
+                )}
               </div>
             </div>
           </div>

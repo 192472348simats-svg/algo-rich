@@ -37,6 +37,11 @@ model User {
   streakRepairAvailable   Boolean   @default(false)   // Task 13: one-time repair available
   streakRepairedAt        DateTime?                   // Task 13: when last repaired
 
+  // Interview prep
+  targetInterviewDate     DateTime?                   // F1: target interview date
+  lastBossCompletedAt     DateTime?                   // F9: last boss challenge completion
+  bossProblemsWon         Int       @default(0)        // F9: total boss problems won
+
   // Email verification
   emailVerified       Boolean   @default(true)        // Task 15: true for legacy users; new signups start false
   verificationToken   String?                          // Task 15: bcrypt-hashed OTP
@@ -66,6 +71,7 @@ model Problem {
   topics              String?  // JSON array: ["arrays", "strings"]
   companies           String?  // JSON array: ["Google", "Amazon"]
   companyTags         String?  // JSON array: ["Amazon", "Google"] (alternate)
+  company             String[] @default([])  // F13: proper array for filtering
 
   // Problem Content
   description         String   // Markdown description

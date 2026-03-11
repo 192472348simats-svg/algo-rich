@@ -25,6 +25,7 @@ import ProgressBar3D from "@/app/components/ui/ProgressBar3D";
 import ProgressRing from "@/app/components/ui/ProgressRing";
 import BeginnerOnboardingFlow from "@/app/components/onboarding/BeginnerOnboardingFlow";
 import { celebrate } from "@/lib/celebrationEngine";
+import { getCountdownData } from "@/lib/interviewCountdown";
 
 // ─── Types ─────────────────────────────────────────────────
 
@@ -65,6 +66,7 @@ interface DashboardContentProps {
   userState: "new" | "active" | "advanced";
   onboardingChecklist: OnboardingChecklist;
   currentPhase?: number;
+  targetInterviewDate?: string | null;
 }
 
 // ─── Hooks ─────────────────────────────────────────────────
@@ -1211,6 +1213,145 @@ function CourseGrid({ courses }: { courses: CourseCard[] }) {
   );
 }
 
+// ─── Problem of the Day ───────────────────────────────────
+
+function ProblemOfTheDay() {
+  const [data, setData] = useState<{
+    problem: { id: string; slug: string; title: string; difficulty: string; pattern?: string };
+    solvedToday: boolean;
+    totalSolvedToday: number;
+  } | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch("/api/problems/daily")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => { if (d) setData(d); })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+
+  if (loading || !data) return null;
+
+  const diffColor: Record<string, string> = {
+    easy: "text-emerald-400 bg-emerald-400/10",
+    medium: "text-amber-400 bg-amber-400/10",
+    hard: "text-red-400 bg-red-400/10",
+  };
+
+  return (
+    <motion.div variants={itemVariants} className="glass rounded-xl p-5 mt-4">
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <span className="text-base">🎯</span>
+          <h3 className="text-sm font-semibold text-white">Problem of the Day</h3>
+        </div>
+        <span className="text-[10px] text-white/30">🧑‍💻 {data.totalSolvedToday} solved today</span>
+      </div>
+      <div className="flex items-center gap-2 mb-3">
+        <span className="text-sm font-medium text-white">{data.problem.title}</span>
+        <span className={`text-[10px] px-2 py-0.5 rounded-full capitalize ${diffColor[data.problem.difficulty] ?? "text-white/40 bg-white/10"}`}>
+          {data.problem.difficulty}
+        </span>
+        {data.problem.pattern && (
+          <span className="text-[10px] text-white/30 bg-white/5 px-2 py-0.5 rounded-full">
+            {data.problem.pattern}
+          </span>
+        )}
+      </div>
+      {data.solvedToday ? (
+        <p className="text-xs text-emerald-400">✅ You solved today&apos;s problem!</p>
+      ) : (
+        <Link href={`/dashboard/practice/${data.problem.slug}`}>
+          <div className="rounded-lg bg-primary/10 border border-primary/20 py-2 text-center text-xs text-primary font-medium hover:bg-primary/20 transition-colors cursor-pointer">
+            Solve Now →
+          </div>
+        </Link>
+      )}
+    </motion.div>
+  );
+}
+
+// ─── Boss Challenge Widget ─────────────────────────────────
+
+function BossChallengeWidget() {
+  const [data, setData] = useState<{
+    available: boolean;
+    completed: boolean;
+    weekNumber: number;
+    problem: { slug: string } | null;
+  } | null>(null);
+
+  useEffect(() => {
+    fetch("/api/boss-challenge")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => { if (d) setData(d); })
+      .catch(() => {});
+  }, []);
+
+  if (!data) return null;
+
+  return (
+    <motion.div variants={itemVariants} className="glass rounded-xl p-4 mt-4">
+      <div className="flex items-center gap-2 text-sm">
+        <span>🐉</span>
+        {!data.available && (
+          <span className="text-white/50">Next Boss Challenge: Sunday • Complete it for 500 XP</span>
+        )}
+        {data.available && !data.completed && data.problem && (
+          <>
+            <span className="text-white font-semibold">Boss Challenge Available!</span>
+            <Link href={`/dashboard/practice/${data.problem.slug}`} className="text-primary hover:underline ml-1">
+              → Take the Challenge
+            </Link>
+          </>
+        )}
+        {data.available && data.completed && (
+          <span className="text-emerald-400">✅ Boss Defeated this week! Next: Sunday</span>
+        )}
+      </div>
+    </motion.div>
+  );
+}
+
+// ─── Interview Countdown Widget ────────────────────────────
+
+function InterviewCountdownWidget({ targetInterviewDate }: { targetInterviewDate?: string | null }) {
+  const countdown = getCountdownData(targetInterviewDate ? new Date(targetInterviewDate) : null);
+
+  const urgencyColor: Record<string, string> = {
+    none: "text-white/40",
+    comfortable: "text-emerald-400",
+    tight: "text-amber-400",
+    urgent: "text-red-400",
+  };
+
+  return (
+    <motion.div variants={itemVariants} className="glass rounded-xl p-4 mt-4">
+      <div className="flex items-center justify-between text-sm">
+        <div className="flex items-center gap-2">
+          <span>📅</span>
+          {countdown.daysLeft !== null ? (
+            <>
+              <span className={`text-2xl font-bold font-mono ${urgencyColor[countdown.urgency]}`}>
+                {countdown.daysLeft}
+              </span>
+              <span className={`text-xs ${urgencyColor[countdown.urgency]}`}>{countdown.message}</span>
+            </>
+          ) : (
+            <span className="text-white/40 text-xs">{countdown.message}</span>
+          )}
+        </div>
+        {countdown.daysLeft === null && (
+          <Link href="/dashboard/settings" className="text-xs text-primary hover:underline">
+            Set interview date →
+          </Link>
+        )}
+      </div>
+    </motion.div>
+  );
+}
+
 // ═══════════════════════════════════════════════════════════
 // MAIN COMPONENT
 // ═══════════════════════════════════════════════════════════
@@ -1223,6 +1364,7 @@ export default function DashboardContent({
   userState,
   onboardingChecklist,
   currentPhase = 1,
+  targetInterviewDate,
 }: DashboardContentProps) {
   const [showOnboarding, setShowOnboarding] = useState(!onboardingCompleted);
 
@@ -1352,6 +1494,16 @@ export default function DashboardContent({
       <motion.div variants={itemVariants} className="mt-8">
         <h2 className="text-xl font-bold text-white mb-5">Your Courses</h2>
         <CourseGrid courses={uniqueCourses} />
+      </motion.div>
+
+      {/* ──── Extra Widgets ──── */}
+      <InterviewCountdownWidget targetInterviewDate={targetInterviewDate} />
+      <ProblemOfTheDay />
+      <BossChallengeWidget />
+      <motion.div variants={itemVariants} className="mt-4 text-xs text-white/30 text-center">
+        <Link href="/dashboard/mock-interview" className="hover:text-primary transition-colors">
+          🎯 Take a Mock Interview
+        </Link>
       </motion.div>
     </motion.div>
   );

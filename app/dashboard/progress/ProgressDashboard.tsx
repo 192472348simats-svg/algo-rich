@@ -3,6 +3,8 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import ReadinessOverview from "@/app/dashboard/components/ReadinessOverview";
+import { getStatusColor, type TimelineEvent } from "@/lib/masteryTimeline";
+import type { FailureSummary } from "@/lib/failurePatternAnalysis";
 
 interface StatsData {
   lessonsCompleted: number;
@@ -70,19 +72,28 @@ export default function ProgressDashboard({ userName }: { userName: string }) {
   const [stats, setStats] = useState<StatsData | null>(null);
   const [activities, setActivities] = useState<ActivityItem[]>([]);
   const [reflectionStats, setReflectionStats] = useState<ReflectionStats | null>(null);
+  const [timeline, setTimeline] = useState<TimelineEvent[]>([]);
+  const [failureSummary, setFailureSummary] = useState<FailureSummary | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function fetchData() {
       try {
-        const [statsRes, actRes, reflRes] = await Promise.all([
+        const [statsRes, actRes, reflRes, timelineRes, failureRes] = await Promise.all([
           fetch("/api/user/stats"),
           fetch("/api/user/activity"),
           fetch("/api/reflections/stats"),
+          fetch("/api/patterns/mastery-timeline"),
+          fetch("/api/submissions/failure-stats"),
         ]);
         if (statsRes.ok) setStats(await statsRes.json());
         if (actRes.ok) setActivities(await actRes.json());
         if (reflRes.ok) setReflectionStats(await reflRes.json());
+        if (timelineRes.ok) {
+          const t = await timelineRes.json();
+          setTimeline(t.timeline ?? []);
+        }
+        if (failureRes.ok) setFailureSummary(await failureRes.json());
       } catch (e) {
         console.error("Failed to fetch progress data:", e);
       } finally {
@@ -431,6 +442,96 @@ export default function ProgressDashboard({ userName }: { userName: string }) {
             </div>
           </div>
         </motion.div>
+
+        {/* Pattern Journey */}
+        <motion.div
+          variants={itemVariants}
+          className="bg-card/60 border border-primary/10 rounded-xl p-6 backdrop-blur-sm"
+        >
+          <h2 className="text-xl font-semibold text-white mb-4">🗺️ Pattern Journey</h2>
+          {timeline.length === 0 ? (
+            <div className="text-center py-8 text-foreground opacity-60">
+              <p className="text-4xl mb-3">🧩</p>
+              <p>Solve problems to see your pattern mastery timeline.</p>
+            </div>
+          ) : (
+            <div className="relative">
+              {/* Vertical line */}
+              <div className="absolute left-4 top-0 bottom-0 w-0.5 bg-white/10" />
+              <div className="space-y-4 pl-12">
+                {timeline.map((event, i) => (
+                  <motion.div
+                    key={event.patternSlug}
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: i * 0.06, ease: "easeOut" as const }}
+                    className="relative"
+                  >
+                    {/* Dot on timeline */}
+                    <div
+                      className="absolute -left-[2.05rem] top-1 w-3 h-3 rounded-full border-2 border-[#0A0F24]"
+                      style={{ backgroundColor: getStatusColor(event.status) }}
+                    />
+                    <div className="bg-white/5 rounded-lg p-3 hover:bg-white/[0.08] transition-colors">
+                      <div className="flex items-center justify-between gap-2 flex-wrap">
+                        <span className="text-sm font-semibold text-white">{event.patternTitle}</span>
+                        <span
+                          className="text-xs px-2 py-0.5 rounded-full font-medium capitalize"
+                          style={{
+                            backgroundColor: getStatusColor(event.status) + "22",
+                            color: getStatusColor(event.status),
+                          }}
+                        >
+                          {event.status}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-4 mt-1 text-xs text-white/50">
+                        <span>{event.problemsSolved} problems solved</span>
+                        <span>{event.recognitionAccuracy}% accuracy</span>
+                        <span>{new Date(event.unlockedAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span>
+                      </div>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            </div>
+          )}
+        </motion.div>
+
+        {/* Failure Pattern Analysis */}
+        {failureSummary && failureSummary.totalAttempts > 0 && (
+          <motion.div
+            variants={itemVariants}
+            className="bg-card/60 border border-primary/10 rounded-xl p-6 backdrop-blur-sm"
+          >
+            <h2 className="text-xl font-semibold text-white mb-1">🔍 Your Failure Patterns</h2>
+            <p className="text-white/40 text-xs mb-4">
+              Based on {failureSummary.totalAttempts} submissions — {failureSummary.passRate}% pass rate
+            </p>
+            {failureSummary.topFailures.length === 0 ? (
+              <p className="text-emerald-400 text-sm">🎉 No notable failure patterns — keep it up!</p>
+            ) : (
+              <div className="space-y-3">
+                {failureSummary.topFailures.map((fp, i) => (
+                  <div key={fp.pattern} className="bg-white/5 rounded-lg p-3">
+                    <div className="flex items-center justify-between gap-2 mb-1">
+                      <span className="text-sm font-medium text-white">{fp.label}</span>
+                      <span className="text-xs text-red-400/80 bg-red-500/10 px-2 py-0.5 rounded-full">
+                        {fp.count}× failed
+                      </span>
+                    </div>
+                    <p className="text-xs text-white/50 leading-relaxed">{fp.suggestion}</p>
+                    {i === 0 && (
+                      <div className="mt-2 pt-2 border-t border-white/5">
+                        <p className="text-xs text-[#E5A829]/80">💡 Top tip: {failureSummary.improvementTip}</p>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </motion.div>
+        )}
 
         {/* Recent Activity */}
         <motion.div

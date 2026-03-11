@@ -19,34 +19,46 @@ export default async function DashboardLayout({
   }
 
   // Fetch current phase and streak data for sidebar + banner
-  const [user, recentProgress, recentSubmissions] = await Promise.all([
-    prisma.user.findUnique({
-      where: { id: session.user.id },
-      select: { currentPhase: true },
-    }),
-    prisma.progress.findMany({
-      where: { userId: session.user.id, completed: true, completedAt: { not: null } },
-      select: { completedAt: true },
-      orderBy: { completedAt: "desc" },
-      take: 120,
-    }),
-    prisma.submission.findMany({
-      where: { userId: session.user.id },
-      select: { createdAt: true },
-      orderBy: { createdAt: "desc" },
-      take: 120,
-    }),
-  ]);
+  // Wrapped in try/catch so the dashboard still renders if DB is unreachable
+  let user: { currentPhase: number } | null = null;
+  let currentStreak = 0;
+  let practicedToday = false;
 
-  // Compute streak for urgency banner
-  const activityDates: string[] = [];
-  for (const p of recentProgress) {
-    if (p.completedAt) activityDates.push(p.completedAt.toISOString().slice(0, 10));
+  try {
+    const [fetchedUser, recentProgress, recentSubmissions] = await Promise.all([
+      prisma.user.findUnique({
+        where: { id: session.user.id },
+        select: { currentPhase: true },
+      }),
+      prisma.progress.findMany({
+        where: { userId: session.user.id, completed: true, completedAt: { not: null } },
+        select: { completedAt: true },
+        orderBy: { completedAt: "desc" },
+        take: 120,
+      }),
+      prisma.submission.findMany({
+        where: { userId: session.user.id },
+        select: { createdAt: true },
+        orderBy: { createdAt: "desc" },
+        take: 120,
+      }),
+    ]);
+
+    user = fetchedUser;
+
+    // Compute streak for urgency banner
+    const activityDates: string[] = [];
+    for (const p of recentProgress) {
+      if (p.completedAt) activityDates.push(p.completedAt.toISOString().slice(0, 10));
+    }
+    for (const s of recentSubmissions) {
+      activityDates.push(s.createdAt.toISOString().slice(0, 10));
+    }
+    ({ currentStreak, practicedToday } = computeStreak(activityDates));
+  } catch (err) {
+    // DB unreachable (e.g. Atlas IP not whitelisted) — render with safe defaults
+    console.error("[DashboardLayout] DB error:", err instanceof Error ? err.message : err);
   }
-  for (const s of recentSubmissions) {
-    activityDates.push(s.createdAt.toISOString().slice(0, 10));
-  }
-  const { currentStreak, practicedToday } = computeStreak(activityDates);
 
   return (
     <div className="min-h-screen flex bg-background">

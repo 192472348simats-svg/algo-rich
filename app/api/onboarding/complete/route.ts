@@ -10,13 +10,14 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json()
-    const { experience, goal, phase } = body
+    const { experience, goal, phase, targetInterviewDate } = body
 
     await prisma.user.update({
       where: { id: session.user.id },
       data: {
         onboardingCompleted: true,
         ...(phase != null && { currentPhase: phase }),
+        ...(targetInterviewDate && { targetInterviewDate: new Date(targetInterviewDate) }),
       },
     })
 

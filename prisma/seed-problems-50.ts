@@ -753,3 +753,5 @@ async function main() {
 main()
   .catch((e) => { console.error("❌ Seed failed:", e); process.exit(1); })
   .finally(() => prisma.$disconnect());
+
+export { main as seedProblems };

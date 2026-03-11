@@ -19,6 +19,7 @@ export async function GET() {
     totalProblems,
     progressRecords,
     submissionRecords,
+    userData,
   ] = await Promise.all([
     prisma.progress.count({ where: { userId, completed: true } }),
     prisma.lesson.count(),
@@ -33,6 +34,10 @@ export async function GET() {
       where: { userId },
       select: { createdAt: true },
       orderBy: { createdAt: "desc" },
+    }),
+    prisma.user.findUnique({
+      where: { id: userId },
+      select: { totalXP: true, currentPhase: true, targetInterviewDate: true },
     }),
   ]);
 
@@ -106,6 +111,9 @@ export async function GET() {
     currentStreak,
     estimatedHours,
     progressOverTime,
+    totalXP: userData?.totalXP ?? 0,
+    currentPhase: userData?.currentPhase ?? 1,
+    targetInterviewDate: userData?.targetInterviewDate ?? null,
   });
   } catch (error) {
     console.error("Error fetching stats:", error);

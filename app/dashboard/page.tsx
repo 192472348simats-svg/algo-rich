@@ -51,6 +51,7 @@ export default async function DashboardPage() {
         firstPlanAt: true,
         currentPhase: true,
         currentWeek: true,
+        targetInterviewDate: true,
       },
     }),
     prisma.problemReview.count({
@@ -172,6 +173,7 @@ export default async function DashboardPage() {
       userState={userState}
       onboardingChecklist={onboardingChecklist}
       currentPhase={user?.currentPhase ?? 1}
+      targetInterviewDate={user?.targetInterviewDate?.toISOString() ?? null}
     />
   );
 }

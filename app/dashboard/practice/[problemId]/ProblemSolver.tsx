@@ -18,6 +18,8 @@ import PostSolveReflection from "@/app/components/practice/PostSolveReflection";
 import FailureFeedback from "@/app/components/practice/FailureFeedback";
 import StuckModal from "@/app/components/practice/StuckModal";
 import { parseHints } from "@/lib/hintSystem";
+import { getSimplifiedDescription } from "@/lib/simplifiedProblems";
+import { simpleLineDiff } from "@/lib/codeDiff";
 import {
   analyzeFailure,
   type FailureAnalysis,
@@ -128,6 +130,9 @@ export default function ProblemSolver({ problem, isSolved, userId, relatedLesson
     title: string;
     description: string;
   } | null>(null);
+  const [ahaMoment, setAhaMoment] = useState<{ pattern: string; message: string } | null>(null);
+  const [simplifiedMode, setSimplifiedMode] = useState(false);
+  const [showDiff, setShowDiff] = useState(false);
 
   // Track time stuck (check every 30s)
   useEffect(() => {
@@ -291,6 +296,11 @@ export default function ProblemSolver({ problem, isSolved, userId, relatedLesson
         if (subData?.stats?.patternDiscovery) {
           setPatternDiscovery(subData.stats.patternDiscovery);
           celebrate("pattern_unlock");
+        }
+        // Show aha moment toast
+        if (subData?.stats?.ahaMoment) {
+          setAhaMoment(subData.stats.ahaMoment);
+          setTimeout(() => setAhaMoment(null), 5000);
         }
         // Show reflection after a brief delay
         setTimeout(() => {
@@ -464,11 +474,23 @@ export default function ProblemSolver({ problem, isSolved, userId, relatedLesson
               <span className="text-xs text-gray-light/40 bg-navy-light/30 px-2 py-0.5 rounded-full">
                 {problem.category}
               </span>
+              {getSimplifiedDescription(problem.correctPattern ?? "") && (
+                <button
+                  onClick={() => setSimplifiedMode((v) => !v)}
+                  className={`text-xs px-2 py-0.5 rounded-full border transition-all ${simplifiedMode ? "bg-[#E5A829]/20 border-[#E5A829]/50 text-[#E5A829]" : "bg-navy-light/30 border-white/10 text-white/40 hover:text-white/60"}`}
+                >
+                  {simplifiedMode ? "📖 Standard" : "🔰 Simplified"}
+                </button>
+              )}
             </div>
 
             {/* Description */}
             <div className="prose-sm">
-              <MarkdownContent content={problem.description} />
+              {simplifiedMode && getSimplifiedDescription(problem.correctPattern ?? "") ? (
+                <MarkdownContent content={getSimplifiedDescription(problem.correctPattern ?? "")!} />
+              ) : (
+                <MarkdownContent content={problem.description} />
+              )}
             </div>
 
             {/* Test Cases Preview */}
@@ -739,6 +761,52 @@ export default function ProblemSolver({ problem, isSolved, userId, relatedLesson
               )}
             </AnimatePresence>
 
+            {/* Code Diff (show how your solution differs from starter) */}
+            {solved && (
+              <div className="mb-3">
+                <button
+                  onClick={() => setShowDiff((v) => !v)}
+                  className="text-xs text-white/40 hover:text-white/60 transition-colors flex items-center gap-1"
+                >
+                  <span>{showDiff ? "▾" : "▸"}</span>
+                  {showDiff ? "Hide" : "Show"} your changes vs. starter
+                </button>
+                <AnimatePresence>
+                  {showDiff && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: "auto" }}
+                      exit={{ opacity: 0, height: 0 }}
+                      className="mt-2 bg-black/30 border border-white/10 rounded-lg overflow-hidden"
+                    >
+                      <div className="text-xs text-white/30 px-3 py-1.5 border-b border-white/5 flex gap-4">
+                        <span className="text-red-400/60">− removed</span>
+                        <span className="text-emerald-400/60">+ added</span>
+                        <span className="text-white/20">unchanged</span>
+                      </div>
+                      <div className="font-mono text-xs max-h-64 overflow-y-auto p-2 space-y-0.5">
+                        {simpleLineDiff(problem.starterCode, code).map((line, i) => (
+                          <div
+                            key={i}
+                            className={`px-2 py-0.5 rounded ${
+                              line.type === "added"
+                                ? "bg-emerald-500/10 text-emerald-300"
+                                : line.type === "removed"
+                                ? "bg-red-500/10 text-red-300"
+                                : "text-white/30"
+                            }`}
+                          >
+                            <span className="select-none mr-2 text-white/20">{line.type === "added" ? "+" : line.type === "removed" ? "−" : " "}</span>
+                            {line.content || " "}
+                          </div>
+                        ))}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            )}
+
             {/* Post-Solve Reflection */}
             <AnimatePresence>
               {showReflection && (
@@ -971,6 +1039,27 @@ export default function ProblemSolver({ problem, isSolved, userId, relatedLesson
           </div>
         </div>
       </div>
+
+      {/* Aha Moment Toast */}
+      <AnimatePresence>
+        {ahaMoment && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 20 }}
+            className="fixed bottom-6 right-6 z-50 bg-[#E5A829]/10 border border-[#E5A829]/40 text-white rounded-xl p-4 max-w-sm"
+          >
+            <button
+              onClick={() => setAhaMoment(null)}
+              className="absolute top-2 right-2 text-white/40 hover:text-white/70 text-xs"
+            >
+              ✕
+            </button>
+            <p className="font-semibold text-sm text-[#E5A829]">💡 Pattern Unlocked: {ahaMoment.pattern}</p>
+            <p className="text-xs text-white/70 mt-1">{ahaMoment.message}</p>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

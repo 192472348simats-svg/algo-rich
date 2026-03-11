@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import PatternCard from "@/app/components/patterns/PatternCard";
 import { patterns } from "@/lib/patterns/patternDefinitions";
 import Link from "next/link";
+import PatternFlowchart from "./PatternFlowchart";
 
 type CategoryFilter = "all" | "arrays" | "linkedlists" | "trees" | "graphs" | "dynamic";
 
@@ -35,6 +36,7 @@ export default function PatternsPageContent({
 }: PatternsPageContentProps) {
   const [filter, setFilter] = useState<CategoryFilter>("all");
   const [searchQuery, setSearchQuery] = useState("");
+  const [showFlowchart, setShowFlowchart] = useState(false);
 
   const filteredPatterns = useMemo(() => {
     return patterns.filter((p) => {
@@ -103,6 +105,16 @@ export default function PatternsPageContent({
               {label}
             </button>
           ))}
+          <button
+            onClick={() => setShowFlowchart((v) => !v)}
+            className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-colors ${
+              showFlowchart
+                ? "bg-primary/20 text-primary border border-primary/40"
+                : "text-muted-foreground border border-border hover:text-foreground"
+            }`}
+          >
+            🤔 Which pattern?
+          </button>
         </div>
         <input
           type="text"
@@ -112,6 +124,9 @@ export default function PatternsPageContent({
           className="px-4 py-2 rounded-xl bg-card border border-border text-sm text-foreground focus:outline-none focus:border-primary transition-colors sm:ml-auto sm:w-64"
         />
       </div>
+
+      {/* Pattern Flowchart */}
+      {showFlowchart && <PatternFlowchart />}
 
       {/* Pattern grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
