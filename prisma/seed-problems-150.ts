@@ -23,6 +23,10 @@ async function main() {
       ]),
       solutionApproach: "Two pointers: slow tracks insertion position. Fast scans. Swap non-zero to slow position. O(n) time, O(1) space.",
       companyTags: JSON.stringify(["Meta", "Amazon", "Apple"]),
+      hiddenTestCases: JSON.stringify([
+        { input: { nums: [] }, expectedOutput: [] },
+        { input: { nums: [0, 0, 0, 1] }, expectedOutput: [1, 0, 0, 0] },
+      ]),
     },
     {
       slug: "find-disappeared-numbers",
@@ -37,6 +41,10 @@ async function main() {
       ]),
       solutionApproach: "Mark visited by negating nums[abs(nums[i])-1]. Missing numbers are at positive indices. O(n) time, O(1) space.",
       companyTags: JSON.stringify(["Amazon", "Google"]),
+      hiddenTestCases: JSON.stringify([
+        { input: { nums: [1] }, expectedOutput: [] },
+        { input: { nums: [2, 2] }, expectedOutput: [1] },
+      ]),
     },
     {
       slug: "majority-element",
@@ -51,6 +59,10 @@ async function main() {
       ]),
       solutionApproach: "Boyer-Moore Voting Algorithm: count for candidate. If count=0, pick new candidate. O(n) time, O(1) space.",
       companyTags: JSON.stringify(["Amazon", "Google", "Microsoft"]),
+      hiddenTestCases: JSON.stringify([
+        { input: { nums: [1] }, expectedOutput: 1 },
+        { input: { nums: [6, 5, 5] }, expectedOutput: 5 },
+      ]),
     },
     {
       slug: "single-number",
@@ -66,6 +78,10 @@ async function main() {
       ]),
       solutionApproach: "XOR all numbers. a^a=0 and a^0=a. All pairs cancel, leaving the single number. O(n) time, O(1) space.",
       companyTags: JSON.stringify(["Amazon", "Apple", "Google"]),
+      hiddenTestCases: JSON.stringify([
+        { input: { nums: [1] }, expectedOutput: 1 },
+        { input: { nums: [0, 1, 0] }, expectedOutput: 1 },
+      ]),
     },
     {
       slug: "pascals-triangle",
@@ -80,6 +96,10 @@ async function main() {
       ]),
       solutionApproach: "Build row by row. Each element is sum of two elements above it. O(n²).",
       companyTags: JSON.stringify(["Amazon", "Microsoft", "Google"]),
+      hiddenTestCases: JSON.stringify([
+        { input: { numRows: 2 }, expectedOutput: [[1], [1, 1]] },
+        { input: { numRows: 4 }, expectedOutput: [[1], [1, 1], [1, 2, 1], [1, 3, 3, 1]] },
+      ]),
     },
     {
       slug: "next-permutation",
@@ -95,6 +115,10 @@ async function main() {
       ]),
       solutionApproach: "Find rightmost ascending pair, swap with smallest larger element to the right, reverse suffix. O(n).",
       companyTags: JSON.stringify(["Google", "Amazon", "Meta"]),
+      hiddenTestCases: JSON.stringify([
+        { input: { nums: [1] }, expectedOutput: [1] },
+        { input: { nums: [2, 3, 1] }, expectedOutput: [3, 1, 2] },
+      ]),
     },
     {
       slug: "sort-colors",
@@ -109,6 +133,10 @@ async function main() {
       ]),
       solutionApproach: "Dutch National Flag: three pointers (low, mid, high). Swap 0s to front, 2s to back. O(n), single pass.",
       companyTags: JSON.stringify(["Amazon", "Microsoft", "Google"]),
+      hiddenTestCases: JSON.stringify([
+        { input: { nums: [0] }, expectedOutput: [0] },
+        { input: { nums: [1, 0] }, expectedOutput: [0, 1] },
+      ]),
     },
     {
       slug: "find-minimum-rotated-sorted",
@@ -124,6 +152,10 @@ async function main() {
       ]),
       solutionApproach: "Binary search: compare mid with right. If mid > right, min is in right half. Else left half. O(log n).",
       companyTags: JSON.stringify(["Amazon", "Google", "Microsoft"]),
+      hiddenTestCases: JSON.stringify([
+        { input: { nums: [1] }, expectedOutput: 1 },
+        { input: { nums: [2, 1] }, expectedOutput: 1 },
+      ]),
     },
     {
       slug: "maximum-product-subarray",
@@ -139,6 +171,10 @@ async function main() {
       ]),
       solutionApproach: "Track both max and min product at each position (negative * negative = positive). O(n).",
       companyTags: JSON.stringify(["Amazon", "Google", "Microsoft"]),
+      hiddenTestCases: JSON.stringify([
+        { input: { nums: [0] }, expectedOutput: 0 },
+        { input: { nums: [-2, -3, -4] }, expectedOutput: 12 },
+      ]),
     },
     {
       slug: "subarray-sum-equals-k",
@@ -153,6 +189,10 @@ async function main() {
       ]),
       solutionApproach: "Prefix sum + hash map. For each prefix sum, check if (prefix_sum - k) exists in map. O(n).",
       companyTags: JSON.stringify(["Google", "Meta", "Amazon"]),
+      hiddenTestCases: JSON.stringify([
+        { input: { nums: [1], k: 0 }, expectedOutput: 0 },
+        { input: { nums: [-1, -1, 1], k: 0 }, expectedOutput: 1 },
+      ]),
     },
 
     // ═══════════════════════════════════════════════════════
@@ -171,6 +211,10 @@ async function main() {
       ]),
       solutionApproach: "Count character frequencies. Compare counts. O(n) time, O(1) space (26 letters).",
       companyTags: JSON.stringify(["Amazon", "Google", "Microsoft"]),
+      hiddenTestCases: JSON.stringify([
+        { input: { s: "", t: "" }, expectedOutput: true },
+        { input: { s: "a", t: "b" }, expectedOutput: false },
+      ]),
     },
     {
       slug: "first-unique-character",
@@ -186,6 +230,10 @@ async function main() {
       ]),
       solutionApproach: "Count frequencies, then iterate to find first with count 1. O(n) time, O(1) space.",
       companyTags: JSON.stringify(["Amazon", "Google", "Apple"]),
+      hiddenTestCases: JSON.stringify([
+        { input: { s: "aabbcc" }, expectedOutput: -1 },
+        { input: { s: "z" }, expectedOutput: 0 },
+      ]),
     },
     {
       slug: "longest-common-prefix",
@@ -200,6 +248,10 @@ async function main() {
       ]),
       solutionApproach: "Vertical scanning: compare character by character across all strings. O(S) where S is sum of all characters.",
       companyTags: JSON.stringify(["Amazon", "Google", "Microsoft"]),
+      hiddenTestCases: JSON.stringify([
+        { input: { strs: [""] }, expectedOutput: "" },
+        { input: { strs: ["abc", "abc", "abc"] }, expectedOutput: "abc" },
+      ]),
     },
     {
       slug: "string-to-integer-atoi",
@@ -215,6 +267,10 @@ async function main() {
       ]),
       solutionApproach: "State machine: skip whitespace, read sign, read digits, handle overflow. O(n).",
       companyTags: JSON.stringify(["Amazon", "Microsoft", "Goldman Sachs"]),
+      hiddenTestCases: JSON.stringify([
+        { input: { str: "" }, expectedOutput: 0 },
+        { input: { str: "-2147483649" }, expectedOutput: -2147483648 },
+      ]),
     },
     {
       slug: "count-and-say",
@@ -230,6 +286,10 @@ async function main() {
       ]),
       solutionApproach: "Build iteratively. For each step, group consecutive same digits and describe 'count + digit'. O(2^n) due to exponential growth.",
       companyTags: JSON.stringify(["Meta", "Amazon"]),
+      hiddenTestCases: JSON.stringify([
+        { input: { n: 1 }, expectedOutput: "1" },
+        { input: { n: 6 }, expectedOutput: "312211" },
+      ]),
     },
     {
       slug: "zigzag-conversion",
@@ -245,6 +305,10 @@ async function main() {
       ]),
       solutionApproach: "Create numRows strings. Iterate through s, distributing chars by bouncing index. O(n).",
       companyTags: JSON.stringify(["Amazon"]),
+      hiddenTestCases: JSON.stringify([
+        { input: { s: "A", numRows: 1 }, expectedOutput: "A" },
+        { input: { s: "AB", numRows: 1 }, expectedOutput: "AB" },
+      ]),
     },
     {
       slug: "encode-decode-strings",
@@ -260,6 +324,10 @@ async function main() {
       ]),
       solutionApproach: "Length-delimited encoding: for each string, store length + delimiter + string. O(n).",
       companyTags: JSON.stringify(["Google", "Meta"]),
+      hiddenTestCases: JSON.stringify([
+        { input: { strs: [] }, expectedOutput: [] },
+        { input: { strs: [""] }, expectedOutput: [""] },
+      ]),
     },
     {
       slug: "minimum-remove-valid-parens",
@@ -275,6 +343,10 @@ async function main() {
       ]),
       solutionApproach: "Two passes: left-to-right remove extra ')'. Right-to-left remove extra '('. O(n).",
       companyTags: JSON.stringify(["Meta", "Amazon", "Google"]),
+      hiddenTestCases: JSON.stringify([
+        { input: { s: "" }, expectedOutput: "" },
+        { input: { s: "((((" }, expectedOutput: "" },
+      ]),
     },
 
     // ═══════════════════════════════════════════════════════
@@ -293,6 +365,10 @@ async function main() {
       ]),
       solutionApproach: "DP: dp[i][j] = dp[i-1][j] + dp[i][j-1]. Or math: C(m+n-2, m-1). O(m*n).",
       companyTags: JSON.stringify(["Amazon", "Google", "Microsoft"]),
+      hiddenTestCases: JSON.stringify([
+        { input: { m: 1, n: 1 }, expectedOutput: 1 },
+        { input: { m: 1, n: 100 }, expectedOutput: 1 },
+      ]),
     },
     {
       slug: "decode-ways",
@@ -308,6 +384,10 @@ async function main() {
       ]),
       solutionApproach: "DP: dp[i] = dp[i-1] (if valid single digit) + dp[i-2] (if valid two digits 10-26). O(n).",
       companyTags: JSON.stringify(["Amazon", "Google", "Meta", "Microsoft"]),
+      hiddenTestCases: JSON.stringify([
+        { input: { s: "0" }, expectedOutput: 0 },
+        { input: { s: "10" }, expectedOutput: 1 },
+      ]),
     },
     {
       slug: "longest-common-subsequence",
@@ -323,6 +403,10 @@ async function main() {
       ]),
       solutionApproach: "2D DP: if chars match dp[i][j]=dp[i-1][j-1]+1, else max(dp[i-1][j], dp[i][j-1]). O(m*n).",
       companyTags: JSON.stringify(["Amazon", "Google", "Microsoft"]),
+      hiddenTestCases: JSON.stringify([
+        { input: { text1: "abc", text2: "" }, expectedOutput: 0 },
+        { input: { text1: "aaa", text2: "aa" }, expectedOutput: 2 },
+      ]),
     },
     {
       slug: "edit-distance",
@@ -337,6 +421,10 @@ async function main() {
       ]),
       solutionApproach: "2D DP: if chars match dp[i][j]=dp[i-1][j-1], else 1 + min(insert, delete, replace). O(m*n).",
       companyTags: JSON.stringify(["Amazon", "Google", "Microsoft"]),
+      hiddenTestCases: JSON.stringify([
+        { input: { word1: "", word2: "abc" }, expectedOutput: 3 },
+        { input: { word1: "abc", word2: "abc" }, expectedOutput: 0 },
+      ]),
     },
     {
       slug: "partition-equal-subset-sum",
@@ -351,6 +439,10 @@ async function main() {
       ]),
       solutionApproach: "0/1 knapsack. Target = sum/2. DP: dp[j] = can we make sum j? O(n * sum).",
       companyTags: JSON.stringify(["Amazon", "Google", "Meta"]),
+      hiddenTestCases: JSON.stringify([
+        { input: { nums: [1, 1] }, expectedOutput: true },
+        { input: { nums: [1, 2, 3, 5] }, expectedOutput: false },
+      ]),
     },
     {
       slug: "min-cost-climbing-stairs",
@@ -365,6 +457,10 @@ async function main() {
       ]),
       solutionApproach: "DP: dp[i] = cost[i] + min(dp[i-1], dp[i-2]). Answer = min(dp[-1], dp[-2]). O(n).",
       companyTags: JSON.stringify(["Amazon", "Google"]),
+      hiddenTestCases: JSON.stringify([
+        { input: { cost: [0, 0] }, expectedOutput: 0 },
+        { input: { cost: [1, 100, 1, 1, 1, 100, 1, 1, 100, 1] }, expectedOutput: 6 },
+      ]),
     },
     {
       slug: "coin-change-ii",
@@ -380,6 +476,10 @@ async function main() {
       ]),
       solutionApproach: "Unbounded knapsack DP. For each coin, iterate amounts. dp[j] += dp[j-coin]. O(amount * coins).",
       companyTags: JSON.stringify(["Amazon", "Google"]),
+      hiddenTestCases: JSON.stringify([
+        { input: { amount: 0, coins: [1, 2, 5] }, expectedOutput: 1 },
+        { input: { amount: 3, coins: [2] }, expectedOutput: 0 },
+      ]),
     },
     {
       slug: "palindromic-substrings",
@@ -394,6 +494,10 @@ async function main() {
       ]),
       solutionApproach: "Expand around center for each character and each pair of characters. O(n²).",
       companyTags: JSON.stringify(["Amazon", "Meta", "Google"]),
+      hiddenTestCases: JSON.stringify([
+        { input: { s: "a" }, expectedOutput: 1 },
+        { input: { s: "aaaa" }, expectedOutput: 10 },
+      ]),
     },
     {
       slug: "maximal-square",
@@ -408,6 +512,10 @@ async function main() {
       ]),
       solutionApproach: "DP: dp[i][j] = min(dp[i-1][j], dp[i][j-1], dp[i-1][j-1]) + 1 if cell is '1'. Track max side. O(m*n).",
       companyTags: JSON.stringify(["Amazon", "Google", "Apple"]),
+      hiddenTestCases: JSON.stringify([
+        { input: { matrix: [["0"]] }, expectedOutput: 0 },
+        { input: { matrix: [["1"]] }, expectedOutput: 1 },
+      ]),
     },
     {
       slug: "target-sum",
@@ -422,6 +530,10 @@ async function main() {
       ]),
       solutionApproach: "DP with offset or hash map of sums. Or reduce to subset sum problem. O(n * sum).",
       companyTags: JSON.stringify(["Meta", "Amazon", "Google"]),
+      hiddenTestCases: JSON.stringify([
+        { input: { nums: [1], target: 1 }, expectedOutput: 1 },
+        { input: { nums: [1, 1, 1, 1, 1], target: 5 }, expectedOutput: 1 },
+      ]),
     },
 
     // ═══════════════════════════════════════════════════════
@@ -439,6 +551,10 @@ async function main() {
       ]),
       solutionApproach: "BFS/DFS from ocean borders. Two visited sets. Answer = intersection. O(m*n).",
       companyTags: JSON.stringify(["Amazon", "Google", "Meta"]),
+      hiddenTestCases: JSON.stringify([
+        { input: { heights: [[1]] }, expectedOutput: [[0, 0]] },
+        { input: { heights: [[1, 1], [1, 1]] }, expectedOutput: [[0, 0], [0, 1], [1, 0], [1, 1]] },
+      ]),
     },
     {
       slug: "rotting-oranges",
@@ -454,6 +570,10 @@ async function main() {
       ]),
       solutionApproach: "Multi-source BFS from all rotten oranges. Count levels. Check if fresh remain. O(m*n).",
       companyTags: JSON.stringify(["Amazon", "Google", "Microsoft"]),
+      hiddenTestCases: JSON.stringify([
+        { input: { grid: [[0]] }, expectedOutput: 0 },
+        { input: { grid: [[2, 1, 1], [0, 1, 1], [1, 0, 1]] }, expectedOutput: -1 },
+      ]),
     },
     {
       slug: "walls-and-gates",
@@ -467,6 +587,10 @@ async function main() {
       ]),
       solutionApproach: "Multi-source BFS from all gates simultaneously. O(m*n).",
       companyTags: JSON.stringify(["Meta", "Amazon", "Google"]),
+      hiddenTestCases: JSON.stringify([
+        { input: { rooms: [] }, expectedOutput: [] },
+        { input: { rooms: [[-1]] }, expectedOutput: [[-1]] },
+      ]),
     },
     {
       slug: "graph-valid-tree",
@@ -481,6 +605,10 @@ async function main() {
       ]),
       solutionApproach: "Union-Find or DFS. Tree: connected + no cycles. Must have exactly n-1 edges. O(V+E).",
       companyTags: JSON.stringify(["Google", "Meta", "Amazon"]),
+      hiddenTestCases: JSON.stringify([
+        { input: { n: 1, edges: [] }, expectedOutput: true },
+        { input: { n: 2, edges: [[0, 1], [0, 1]] }, expectedOutput: false },
+      ]),
     },
     {
       slug: "number-connected-components",
@@ -495,6 +623,10 @@ async function main() {
       ]),
       solutionApproach: "Union-Find: start with n components, each union reduces by 1. Or DFS/BFS counting. O(V+E).",
       companyTags: JSON.stringify(["Google", "Meta", "Amazon"]),
+      hiddenTestCases: JSON.stringify([
+        { input: { n: 1, edges: [] }, expectedOutput: 1 },
+        { input: { n: 4, edges: [[0, 1], [2, 3]] }, expectedOutput: 2 },
+      ]),
     },
     {
       slug: "network-delay-time",
@@ -510,6 +642,10 @@ async function main() {
       ]),
       solutionApproach: "Dijkstra's algorithm from node k. Answer = max distance to any reachable node. O((V+E) log V).",
       companyTags: JSON.stringify(["Amazon", "Google"]),
+      hiddenTestCases: JSON.stringify([
+        { input: { times: [[1, 2, 1]], n: 2, k: 1 }, expectedOutput: 1 },
+        { input: { times: [[1, 2, 1]], n: 3, k: 1 }, expectedOutput: -1 },
+      ]),
     },
     {
       slug: "surrounded-regions",
@@ -523,6 +659,10 @@ async function main() {
       ]),
       solutionApproach: "DFS/BFS from border O's to mark safe. Then flip all remaining O's. O(m*n).",
       companyTags: JSON.stringify(["Amazon", "Google"]),
+      hiddenTestCases: JSON.stringify([
+        { input: { board: [["X"]] }, expectedOutput: [["X"]] },
+        { input: { board: [["O"]] }, expectedOutput: [["O"]] },
+      ]),
     },
     {
       slug: "alien-dictionary",
@@ -538,6 +678,10 @@ async function main() {
       ]),
       solutionApproach: "Build directed graph from adjacent word comparisons. Topological sort. Detect cycles. O(C) where C is total chars.",
       companyTags: JSON.stringify(["Meta", "Google", "Amazon", "Microsoft"]),
+      hiddenTestCases: JSON.stringify([
+        { input: { words: ["z", "x"] }, expectedOutput: "zx" },
+        { input: { words: ["a"] }, expectedOutput: "a" },
+      ]),
     },
 
     // ═══════════════════════════════════════════════════════
@@ -557,6 +701,10 @@ async function main() {
       ]),
       solutionApproach: "Two pointers from both ends. If sum < target, move left. If sum > target, move right. O(n) time, O(1) space.",
       companyTags: JSON.stringify(["Amazon", "Google"]),
+      hiddenTestCases: JSON.stringify([
+        { input: { numbers: [2, 7], target: 9 }, expectedOutput: [1, 2] },
+        { input: { numbers: [-1, 0], target: -1 }, expectedOutput: [1, 2] },
+      ]),
     },
     {
       slug: "isomorphic-strings",
@@ -572,6 +720,10 @@ async function main() {
       ]),
       solutionApproach: "Two hash maps for bidirectional mapping. Check consistency at each char. O(n).",
       companyTags: JSON.stringify(["Amazon", "Google"]),
+      hiddenTestCases: JSON.stringify([
+        { input: { s: "", t: "" }, expectedOutput: true },
+        { input: { s: "aa", t: "ab" }, expectedOutput: false },
+      ]),
     },
     {
       slug: "happy-number",
@@ -586,6 +738,10 @@ async function main() {
       ]),
       solutionApproach: "Use a set to detect cycles. Or Floyd's algorithm (slow/fast pointer). O(log n) per step.",
       companyTags: JSON.stringify(["Amazon", "Apple"]),
+      hiddenTestCases: JSON.stringify([
+        { input: { n: 1 }, expectedOutput: true },
+        { input: { n: 2 }, expectedOutput: false },
+      ]),
     },
     {
       slug: "intersection-two-arrays-ii",
@@ -600,6 +756,10 @@ async function main() {
       ]),
       solutionApproach: "Counter/hash map for smaller array. Iterate larger, decrement counts. O(n+m).",
       companyTags: JSON.stringify(["Amazon", "Google", "Meta"]),
+      hiddenTestCases: JSON.stringify([
+        { input: { nums1: [], nums2: [1] }, expectedOutput: [] },
+        { input: { nums1: [1, 1, 1], nums2: [1, 1] }, expectedOutput: [1, 1] },
+      ]),
     },
     {
       slug: "ransom-note",
@@ -614,6 +774,10 @@ async function main() {
       ]),
       solutionApproach: "Count chars in magazine. Check if ransom note chars are available. O(n+m).",
       companyTags: JSON.stringify(["Amazon", "Google"]),
+      hiddenTestCases: JSON.stringify([
+        { input: { ransomNote: "", magazine: "" }, expectedOutput: true },
+        { input: { ransomNote: "aa", magazine: "ab" }, expectedOutput: false },
+      ]),
     },
 
     // ═══════════════════════════════════════════════════════
@@ -633,6 +797,10 @@ async function main() {
       ]),
       solutionApproach: "Three pointers: prev, curr, next. Iterate and reverse links. O(n) time, O(1) space.",
       companyTags: JSON.stringify(["Amazon", "Microsoft", "Apple"]),
+      hiddenTestCases: JSON.stringify([
+        { input: { head: [] }, expectedOutput: [] },
+        { input: { head: [1] }, expectedOutput: [1] },
+      ]),
     },
     {
       slug: "remove-nth-from-end",
@@ -648,6 +816,10 @@ async function main() {
       ]),
       solutionApproach: "Two pointers with n gap. When fast reaches end, slow is at node before target. O(n), one pass.",
       companyTags: JSON.stringify(["Amazon", "Meta", "Google"]),
+      hiddenTestCases: JSON.stringify([
+        { input: { head: [1], n: 1 }, expectedOutput: [] },
+        { input: { head: [1, 2], n: 1 }, expectedOutput: [1] },
+      ]),
     },
     {
       slug: "reorder-list",
@@ -662,6 +834,10 @@ async function main() {
       ]),
       solutionApproach: "Find middle, reverse second half, merge alternately. O(n) time, O(1) space.",
       companyTags: JSON.stringify(["Amazon", "Meta", "Google"]),
+      hiddenTestCases: JSON.stringify([
+        { input: { head: [1] }, expectedOutput: [1] },
+        { input: { head: [1, 2, 3] }, expectedOutput: [1, 3, 2] },
+      ]),
     },
     {
       slug: "add-two-numbers",
@@ -677,6 +853,10 @@ async function main() {
       ]),
       solutionApproach: "Iterate both lists with carry. Sum = l1.val + l2.val + carry. New digit = sum % 10, carry = sum // 10. O(max(m,n)).",
       companyTags: JSON.stringify(["Amazon", "Google", "Microsoft", "Meta"]),
+      hiddenTestCases: JSON.stringify([
+        { input: { l1: [0], l2: [0] }, expectedOutput: [0] },
+        { input: { l1: [9, 9, 9], l2: [1] }, expectedOutput: [0, 0, 0, 1] },
+      ]),
     },
     {
       slug: "middle-linked-list",
@@ -691,6 +871,10 @@ async function main() {
       ]),
       solutionApproach: "Slow and fast pointers. Fast moves 2 steps, slow moves 1. When fast reaches end, slow is at middle. O(n).",
       companyTags: JSON.stringify(["Amazon", "Google"]),
+      hiddenTestCases: JSON.stringify([
+        { input: { head: [1] }, expectedOutput: [1] },
+        { input: { head: [1, 2] }, expectedOutput: [2] },
+      ]),
     },
 
     // ═══════════════════════════════════════════════════════
@@ -709,6 +893,10 @@ async function main() {
       ]),
       solutionApproach: "Recursive comparison of values and structure. O(min(n,m)).",
       companyTags: JSON.stringify(["Amazon", "Google"]),
+      hiddenTestCases: JSON.stringify([
+        { input: { p: null, q: null }, expectedOutput: true },
+        { input: { p: [1], q: [1, 2] }, expectedOutput: false },
+      ]),
     },
     {
       slug: "subtree-of-another-tree",
@@ -723,6 +911,10 @@ async function main() {
       ]),
       solutionApproach: "At each node, check if current subtree matches. O(m*n).",
       companyTags: JSON.stringify(["Amazon", "Google", "Meta"]),
+      hiddenTestCases: JSON.stringify([
+        { input: { root: [1], subRoot: [1] }, expectedOutput: true },
+        { input: { root: null, subRoot: [1] }, expectedOutput: false },
+      ]),
     },
     {
       slug: "lowest-common-ancestor-bst",
@@ -737,6 +929,10 @@ async function main() {
       ]),
       solutionApproach: "Use BST property: if both < node go left; if both > go right; else found. O(h).",
       companyTags: JSON.stringify(["Amazon", "Meta", "Google"]),
+      hiddenTestCases: JSON.stringify([
+        { input: { root: [2, 1, 3], p: 1, q: 3 }, expectedOutput: 2 },
+        { input: { root: [2, 1, 3], p: 1, q: 2 }, expectedOutput: 2 },
+      ]),
     },
     {
       slug: "binary-tree-right-side-view",
@@ -752,6 +948,10 @@ async function main() {
       ]),
       solutionApproach: "BFS level order, take last node of each level. Or DFS right-first. O(n).",
       companyTags: JSON.stringify(["Amazon", "Meta", "Google"]),
+      hiddenTestCases: JSON.stringify([
+        { input: { root: null }, expectedOutput: [] },
+        { input: { root: [1] }, expectedOutput: [1] },
+      ]),
     },
     {
       slug: "diameter-of-binary-tree",
@@ -766,6 +966,10 @@ async function main() {
       ]),
       solutionApproach: "At each node, diameter through it = left_depth + right_depth. Track global max. O(n).",
       companyTags: JSON.stringify(["Amazon", "Google", "Meta"]),
+      hiddenTestCases: JSON.stringify([
+        { input: { root: [1] }, expectedOutput: 0 },
+        { input: { root: [1, 2, 3, 4, 5] }, expectedOutput: 3 },
+      ]),
     },
     {
       slug: "kth-smallest-bst",
@@ -780,6 +984,10 @@ async function main() {
       ]),
       solutionApproach: "In-order traversal (gives sorted order). Return kth element. O(H + k).",
       companyTags: JSON.stringify(["Amazon", "Meta", "Google"]),
+      hiddenTestCases: JSON.stringify([
+        { input: { root: [1], k: 1 }, expectedOutput: 1 },
+        { input: { root: [5, 3, 6, 2, 4], k: 5 }, expectedOutput: 6 },
+      ]),
     },
     {
       slug: "construct-tree-preorder-inorder",
@@ -794,6 +1002,10 @@ async function main() {
       ]),
       solutionApproach: "Root = first of preorder. Split inorder at root. Recursively build left/right. O(n) with hash map.",
       companyTags: JSON.stringify(["Amazon", "Google", "Microsoft"]),
+      hiddenTestCases: JSON.stringify([
+        { input: { preorder: [1], inorder: [1] }, expectedOutput: [1] },
+        { input: { preorder: [1, 2], inorder: [2, 1] }, expectedOutput: [1, 2] },
+      ]),
     },
     {
       slug: "balanced-binary-tree",
@@ -808,6 +1020,10 @@ async function main() {
       ]),
       solutionApproach: "Recursive height check. If any subtree is unbalanced, return -1 to propagate. O(n).",
       companyTags: JSON.stringify(["Amazon", "Google"]),
+      hiddenTestCases: JSON.stringify([
+        { input: { root: null }, expectedOutput: true },
+        { input: { root: [1, 2, 2, 3, 3, null, null, 4, 4] }, expectedOutput: false },
+      ]),
     },
 
     // ═══════════════════════════════════════════════════════
@@ -826,6 +1042,10 @@ async function main() {
       ]),
       solutionApproach: "Binary search: if mid is bad, search left including mid. Else search right. O(log n).",
       companyTags: JSON.stringify(["Meta", "Amazon", "Google"]),
+      hiddenTestCases: JSON.stringify([
+        { input: { n: 1, bad: 1 }, expectedOutput: 1 },
+        { input: { n: 100, bad: 1 }, expectedOutput: 1 },
+      ]),
     },
     {
       slug: "find-peak-element",
@@ -840,6 +1060,10 @@ async function main() {
       ]),
       solutionApproach: "Binary search: if nums[mid] < nums[mid+1], peak is on right. Else peak is on left or at mid. O(log n).",
       companyTags: JSON.stringify(["Meta", "Google", "Amazon"]),
+      hiddenTestCases: JSON.stringify([
+        { input: { nums: [1] }, expectedOutput: 0 },
+        { input: { nums: [3, 2, 1] }, expectedOutput: 0 },
+      ]),
     },
     {
       slug: "search-2d-matrix",
@@ -854,6 +1078,10 @@ async function main() {
       ]),
       solutionApproach: "Treat as flattened sorted array. Binary search with row=mid//cols, col=mid%cols. O(log(m*n)).",
       companyTags: JSON.stringify(["Amazon", "Google", "Microsoft"]),
+      hiddenTestCases: JSON.stringify([
+        { input: { matrix: [[1]], target: 2 }, expectedOutput: false },
+        { input: { matrix: [[1]], target: 1 }, expectedOutput: true },
+      ]),
     },
     {
       slug: "koko-eating-bananas",
@@ -869,6 +1097,10 @@ async function main() {
       ]),
       solutionApproach: "Binary search on k (1 to max(piles)). Check if sum(ceil(pile/k)) <= h. O(n log max).",
       companyTags: JSON.stringify(["Amazon", "Google"]),
+      hiddenTestCases: JSON.stringify([
+        { input: { piles: [1], h: 1 }, expectedOutput: 1 },
+        { input: { piles: [1000000000], h: 1000000000 }, expectedOutput: 1 },
+      ]),
     },
 
     // ═══════════════════════════════════════════════════════
@@ -887,6 +1119,10 @@ async function main() {
       ]),
       solutionApproach: "Slow pointer tracks insertion. Fast pointer scans. When different, copy to slow+1. O(n).",
       companyTags: JSON.stringify(["Amazon", "Meta", "Google"]),
+      hiddenTestCases: JSON.stringify([
+        { input: { nums: [] }, expectedOutput: 0 },
+        { input: { nums: [1] }, expectedOutput: 1 },
+      ]),
     },
     {
       slug: "four-sum",
@@ -901,6 +1137,10 @@ async function main() {
       ]),
       solutionApproach: "Sort + two nested loops + two pointers. Skip duplicates. O(n³).",
       companyTags: JSON.stringify(["Amazon", "Google"]),
+      hiddenTestCases: JSON.stringify([
+        { input: { nums: [], target: 0 }, expectedOutput: [] },
+        { input: { nums: [0, 0, 0, 0], target: 0 }, expectedOutput: [[0, 0, 0, 0]] },
+      ]),
     },
     {
       slug: "valid-palindrome-ii",
@@ -916,6 +1156,10 @@ async function main() {
       ]),
       solutionApproach: "Two pointers from both ends. On mismatch, try skipping left OR right and check if remainder is palindrome. O(n).",
       companyTags: JSON.stringify(["Meta", "Amazon"]),
+      hiddenTestCases: JSON.stringify([
+        { input: { s: "a" }, expectedOutput: true },
+        { input: { s: "abc" }, expectedOutput: false },
+      ]),
     },
     {
       slug: "boats-to-save-people",
@@ -931,6 +1175,10 @@ async function main() {
       ]),
       solutionApproach: "Sort. Two pointers from lightest and heaviest. If pair fits, both go. Else heaviest alone. O(n log n).",
       companyTags: JSON.stringify(["Amazon", "Google"]),
+      hiddenTestCases: JSON.stringify([
+        { input: { people: [1], limit: 1 }, expectedOutput: 1 },
+        { input: { people: [2, 2], limit: 3 }, expectedOutput: 2 },
+      ]),
     },
 
     // ═══════════════════════════════════════════════════════
@@ -949,6 +1197,10 @@ async function main() {
       ]),
       solutionApproach: "Monotonic decreasing deque. Remove smaller elements from back before adding. O(n).",
       companyTags: JSON.stringify(["Amazon", "Google", "Microsoft"]),
+      hiddenTestCases: JSON.stringify([
+        { input: { nums: [1], k: 1 }, expectedOutput: [1] },
+        { input: { nums: [1, -1], k: 1 }, expectedOutput: [1, -1] },
+      ]),
     },
     {
       slug: "permutation-in-string",
@@ -963,6 +1215,10 @@ async function main() {
       ]),
       solutionApproach: "Fixed-size sliding window of len(s1). Compare character counts. O(n).",
       companyTags: JSON.stringify(["Amazon", "Microsoft"]),
+      hiddenTestCases: JSON.stringify([
+        { input: { s1: "a", s2: "a" }, expectedOutput: true },
+        { input: { s1: "ab", s2: "a" }, expectedOutput: false },
+      ]),
     },
     {
       slug: "longest-repeating-character-replacement",
@@ -977,6 +1233,10 @@ async function main() {
       ]),
       solutionApproach: "Sliding window. Track max frequency in window. If window_size - max_freq > k, shrink. O(n).",
       companyTags: JSON.stringify(["Amazon", "Google"]),
+      hiddenTestCases: JSON.stringify([
+        { input: { s: "A", k: 0 }, expectedOutput: 1 },
+        { input: { s: "AAAA", k: 2 }, expectedOutput: 4 },
+      ]),
     },
     {
       slug: "fruit-into-baskets",
@@ -992,6 +1252,10 @@ async function main() {
       ]),
       solutionApproach: "Sliding window with hash map tracking counts. Shrink when > 2 types. O(n).",
       companyTags: JSON.stringify(["Google", "Amazon"]),
+      hiddenTestCases: JSON.stringify([
+        { input: { fruits: [1] }, expectedOutput: 1 },
+        { input: { fruits: [1, 1, 1, 1] }, expectedOutput: 4 },
+      ]),
     },
 
     // ═══════════════════════════════════════════════════════
@@ -1010,6 +1274,10 @@ async function main() {
       ]),
       solutionApproach: "Backtracking: for each candidate, include it (reuse allowed) or skip. Prune if sum > target. O(n^(T/M)).",
       companyTags: JSON.stringify(["Amazon", "Meta", "Google"]),
+      hiddenTestCases: JSON.stringify([
+        { input: { candidates: [2], target: 1 }, expectedOutput: [] },
+        { input: { candidates: [1], target: 1 }, expectedOutput: [[1]] },
+      ]),
     },
     {
       slug: "combination-sum-ii",
@@ -1024,6 +1292,10 @@ async function main() {
       ]),
       solutionApproach: "Sort, backtrack with index. Skip consecutive duplicates at same level. O(2^n).",
       companyTags: JSON.stringify(["Amazon", "Google"]),
+      hiddenTestCases: JSON.stringify([
+        { input: { candidates: [1, 1], target: 1 }, expectedOutput: [[1]] },
+        { input: { candidates: [2], target: 1 }, expectedOutput: [] },
+      ]),
     },
     {
       slug: "n-queens",
@@ -1039,6 +1311,10 @@ async function main() {
       ]),
       solutionApproach: "Backtracking row by row. Track used columns and diagonals with sets. O(n!).",
       companyTags: JSON.stringify(["Amazon", "Google", "Microsoft"]),
+      hiddenTestCases: JSON.stringify([
+        { input: { n: 1 }, expectedOutput: [["Q"]] },
+        { input: { n: 2 }, expectedOutput: [] },
+      ]),
     },
     {
       slug: "palindrome-partitioning",
@@ -1053,6 +1329,10 @@ async function main() {
       ]),
       solutionApproach: "Backtracking: at each position, try all substrings that are palindromes. O(n * 2^n).",
       companyTags: JSON.stringify(["Amazon", "Google"]),
+      hiddenTestCases: JSON.stringify([
+        { input: { s: "a" }, expectedOutput: [["a"]] },
+        { input: { s: "aa" }, expectedOutput: [["a", "a"], ["aa"]] },
+      ]),
     },
 
     // ═══════════════════════════════════════════════════════
@@ -1071,6 +1351,10 @@ async function main() {
       ]),
       solutionApproach: "Three phases: add intervals before, merge overlapping, add intervals after. O(n).",
       companyTags: JSON.stringify(["Amazon", "Google", "Meta"]),
+      hiddenTestCases: JSON.stringify([
+        { input: { intervals: [], newInterval: [5, 7] }, expectedOutput: [[5, 7]] },
+        { input: { intervals: [[1, 5]], newInterval: [2, 3] }, expectedOutput: [[1, 5]] },
+      ]),
     },
     {
       slug: "non-overlapping-intervals",
@@ -1086,6 +1370,10 @@ async function main() {
       ]),
       solutionApproach: "Sort by end time. Greedily keep intervals that don't overlap. Count removed. O(n log n).",
       companyTags: JSON.stringify(["Amazon", "Google"]),
+      hiddenTestCases: JSON.stringify([
+        { input: { intervals: [] }, expectedOutput: 0 },
+        { input: { intervals: [[1, 2]] }, expectedOutput: 0 },
+      ]),
     },
     {
       slug: "meeting-rooms-ii",
@@ -1100,6 +1388,10 @@ async function main() {
       ]),
       solutionApproach: "Sort starts and ends separately. Two pointers: if start < end, need room, else free room. Or min-heap. O(n log n).",
       companyTags: JSON.stringify(["Amazon", "Google", "Meta", "Microsoft"]),
+      hiddenTestCases: JSON.stringify([
+        { input: { intervals: [] }, expectedOutput: 0 },
+        { input: { intervals: [[1, 2]] }, expectedOutput: 1 },
+      ]),
     },
 
     // ═══════════════════════════════════════════════════════
@@ -1118,6 +1410,10 @@ async function main() {
       ]),
       solutionApproach: "Max-heap. Pop two largest, push difference if non-zero. Repeat. O(n log n).",
       companyTags: JSON.stringify(["Amazon", "Google"]),
+      hiddenTestCases: JSON.stringify([
+        { input: { stones: [1] }, expectedOutput: 1 },
+        { input: { stones: [2, 2] }, expectedOutput: 0 },
+      ]),
     },
     {
       slug: "k-closest-points-to-origin",
@@ -1132,6 +1428,10 @@ async function main() {
       ]),
       solutionApproach: "Min-heap by distance, pop k times. Or max-heap of size k. Or quickselect. O(n log k).",
       companyTags: JSON.stringify(["Amazon", "Meta", "Google"]),
+      hiddenTestCases: JSON.stringify([
+        { input: { points: [[0, 0]], k: 1 }, expectedOutput: [[0, 0]] },
+        { input: { points: [[1, 0], [0, 1]], k: 1 }, expectedOutput: [[1, 0]] },
+      ]),
     },
     {
       slug: "task-scheduler",
@@ -1147,6 +1447,10 @@ async function main() {
       ]),
       solutionApproach: "Greedy or heap: most frequent task determines frame. Formula: (maxFreq-1)*(n+1) + numMax. O(n).",
       companyTags: JSON.stringify(["Meta", "Amazon", "Google", "Microsoft"]),
+      hiddenTestCases: JSON.stringify([
+        { input: { tasks: ["A"], n: 0 }, expectedOutput: 1 },
+        { input: { tasks: ["A", "A"], n: 2 }, expectedOutput: 5 },
+      ]),
     },
     {
       slug: "find-median-from-data-stream",
@@ -1160,6 +1464,10 @@ async function main() {
       ]),
       solutionApproach: "Two heaps: max-heap for lower half, min-heap for upper half. Balance sizes. O(log n) add, O(1) median.",
       companyTags: JSON.stringify(["Amazon", "Google", "Microsoft"]),
+      hiddenTestCases: JSON.stringify([
+        { input: { nums: [1] }, expectedOutput: 1.0 },
+        { input: { nums: [1, 2, 3] }, expectedOutput: 2.0 },
+      ]),
     },
     {
       slug: "reorganize-string",
@@ -1174,6 +1482,10 @@ async function main() {
       ]),
       solutionApproach: "Max-heap by frequency. Pop two most frequent, place alternately. O(n log k).",
       companyTags: JSON.stringify(["Amazon", "Google"]),
+      hiddenTestCases: JSON.stringify([
+        { input: { s: "a" }, expectedOutput: "a" },
+        { input: { s: "aaa" }, expectedOutput: "" },
+      ]),
     },
 
     // ═══════════════════════════════════════════════════════
@@ -1192,6 +1504,10 @@ async function main() {
       ]),
       solutionApproach: "Track farthest reachable index. If current > farthest, can't proceed. O(n).",
       companyTags: JSON.stringify(["Amazon", "Google", "Microsoft"]),
+      hiddenTestCases: JSON.stringify([
+        { input: { nums: [0] }, expectedOutput: true },
+        { input: { nums: [2, 0, 0] }, expectedOutput: true },
+      ]),
     },
     {
       slug: "jump-game-ii",
@@ -1206,6 +1522,10 @@ async function main() {
       ]),
       solutionApproach: "BFS-like: track current range end and farthest reachable. Increment jumps at range end. O(n).",
       companyTags: JSON.stringify(["Amazon", "Google"]),
+      hiddenTestCases: JSON.stringify([
+        { input: { nums: [0] }, expectedOutput: 0 },
+        { input: { nums: [1, 2, 3] }, expectedOutput: 2 },
+      ]),
     },
     {
       slug: "gas-station",
@@ -1220,6 +1540,10 @@ async function main() {
       ]),
       solutionApproach: "If total gas >= total cost, solution exists. Track current tank; if negative, start from next station. O(n).",
       companyTags: JSON.stringify(["Amazon", "Google"]),
+      hiddenTestCases: JSON.stringify([
+        { input: { gas: [1], cost: [1] }, expectedOutput: 0 },
+        { input: { gas: [2, 3], cost: [3, 2] }, expectedOutput: 1 },
+      ]),
     },
     {
       slug: "hand-of-straights",
@@ -1234,6 +1558,10 @@ async function main() {
       ]),
       solutionApproach: "Sort + counter. For each remaining minimum, try to form a group of W consecutive. O(n log n).",
       companyTags: JSON.stringify(["Google", "Amazon"]),
+      hiddenTestCases: JSON.stringify([
+        { input: { hand: [1], groupSize: 1 }, expectedOutput: true },
+        { input: { hand: [1, 2, 3], groupSize: 2 }, expectedOutput: false },
+      ]),
     },
     {
       slug: "partition-labels",
@@ -1248,6 +1576,10 @@ async function main() {
       ]),
       solutionApproach: "Record last occurrence of each character. Expand partition to include all characters' last positions. O(n).",
       companyTags: JSON.stringify(["Amazon", "Google"]),
+      hiddenTestCases: JSON.stringify([
+        { input: { s: "a" }, expectedOutput: [1] },
+        { input: { s: "aa" }, expectedOutput: [2] },
+      ]),
     },
 
     // ═══════════════════════════════════════════════════════
@@ -1267,6 +1599,10 @@ async function main() {
       ]),
       solutionApproach: "Pop digits with % 10, push to result with * 10. Check overflow before final operation. O(log x).",
       companyTags: JSON.stringify(["Amazon", "Google", "Apple"]),
+      hiddenTestCases: JSON.stringify([
+        { input: { x: 0 }, expectedOutput: 0 },
+        { input: { x: -2147483648 }, expectedOutput: 0 },
+      ]),
     },
     {
       slug: "power-of-two",
@@ -1282,6 +1618,10 @@ async function main() {
       ]),
       solutionApproach: "Bit trick: n > 0 and n & (n-1) == 0. Powers of two have exactly one bit set. O(1).",
       companyTags: JSON.stringify(["Amazon", "Apple"]),
+      hiddenTestCases: JSON.stringify([
+        { input: { n: 0 }, expectedOutput: false },
+        { input: { n: -2 }, expectedOutput: false },
+      ]),
     },
     {
       slug: "counting-bits",
@@ -1296,6 +1636,10 @@ async function main() {
       ]),
       solutionApproach: "DP: ans[i] = ans[i >> 1] + (i & 1). Or ans[i] = ans[i & (i-1)] + 1. O(n).",
       companyTags: JSON.stringify(["Amazon", "Google"]),
+      hiddenTestCases: JSON.stringify([
+        { input: { n: 0 }, expectedOutput: [0] },
+        { input: { n: 4 }, expectedOutput: [0, 1, 1, 2, 1] },
+      ]),
     },
     {
       slug: "missing-number",
@@ -1311,6 +1655,10 @@ async function main() {
       ]),
       solutionApproach: "Sum formula: n*(n+1)/2 - sum(nums). Or XOR all numbers with indices. O(n) time, O(1) space.",
       companyTags: JSON.stringify(["Amazon", "Microsoft", "Google"]),
+      hiddenTestCases: JSON.stringify([
+        { input: { nums: [0] }, expectedOutput: 1 },
+        { input: { nums: [1] }, expectedOutput: 0 },
+      ]),
     },
     {
       slug: "number-of-1-bits",
@@ -1326,6 +1674,10 @@ async function main() {
       ]),
       solutionApproach: "Count bits: n = n & (n-1) removes lowest set bit. Count iterations. O(number of bits).",
       companyTags: JSON.stringify(["Amazon", "Apple"]),
+      hiddenTestCases: JSON.stringify([
+        { input: { n: 0 }, expectedOutput: 0 },
+        { input: { n: 4294967295 }, expectedOutput: 32 },
+      ]),
     },
 
     // ═══════════════════════════════════════════════════════
@@ -1345,6 +1697,10 @@ async function main() {
       ]),
       solutionApproach: "Monotonic decreasing stack of indices. When a warmer temp appears, pop and calculate days. O(n).",
       companyTags: JSON.stringify(["Amazon", "Google", "Meta"]),
+      hiddenTestCases: JSON.stringify([
+        { input: { temperatures: [30] }, expectedOutput: [0] },
+        { input: { temperatures: [100, 99, 98] }, expectedOutput: [0, 0, 0] },
+      ]),
     },
     {
       slug: "evaluate-reverse-polish-notation",
@@ -1360,6 +1716,10 @@ async function main() {
       ]),
       solutionApproach: "Stack: push numbers, pop two on operator, compute, push result. O(n).",
       companyTags: JSON.stringify(["Amazon", "Google"]),
+      hiddenTestCases: JSON.stringify([
+        { input: { tokens: ["3"] }, expectedOutput: 3 },
+        { input: { tokens: ["0", "3", "/"] }, expectedOutput: 0 },
+      ]),
     },
     {
       slug: "largest-rectangle-histogram",
@@ -1374,6 +1734,10 @@ async function main() {
       ]),
       solutionApproach: "Monotonic increasing stack. Pop when shorter bar found, calculate area with width to last smaller. O(n).",
       companyTags: JSON.stringify(["Amazon", "Google", "Microsoft"]),
+      hiddenTestCases: JSON.stringify([
+        { input: { heights: [1] }, expectedOutput: 1 },
+        { input: { heights: [0] }, expectedOutput: 0 },
+      ]),
     },
     {
       slug: "generate-parentheses",
@@ -1388,6 +1752,10 @@ async function main() {
       ]),
       solutionApproach: "Backtracking with open/close counts. Add '(' if open < n, add ')' if close < open. O(4^n / sqrt(n)).",
       companyTags: JSON.stringify(["Amazon", "Google", "Microsoft"]),
+      hiddenTestCases: JSON.stringify([
+        { input: { n: 1 }, expectedOutput: ["()"] },
+        { input: { n: 0 }, expectedOutput: [""] },
+      ]),
     },
 
     // ═══════════════════════════════════════════════════════
@@ -1405,6 +1773,10 @@ async function main() {
       ]),
       solutionApproach: "Store (value, current_min, current_max) tuples on stack. Each push records extremes at that level. O(1) all ops.",
       companyTags: JSON.stringify(["Amazon", "Google"]),
+      hiddenTestCases: JSON.stringify([
+        { input: { ops: ["push", "getMin"], vals: [-2, null] }, expectedOutput: -2 },
+        { input: { ops: ["push", "push", "pop", "getMin"], vals: [5, 1, null, null] }, expectedOutput: 5 },
+      ]),
     },
     {
       slug: "implement-queue-using-stacks",
@@ -1418,6 +1790,10 @@ async function main() {
       ]),
       solutionApproach: "Two stacks: input stack and output stack. On pop/peek, if output empty, pour input→output. Amortized O(1).",
       companyTags: JSON.stringify(["Amazon", "Google", "Microsoft"]),
+      hiddenTestCases: JSON.stringify([
+        { input: { ops: ["push", "peek"], vals: [1, null] }, expectedOutput: 1 },
+        { input: { ops: ["push", "push", "pop"], vals: [1, 2, null] }, expectedOutput: 1 },
+      ]),
     },
     {
       slug: "time-based-key-value-store",
@@ -1431,6 +1807,10 @@ async function main() {
       ]),
       solutionApproach: "Hash map of key → list of (timestamp, value). Binary search on get. O(1) set, O(log n) get.",
       companyTags: JSON.stringify(["Google", "Amazon", "Meta"]),
+      hiddenTestCases: JSON.stringify([
+        { input: { key: "foo", value: "bar", timestamp: 1, getTimestamp: 0 }, expectedOutput: "" },
+        { input: { key: "foo", value: "bar", timestamp: 1, getTimestamp: 3 }, expectedOutput: "bar" },
+      ]),
     },
 
     // ═══════════════════════════════════════════════════════
@@ -1450,6 +1830,10 @@ async function main() {
       ]),
       solutionApproach: "Iterative or memoized recursion. O(n) time with two variables.",
       companyTags: JSON.stringify(["Amazon", "Google"]),
+      hiddenTestCases: JSON.stringify([
+        { input: { n: 0 }, expectedOutput: 0 },
+        { input: { n: 10 }, expectedOutput: 55 },
+      ]),
     },
     {
       slug: "power-function",
@@ -1465,6 +1849,10 @@ async function main() {
       ]),
       solutionApproach: "Fast exponentiation: x^n = (x^(n/2))^2. Handle negative n with 1/x. O(log n).",
       companyTags: JSON.stringify(["Amazon", "Google", "Meta"]),
+      hiddenTestCases: JSON.stringify([
+        { input: { x: 1.0, n: 0 }, expectedOutput: 1.0 },
+        { input: { x: 2.0, n: -2 }, expectedOutput: 0.25 },
+      ]),
     },
     {
       slug: "merge-sort-implementation",
@@ -1479,6 +1867,10 @@ async function main() {
       ]),
       solutionApproach: "Divide array in half, recursively sort each, merge sorted halves. O(n log n) time, O(n) space.",
       companyTags: JSON.stringify(["Amazon", "Google", "Microsoft"]),
+      hiddenTestCases: JSON.stringify([
+        { input: { nums: [] }, expectedOutput: [] },
+        { input: { nums: [1] }, expectedOutput: [1] },
+      ]),
     },
     {
       slug: "flatten-nested-list",
@@ -1513,7 +1905,11 @@ async function main() {
           testCases: problem.testCases,
           solutionApproach: problem.solutionApproach,
           companyTags: problem.companyTags,
-        },
+          hiddenTestCases: JSON.stringify([
+        { input: { nestedList: [] }, expectedOutput: [] },
+        { input: { nestedList: [[1, 1], 2, [1, 1]] }, expectedOutput: [1, 1, 2, 1, 1] },
+      ]),
+    },
       });
       created++;
       console.log(`  ✓ ${problem.title} (${problem.difficulty} | ${problem.category})`);

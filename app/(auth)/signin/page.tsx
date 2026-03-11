@@ -26,7 +26,11 @@ export default function SignInPage() {
       });
 
       if (result?.error) {
-        setError("Invalid email or password");
+        if (result.error.includes("EMAIL_NOT_VERIFIED")) {
+          setError("Please verify your email before signing in. Check your inbox for the 6-digit code.");
+        } else {
+          setError("Invalid email or password");
+        }
       } else {
         router.push("/dashboard");
         router.refresh();

@@ -92,6 +92,7 @@ export default async function ProblemPage({ params }: Props) {
         starterCode: problem.starterCode,
         testCases,
         hiddenTestCases,
+        hints: problem.hints ?? undefined,
         correctPattern: problem.correctPattern ?? undefined,
         solutionApproach: problem.solutionApproach ?? undefined,
       }}

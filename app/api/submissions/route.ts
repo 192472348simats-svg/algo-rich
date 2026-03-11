@@ -5,11 +5,29 @@ import { parseProblem } from "@/lib/types/problem";
 import { enrollProblemForReview } from "@/lib/reviewEngine";
 import { checkPatternDiscovery } from "@/lib/patternDiscovery";
 
+const submissionRateLimit = new Map<string, { count: number; resetAt: number }>();
+
 export async function POST(request: NextRequest) {
   try {
     const session = await auth();
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const now = Date.now();
+    const window = 60 * 1000; // 1 minute
+    const userId = session.user.id;
+    const entry = submissionRateLimit.get(userId);
+    if (entry && now < entry.resetAt) {
+      if (entry.count >= 10) {
+        return Response.json(
+          { error: "Slow down — maximum 10 runs per minute." },
+          { status: 429 }
+        );
+      }
+      entry.count++;
+    } else {
+      submissionRateLimit.set(userId, { count: 1, resetAt: now + window });
     }
 
   const body = await request.json();

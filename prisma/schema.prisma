@@ -32,6 +32,16 @@ model User {
   phase3CompletedAt   DateTime?
   phase4CompletedAt   DateTime?
 
+  // Streak mechanics
+  streakFreezes           Int       @default(0)       // Task 12: available freeze tokens
+  streakRepairAvailable   Boolean   @default(false)   // Task 13: one-time repair available
+  streakRepairedAt        DateTime?                   // Task 13: when last repaired
+
+  // Email verification
+  emailVerified       Boolean   @default(true)        // Task 15: true for legacy users; new signups start false
+  verificationToken   String?                          // Task 15: bcrypt-hashed OTP
+  verificationExpiry  DateTime?                        // Task 15: OTP expiry
+
   progress             Progress[]
   submissions          Submission[]
   preferences          UserPreferences?

@@ -11,6 +11,9 @@ interface CodeEditorProps {
   fontSize?: number;
   readOnly?: boolean;
   showMinimap?: boolean;
+  pyodideReady?: boolean;
+  pyodideProgress?: number;
+  pyodideMessage?: string;
 }
 
 export default function CodeEditor({
@@ -20,6 +23,9 @@ export default function CodeEditor({
   fontSize = 14,
   readOnly = false,
   showMinimap = true,
+  pyodideReady = true,
+  pyodideProgress = 0,
+  pyodideMessage = "Loading Python runtime...",
 }: CodeEditorProps) {
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
 
@@ -87,7 +93,7 @@ export default function CodeEditor({
   );
 
   return (
-    <div className="h-full w-full">
+    <div className="h-full w-full relative">
       <Editor
         defaultLanguage={language}
         defaultValue={initialCode}
@@ -130,6 +136,27 @@ export default function CodeEditor({
           </div>
         }
       />
+      {/* Pyodide loading overlay — shown until Python runtime is ready */}
+      {!pyodideReady && (
+        <div className="absolute inset-0 bg-[#0A0F24]/90 flex flex-col items-center justify-center z-10 rounded">
+          <div className="w-64 space-y-4 px-4">
+            <div className="flex items-center gap-3">
+              <div className="w-6 h-6 border-2 border-[#E5A829] border-t-transparent rounded-full animate-spin flex-shrink-0" />
+              <span className="text-white/80 text-sm font-medium">{pyodideMessage}</span>
+            </div>
+            {/* Progress bar */}
+            <div className="w-full h-1.5 bg-white/10 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-[#E5A829] rounded-full transition-all duration-500"
+                style={{ width: `${pyodideProgress}%` }}
+              />
+            </div>
+            <p className="text-white/30 text-xs text-center">
+              ⚡ First load ~8s — instant on return visits
+            </p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -10,11 +10,17 @@ async function loadPyodideRuntime() {
   if (pyodide) return pyodide;
 
   // Load Pyodide from CDN
+  sendMessage("loading", { id: "init", progress: 25, message: "Downloading Python runtime (~8 MB)..." });
   importScripts("https://cdn.jsdelivr.net/pyodide/v0.26.4/full/pyodide.js");
 
+  sendMessage("loading", { id: "init", progress: 60, message: "Compiling standard library..." });
   pyodide = await self.loadPyodide({
     indexURL: "https://cdn.jsdelivr.net/pyodide/v0.26.4/full/",
   });
+
+  sendMessage("loading", { id: "init", progress: 90, message: "Warming up interpreter..." });
+  // Quick warm-up run so first user execution feels instant
+  pyodide.runPython("1 + 1");
 
   pyodideReady = true;
   return pyodide;
@@ -30,9 +36,9 @@ self.onmessage = async function (e) {
 
   if (type === "init") {
     try {
-      sendMessage("loading", { id });
+      sendMessage("loading", { id, progress: 10, message: "Initializing Python environment..." });
       await loadPyodideRuntime();
-      sendMessage("ready", { id });
+      sendMessage("ready", { id, progress: 100, message: "Python ready!" });
     } catch (err) {
       sendMessage("error", { id, error: `Failed to load Python: ${err.message}` });
     }

@@ -4,6 +4,8 @@ import prisma from "@/lib/prisma";
 import Sidebar from "./components/Sidebar";
 import MobileNav from "@/app/components/ui/MobileNav";
 import PageTransition from "./components/PageTransition";
+import StreakUrgencyBanner from "./components/StreakUrgencyBanner";
+import { computeStreak } from "@/lib/streakUtils";
 
 export default async function DashboardLayout({
   children,
@@ -16,11 +18,35 @@ export default async function DashboardLayout({
     redirect("/signin");
   }
 
-  // Fetch current phase for sidebar filtering
-  const user = await prisma.user.findUnique({
-    where: { id: session.user.id },
-    select: { currentPhase: true },
-  });
+  // Fetch current phase and streak data for sidebar + banner
+  const [user, recentProgress, recentSubmissions] = await Promise.all([
+    prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { currentPhase: true },
+    }),
+    prisma.progress.findMany({
+      where: { userId: session.user.id, completed: true, completedAt: { not: null } },
+      select: { completedAt: true },
+      orderBy: { completedAt: "desc" },
+      take: 120,
+    }),
+    prisma.submission.findMany({
+      where: { userId: session.user.id },
+      select: { createdAt: true },
+      orderBy: { createdAt: "desc" },
+      take: 120,
+    }),
+  ]);
+
+  // Compute streak for urgency banner
+  const activityDates: string[] = [];
+  for (const p of recentProgress) {
+    if (p.completedAt) activityDates.push(p.completedAt.toISOString().slice(0, 10));
+  }
+  for (const s of recentSubmissions) {
+    activityDates.push(s.createdAt.toISOString().slice(0, 10));
+  }
+  const { currentStreak, practicedToday } = computeStreak(activityDates);
 
   return (
     <div className="min-h-screen flex bg-background">
@@ -84,6 +110,10 @@ export default async function DashboardLayout({
             }}
           />
           <div className="relative z-[2] p-4 sm:p-6 lg:p-8 pb-20 lg:pb-8">
+            <StreakUrgencyBanner
+              currentStreak={currentStreak}
+              practicedToday={practicedToday}
+            />
             <PageTransition>{children}</PageTransition>
           </div>
         </div>

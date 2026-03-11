@@ -28,6 +28,8 @@ type PyodideStatus = "idle" | "loading" | "ready" | "running" | "error";
 export function usePyodide() {
   const workerRef = useRef<Worker | null>(null);
   const [status, setStatus] = useState<PyodideStatus>("loading");
+  const [pyodideProgress, setPyodideProgress] = useState(0);
+  const [pyodideMessage, setPyodideMessage] = useState("Initializing Python environment...");
   const callbacksRef = useRef<Map<string, (result: ExecutionResult) => void>>(
     new Map()
   );
@@ -44,9 +46,13 @@ export function usePyodide() {
       switch (type) {
         case "loading":
           setStatus("loading");
+          if (typeof data.progress === "number") setPyodideProgress(data.progress);
+          if (data.message) setPyodideMessage(data.message);
           break;
         case "ready":
           setStatus("ready");
+          setPyodideProgress(100);
+          setPyodideMessage("Python ready!");
           break;
         case "error":
           setStatus("error");
@@ -121,5 +127,5 @@ export function usePyodide() {
     []
   );
 
-  return { status, runCode };
+  return { status, runCode, pyodideProgress, pyodideMessage };
 }

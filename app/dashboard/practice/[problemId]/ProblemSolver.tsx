@@ -13,9 +13,11 @@ import {
   type TestResult,
 } from "@/app/components/CodeExecutor";
 import { triggerSuccessConfetti } from "@/app/components/feedback/Confetti";
+import { celebrate } from "@/lib/celebrationEngine";
 import PostSolveReflection from "@/app/components/practice/PostSolveReflection";
 import FailureFeedback from "@/app/components/practice/FailureFeedback";
 import StuckModal from "@/app/components/practice/StuckModal";
+import { parseHints } from "@/lib/hintSystem";
 import {
   analyzeFailure,
   type FailureAnalysis,
@@ -59,6 +61,7 @@ interface ProblemData {
   starterCode: string;
   testCases: Array<{ input: Record<string, unknown> | string; expectedOutput: unknown }>;
   hiddenTestCases?: Array<{ input: Record<string, unknown> | string; expectedOutput: unknown }>;
+  hints?: string;
   correctPattern?: string;
   solutionApproach?: string;
 }
@@ -88,8 +91,18 @@ export default function ProblemSolver({ problem, isSolved, userId, relatedLesson
   const [stuckModalOpen, setStuckModalOpen] = useState(false);
   const isPhase1 = currentPhase === 1;
 
+  // Mobile detection — swap Monaco for a plain textarea on small screens
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 767px)");
+    setIsMobile(mq.matches);
+    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    mq.addEventListener("change", handler);
+    return () => mq.removeEventListener("change", handler);
+  }, []);
+
   // Execution state
-  const { status: pyStatus, runCode } = usePyodide();
+  const { status: pyStatus, runCode, pyodideProgress, pyodideMessage } = usePyodide();
   const [result, setResult] = useState<ExecutionResult | null>(null);
   const [activeOutputTab, setActiveOutputTab] = useState<"output" | "tests">(
     "output"
@@ -266,6 +279,7 @@ export default function ProblemSolver({ problem, isSolved, userId, relatedLesson
       if (allPassed) {
         setSolved(true);
         triggerSuccessConfetti();
+        celebrate("solve");
         setFailureAnalysis(null);
         setShowStuckHelper(false);
         onSolved?.();
@@ -276,6 +290,7 @@ export default function ProblemSolver({ problem, isSolved, userId, relatedLesson
         // Show pattern discovery
         if (subData?.stats?.patternDiscovery) {
           setPatternDiscovery(subData.stats.patternDiscovery);
+          celebrate("pattern_unlock");
         }
         // Show reflection after a brief delay
         setTimeout(() => {
@@ -422,8 +437,11 @@ export default function ProblemSolver({ problem, isSolved, userId, relatedLesson
       <AnimatePresence>
         {stuckModalOpen && (
           <StuckModal
+            hints={parseHints(problem.hints)}
             problemTitle={problem.title}
-            onXPPenalty={(xp) => console.log(`-${xp} XP for hint`)}
+            onXPPenalty={(xp) => {
+              fetch(`/api/hints/${problem.id}?level=${xp > 5 ? 5 : xp > 2 ? 4 : xp > 1 ? 3 : 2}`, { method: "GET" }).catch(() => null);
+            }}
             onClose={() => setStuckModalOpen(false)}
           />
         )}
@@ -843,13 +861,31 @@ export default function ProblemSolver({ problem, isSolved, userId, relatedLesson
 
           {/* Editor */}
           <div className="flex-1 min-h-0">
+            {isMobile ? (
+              <div className="h-full flex flex-col">
+                <p className="text-xs text-yellow-400/60 px-3 pt-2 pb-1 flex-shrink-0">
+                  📱 Simplified editor — full editor available on desktop
+                </p>
+                <textarea
+                  value={code}
+                  onChange={(e) => setCode(e.target.value)}
+                  spellCheck={false}
+                  className="flex-1 w-full font-mono text-sm bg-[#0A0F24] text-white border-0 border-t border-[#E5A829]/20 p-3 resize-none focus:outline-none focus:border-t-[#E5A829]"
+                  style={{ fontSize }}
+                />
+              </div>
+            ) : (
             <CodeEditor
               initialCode={code}
               onChange={setCode}
               fontSize={fontSize}
               language="python"
               showMinimap={!isPhase1}
+              pyodideReady={pyStatus === "ready" || pyStatus === "running"}
+              pyodideProgress={pyodideProgress}
+              pyodideMessage={pyodideMessage}
             />
+            )}
           </div>
         </div>
 

@@ -24,6 +24,7 @@ import Card3D, { type GlowColor } from "@/app/components/ui/Card3D";
 import ProgressBar3D from "@/app/components/ui/ProgressBar3D";
 import ProgressRing from "@/app/components/ui/ProgressRing";
 import BeginnerOnboardingFlow from "@/app/components/onboarding/BeginnerOnboardingFlow";
+import { celebrate } from "@/lib/celebrationEngine";
 
 // ─── Types ─────────────────────────────────────────────────
 
@@ -1224,6 +1225,16 @@ export default function DashboardContent({
   currentPhase = 1,
 }: DashboardContentProps) {
   const [showOnboarding, setShowOnboarding] = useState(!onboardingCompleted);
+
+  // Fire streak milestone celebration once per milestone per session
+  useEffect(() => {
+    const milestones = [7, 14, 30, 100];
+    if (!milestones.includes(stats.currentStreak)) return;
+    const key = `streak-celebrated-${stats.currentStreak}`;
+    if (sessionStorage.getItem(key)) return;
+    sessionStorage.setItem(key, "1");
+    celebrate("streak_milestone");
+  }, [stats.currentStreak]);
 
   // Safety: deduplicate courses by title
   const uniqueCourses = courses.filter(
