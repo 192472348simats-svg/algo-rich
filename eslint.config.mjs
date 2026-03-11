@@ -12,6 +12,12 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Seed scripts are plain Node.js CJS files — not part of the app bundle
+    "prisma/seed.js",
+    "prisma/seed-ds.js",
+    "prisma/seed-patterns.js",
+    "prisma/seed-problems.js",
+    "prisma/seed-problems-v2.js",
   ]),
 ]);
 

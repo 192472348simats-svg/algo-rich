@@ -27,7 +27,7 @@ type PyodideStatus = "idle" | "loading" | "ready" | "running" | "error";
 
 export function usePyodide() {
   const workerRef = useRef<Worker | null>(null);
-  const [status, setStatus] = useState<PyodideStatus>("idle");
+  const [status, setStatus] = useState<PyodideStatus>("loading");
   const callbacksRef = useRef<Map<string, (result: ExecutionResult) => void>>(
     new Map()
   );
@@ -79,7 +79,6 @@ export function usePyodide() {
     };
 
     // Start initialization
-    setStatus("loading");
     worker.postMessage({ type: "init", id: "init" });
 
     return () => {

@@ -25,7 +25,8 @@ export default function PlanFlow({ userId }: Props) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [flowComplete, setFlowComplete] = useState(false);
-  const [startTime] = useState(Date.now());
+  const [startTime] = useState(() => Date.now());
+  const [completionTime, setCompletionTime] = useState<number | null>(null);
 
   useEffect(() => {
     fetch("/api/plan")
@@ -56,6 +57,7 @@ export default function PlanFlow({ userId }: Props) {
                 (s: { id: string }) => !completedIds.includes(s.id)
               );
               if (firstIncomplete === -1) {
+                setCompletionTime(Date.now());
                 setFlowComplete(true);
               } else {
                 setCurrentStepIndex(firstIncomplete);
@@ -100,6 +102,7 @@ export default function PlanFlow({ userId }: Props) {
 
       // Advance or complete
       if (currentStepIndex + 1 >= plan.steps.length) {
+        setCompletionTime(Date.now());
         setFlowComplete(true);
       } else {
         setCurrentStepIndex((prev) => prev + 1);
@@ -185,7 +188,7 @@ export default function PlanFlow({ userId }: Props) {
       <PlanCompleteScreen
         plan={plan}
         stepResults={stepResults}
-        totalTime={Math.round((Date.now() - startTime) / 1000)}
+        totalTime={Math.round(((completionTime ?? startTime) - startTime) / 1000)}
       />
     );
   }

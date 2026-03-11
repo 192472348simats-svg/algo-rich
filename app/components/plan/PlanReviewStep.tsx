@@ -19,6 +19,7 @@ export default function PlanReviewStep({ step, onComplete, userId }: Props) {
   const data = step.data as ReviewData;
   const [phase, setPhase] = useState<"intro" | "solve" | "result">("intro");
   const [startTime, setStartTime] = useState<number | null>(null);
+  const [solveTimeSeconds, setSolveTimeSeconds] = useState(0);
   const [solved, setSolved] = useState(false);
 
   return (
@@ -116,6 +117,7 @@ export default function PlanReviewStep({ step, onComplete, userId }: Props) {
               userId={userId}
               onSolved={() => {
                 setSolved(true);
+                setSolveTimeSeconds(startTime ? Math.round((Date.now() - startTime) / 1000) : 0);
                 // Small delay for the confetti to play
                 setTimeout(() => setPhase("result"), 2000);
               }}
@@ -137,11 +139,7 @@ export default function PlanReviewStep({ step, onComplete, userId }: Props) {
               <h3 className="text-xl font-bold text-white">Still got it!</h3>
               <p className="text-sm text-white/30">
                 Solved in{" "}
-                {formatTime(
-                  startTime
-                    ? Math.round((Date.now() - startTime) / 1000)
-                    : 0
-                )}
+                {formatTime(solveTimeSeconds)}
                 . This problem is now locked into your long-term memory.
               </p>
             </>

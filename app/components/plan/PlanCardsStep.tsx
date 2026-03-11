@@ -27,7 +27,7 @@ export default function PlanCardsStep({ step, onComplete }: Props) {
   const [flipped, setFlipped] = useState(false);
   const [reviewed, setReviewed] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [startTime] = useState(Date.now());
+  const [startTime] = useState(() => Date.now());
 
   useEffect(() => {
     fetch("/api/cards/daily")

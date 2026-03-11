@@ -48,7 +48,7 @@ export async function GET(
 
     // Fetch user progress for this lesson if authenticated
     let progress = null;
-    let problemStatuses: Record<string, { solved: boolean; attempts: number }> = {};
+    const problemStatuses: Record<string, { solved: boolean; attempts: number }> = {};
 
     if (userId) {
       progress = await prisma.progress.findUnique({

@@ -54,7 +54,7 @@ export default async function LessonPage({ params }: Props) {
 
   // Fetch submission status for connected problems
   const problemIds = lesson.problems.map((lp) => lp.problem.id);
-  let problemStatuses: Record<string, { solved: boolean; attempts: number }> = {};
+  const problemStatuses: Record<string, { solved: boolean; attempts: number }> = {};
   if (problemIds.length > 0) {
     const submissions = await prisma.submission.findMany({
       where: {

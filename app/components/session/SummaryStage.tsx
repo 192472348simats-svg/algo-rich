@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import type { SummaryConfig, SessionDefinition } from "@/lib/sessionDefinitions";
@@ -20,9 +20,10 @@ export default function SummaryStage({
   definition,
   sessionStartTime,
 }: Props) {
+  const [sessionEndTime] = useState(() => Date.now());
   const stats = useMemo(() => {
     const totalTimeMinutes = Math.round(
-      (Date.now() - sessionStartTime) / 60000
+      (sessionEndTime - sessionStartTime) / 60000
     );
     let totalXP = 0;
     let predictScore = 0;
@@ -65,7 +66,7 @@ export default function SummaryStage({
       reflectTotal,
       codeTimeMinutes: Math.round(codeTimeSpent / 60),
     };
-  }, [stageResults, definition, sessionStartTime]);
+  }, [stageResults, definition, sessionStartTime, sessionEndTime]);
 
   const statItems = [
     {

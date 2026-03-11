@@ -42,7 +42,7 @@ export default function RetrievalQuiz({
   const [results, setResults] = useState<
     { correct: boolean; timeSpent: number }[]
   >([]);
-  const [questionStartTime, setQuestionStartTime] = useState(Date.now());
+  const [questionStartTime, setQuestionStartTime] = useState(() => Date.now());
   const [timeLeft, setTimeLeft] = useState(timeLimit);
   const [isCompleted, setIsCompleted] = useState(false);
 

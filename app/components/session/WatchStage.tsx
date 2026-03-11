@@ -375,17 +375,21 @@ function MachineAnimationVisualizer({ steps, onComplete }: { steps: MachineAnima
   );
 }
 
-// ─── Main Dispatcher ─────────────────────────────────────────────────────────
+// ─── BeginnerHeader ──────────────────────────────────────────────────────────
 
-export default function WatchStage({ config, onComplete }: Props) {
-  const { visualizerType, steps } = config;
-
-  const BeginnerHeader = () => (
+function BeginnerHeader() {
+  return (
     <div className="text-center">
       <p className="text-xs uppercase tracking-widest text-white/20 mb-1">Watch &amp; Observe</p>
       <p className="text-sm text-white/40">Follow along step by step</p>
     </div>
   );
+}
+
+// ─── Main Dispatcher ─────────────────────────────────────────────────────────
+
+export default function WatchStage({ config, onComplete }: Props) {
+  const { visualizerType, steps } = config;
 
   switch (visualizerType) {
     case "text-flow":

@@ -43,6 +43,22 @@ export default function SpacedRepetitionDeck({
   const currentCard = cards[currentIndex];
   const isComplete = currentIndex >= cards.length;
 
+  const handleReview = useCallback(
+    (quality: Quality) => {
+      if (!currentCard) return;
+      onReview(currentCard.id, quality);
+      setSessionResults((prev) => [...prev, { quality }]);
+      setReviewedCount((prev) => prev + 1);
+      setIsFlipped(false);
+
+      // Small delay before next card
+      setTimeout(() => {
+        setCurrentIndex((prev) => prev + 1);
+      }, 200);
+    },
+    [currentCard, onReview]
+  );
+
   // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -65,23 +81,7 @@ export default function SpacedRepetitionDeck({
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isFlipped, currentIndex]);
-
-  const handleReview = useCallback(
-    (quality: Quality) => {
-      if (!currentCard) return;
-      onReview(currentCard.id, quality);
-      setSessionResults((prev) => [...prev, { quality }]);
-      setReviewedCount((prev) => prev + 1);
-      setIsFlipped(false);
-
-      // Small delay before next card
-      setTimeout(() => {
-        setCurrentIndex((prev) => prev + 1);
-      }, 200);
-    },
-    [currentCard, onReview]
-  );
+  }, [isFlipped, currentIndex, handleReview]);
 
   const deckIcon = useMemo(() => {
     switch (deckType) {

@@ -88,7 +88,7 @@ export default function GuidedMode({
     if (nextStep.type === "auto-play" || nextStep.type === "observe") {
       executeAction(nextStep);
     }
-  }, [activeWalkthrough, stepIndex, executeAction]);
+  }, [activeWalkthrough, stepIndex, executeAction, setActiveWalkthrough, setStepIndex, setSelectedOption, setShowResult, setInputValue, setExperimentResult]);
 
   const startWalkthrough = useCallback(
     (slug: string) => {
@@ -104,7 +104,7 @@ export default function GuidedMode({
         executeAction(firstStep);
       }
     },
-    [executeAction]
+    [executeAction, setActiveWalkthrough, setStepIndex, setSelectedOption, setShowResult]
   );
 
   const handleOptionSelect = useCallback(

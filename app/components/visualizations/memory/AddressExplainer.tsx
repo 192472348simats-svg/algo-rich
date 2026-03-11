@@ -1,7 +1,7 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback } from "react";
 import MemoryCell from "./MemoryCell";
 
 interface AddressExplainerProps {
@@ -56,13 +56,12 @@ export default function AddressExplainer({
   const [selectedCell, setSelectedCell] = useState<number | null>(null);
   const [jumpAddress, setJumpAddress] = useState("");
 
-  const cells = useMemo(
-    () =>
-      Array.from({ length: totalCells }, (_, i) => ({
-        address: baseAddress + i,
-        value: Math.floor(Math.random() * 256),
-      })),
-    [totalCells, baseAddress]
+  // Generate stable random cell values once on mount
+  const [cells] = useState(() =>
+    Array.from({ length: totalCells }, (_, i) => ({
+      address: baseAddress + i,
+      value: Math.floor(Math.random() * 256),
+    }))
   );
 
   const handleJump = useCallback(() => {
@@ -131,7 +130,7 @@ export default function AddressExplainer({
               highlightAddress === cell.address;
 
             // Step-dependent display
-            let showAs: "decimal" | "hex" | "binary" =
+            const showAs: "decimal" | "hex" | "binary" =
               currentStep >= 2 ? "hex" : "decimal";
 
             // Step 3: show pointer value

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useCallback } from "react";
+import { useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
 interface Problem {
@@ -41,8 +41,8 @@ export default function InterleavingSession({
   const [isStarted, setIsStarted] = useState(false);
   const [isCompleted, setIsCompleted] = useState(false);
 
-  // Shuffle problems so same patterns don't appear consecutively
-  const shuffledProblems = useMemo(() => {
+  // Shuffle problems once on mount so same patterns don't appear consecutively
+  const [shuffledProblems] = useState(() => {
     const shuffled = [...problems];
     for (let i = shuffled.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
@@ -61,7 +61,7 @@ export default function InterleavingSession({
       }
     }
     return shuffled;
-  }, [problems]);
+  });
 
   const currentProblem = shuffledProblems[currentIndex];
   const isCorrect = selectedPattern === currentProblem?.pattern;
