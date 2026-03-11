@@ -1,14 +1,14 @@
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "mongodb"
   url      = env("DATABASE_URL")
 }
 
 model User {
-  id                   String              @id @default(cuid())
+  id                   String              @id @default(cuid()) @map("_id")
   name                 String
   email                String              @unique
   password             String
@@ -46,7 +46,7 @@ model User {
 }
 
 model Problem {
-  id                  String   @id @default(cuid())
+  id                  String   @id @default(cuid()) @map("_id")
   slug                String   @unique
   title               String
   difficulty          String   // "easy" | "medium" | "hard"
@@ -109,7 +109,7 @@ model Problem {
 }
 
 model Submission {
-  id            String   @id @default(cuid())
+  id            String   @id @default(cuid()) @map("_id")
 
   userId        String
   problemId     String
@@ -135,7 +135,7 @@ model Submission {
 }
 
 model Course {
-  id          String   @id @default(cuid())
+  id          String   @id @default(cuid()) @map("_id")
   slug        String   @unique
   title       String
   description String
@@ -149,7 +149,7 @@ model Course {
 }
 
 model Lesson {
-  id            String     @id @default(cuid())
+  id            String     @id @default(cuid()) @map("_id")
   slug          String     @unique
   courseId       String
   course         Course     @relation(fields: [courseId], references: [id])
@@ -164,7 +164,7 @@ model Lesson {
 }
 
 model Progress {
-  id          String    @id @default(cuid())
+  id          String    @id @default(cuid()) @map("_id")
   userId      String
   user        User      @relation(fields: [userId], references: [id])
   lessonId    String
@@ -178,7 +178,7 @@ model Progress {
 }
 
 model LessonProblem {
-  id        String  @id @default(cuid())
+  id        String  @id @default(cuid()) @map("_id")
   lessonId  String
   problemId String
   order     Int     @default(0) // ordering within the lesson
@@ -191,7 +191,7 @@ model LessonProblem {
 }
 
 model Pattern {
-  id              String   @id @default(cuid())
+  id              String   @id @default(cuid()) @map("_id")
   slug            String   @unique
   name            String
   description     String
@@ -211,7 +211,7 @@ model Pattern {
 }
 
 model PatternProgress {
-  id                    String   @id @default(cuid())
+  id                    String   @id @default(cuid()) @map("_id")
   userId                String
   user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   patternSlug           String
@@ -236,7 +236,7 @@ model PatternProgress {
 }
 
 model FlashCard {
-  id          String   @id @default(cuid())
+  id          String   @id @default(cuid()) @map("_id")
   userId      String
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   type        String   // "pattern" | "complexity" | "concept" | "memory"
@@ -253,7 +253,7 @@ model FlashCard {
 }
 
 model QuizResult {
-  id         String   @id @default(cuid())
+  id         String   @id @default(cuid()) @map("_id")
   userId     String
   user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   quizType   String   // "pattern_recognition" | "complexity" | "memory" | "debug"
@@ -267,7 +267,7 @@ model QuizResult {
 
 
 model UserPreferences {
-  id              String   @id @default(cuid())
+  id              String   @id @default(cuid()) @map("_id")
   userId          String   @unique
   user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   experienceLevel String   // "beginner" | "intermediate" | "interview_prep"
@@ -279,7 +279,7 @@ model UserPreferences {
 }
 
 model Feedback {
-  id        String   @id @default(cuid())
+  id        String   @id @default(cuid()) @map("_id")
   userId    String?
   user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
   type      String   // "bug" | "feature" | "general" | "content"
@@ -289,7 +289,7 @@ model Feedback {
 }
 
 model PredictionCard {
-  id            String       @id @default(cuid())
+  id            String       @id @default(cuid()) @map("_id")
   challengeId   String?      @unique // matches TreeChallenge.id (optional for non-tree cards)
   type          String       // "predict-output" | "insert-parent" | "traversal-order" | etc.
   topic         String?      // "arrays" | "trees" | "linked-lists" | etc.
@@ -306,7 +306,7 @@ model PredictionCard {
 }
 
 model CardReview {
-  id              String         @id @default(cuid())
+  id              String         @id @default(cuid()) @map("_id")
   userId          String
   user            User           @relation(fields: [userId], references: [id], onDelete: Cascade)
   cardId          String
@@ -322,7 +322,7 @@ model CardReview {
 }
 
 model SessionProgress {
-  id                String    @id @default(cuid())
+  id                String    @id @default(cuid()) @map("_id")
   userId            String
   sessionSlug       String
   currentStageIndex Int       @default(0)
@@ -339,7 +339,7 @@ model SessionProgress {
 }
 
 model ProblemReview {
-  id            String   @id @default(cuid())
+  id            String   @id @default(cuid()) @map("_id")
   userId        String
   problemId     String
 
@@ -364,7 +364,7 @@ model ProblemReview {
 }
 
 model Reflection {
-  id                  String   @id @default(cuid())
+  id                  String   @id @default(cuid()) @map("_id")
   userId              String
   problemId           String
   submissionId        String?
