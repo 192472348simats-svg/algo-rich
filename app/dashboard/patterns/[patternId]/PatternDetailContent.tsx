@@ -92,20 +92,19 @@ export default function PatternDetailContent({
   userId,
 }: PatternDetailContentProps) {
   const [activeTab, setActiveTab] = useState<Tab>("overview");
-  const [practiceProblems, setPracticeProblems] = useState<PracticeProblem[]>([]);
-  const [loadingProblems, setLoadingProblems] = useState(false);
+  // null means loading, [] means loaded with no results
+  const [practiceProblems, setPracticeProblems] = useState<PracticeProblem[] | null>(null);
+  const loadingProblems = practiceProblems === null;
 
   // Load practice problems for this pattern
   useEffect(() => {
-    setLoadingProblems(true);
     fetch(`/api/problems?pattern=${pattern.id}`)
       .then((r) => (r.ok ? r.json() : []))
       .then((data) => {
         const problems = Array.isArray(data) ? data : data.problems ?? [];
         setPracticeProblems(problems);
       })
-      .catch(() => {})
-      .finally(() => setLoadingProblems(false));
+      .catch(() => setPracticeProblems([]));
   }, [pattern.id]);
 
   const tabs: { key: Tab; label: string; done: boolean }[] = [
@@ -391,9 +390,9 @@ export default function PatternDetailContent({
               </div>
               {loadingProblems ? (
                 <p className="text-sm text-white/30 text-center py-8">Loading problems...</p>
-              ) : practiceProblems.length > 0 ? (
+              ) : (practiceProblems?.length ?? 0) > 0 ? (
                 <div className="space-y-2">
-                  {practiceProblems.map((prob) => (
+                  {(practiceProblems ?? []).map((prob) => (
                     <Link
                       key={prob.id}
                       href={`/dashboard/practice/${prob.slug}`}
@@ -415,7 +414,7 @@ export default function PatternDetailContent({
                     </Link>
                   ))}
                   <p className="text-xs text-white/20 text-center mt-3">
-                    {practiceProblems.filter(p => p.solved).length}/{practiceProblems.length} solved
+                    {(practiceProblems ?? []).filter(p => p.solved).length}/{practiceProblems?.length ?? 0} solved
                   </p>
                 </div>
               ) : (

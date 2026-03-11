@@ -106,12 +106,13 @@ function MultiCardLearn({ config, onComplete }: Props) {
 }
 
 export default function LearnStage({ config, onComplete }: Props) {
+  // Always call hooks unconditionally (React rules of hooks)
+  const [scrolledToBottom, setScrolledToBottom] = useState(false);
+
   // Route to multi-card format if Phase 1 cards are present
   if (config.cards && config.cards.length > 0) {
     return <MultiCardLearn config={config} onComplete={onComplete} />;
   }
-
-  const [scrolledToBottom, setScrolledToBottom] = useState(false);
 
   function handleScroll(e: React.UIEvent<HTMLDivElement>) {
     const el = e.currentTarget;

@@ -164,8 +164,9 @@ export default function TreePlayground() {
   useEffect(() => {
     if (!playing) return;
     if (state.currentStep >= state.animationQueue.length - 1) {
-      setPlaying(false);
-      return;
+      // Defer to avoid setState in effect body triggering cascading renders
+      const t = setTimeout(() => setPlaying(false), 0);
+      return () => clearTimeout(t);
     }
     playTimerRef.current = setTimeout(() => {
       dispatch({ type: "STEP_FORWARD" });

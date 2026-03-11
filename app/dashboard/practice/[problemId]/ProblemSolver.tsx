@@ -97,15 +97,16 @@ export default function ProblemSolver({ problem, isSolved, userId, relatedLesson
   const [submitting, setSubmitting] = useState(false);
   const [solved, setSolved] = useState(isSolved);
   const [showReflection, setShowReflection] = useState(false);
-  const solveStartTime = useRef<number>(Date.now());
-
+  const [solveTimeSeconds, setSolveTimeSeconds] = useState(0);
+  const solveStartTime = useRef<number>(0);
+  const problemOpenedAt = useRef<number>(0);
+  useEffect(() => { solveStartTime.current = Date.now(); problemOpenedAt.current = Date.now(); }, []);
   // Failure feedback state
   const [failureAnalysis, setFailureAnalysis] = useState<FailureAnalysis | null>(null);
   const [attemptCount, setAttemptCount] = useState(0);
   const [showStuckHelper, setShowStuckHelper] = useState(false);
   const [hintLevel, setHintLevel] = useState(0);
   const [stuckMinutes, setStuckMinutes] = useState(0);
-  const problemOpenedAt = useRef<number>(Date.now());
 
   // XP & pattern discovery state
   const [xpEarned, setXpEarned] = useState<number | null>(null);
@@ -277,7 +278,10 @@ export default function ProblemSolver({ problem, isSolved, userId, relatedLesson
           setPatternDiscovery(subData.stats.patternDiscovery);
         }
         // Show reflection after a brief delay
-        setTimeout(() => setShowReflection(true), 2000);
+        setTimeout(() => {
+          setSolveTimeSeconds(Math.round((Date.now() - solveStartTime.current) / 1000));
+          setShowReflection(true);
+        }, 2000);
       } else if (execResult.testResults) {
         // Run failure analysis
         const analysis = analyzeFailure(
@@ -326,7 +330,7 @@ export default function ProblemSolver({ problem, isSolved, userId, relatedLesson
     }
 
     setSubmitting(false);
-  }, [code, pyStatus, runCode, problem, submitting, onSolved]);
+  }, [code, pyStatus, runCode, problem, submitting, expectedFuncName, onSolved, setSubmitting, setActiveOutputTab, setFailureAnalysis, setResult, setAttemptCount, setSolved, setShowStuckHelper, setXpEarned, setPatternDiscovery, setSolveTimeSeconds, setShowReflection]);
 
   // Reset code
   const handleReset = useCallback(() => {
@@ -722,7 +726,7 @@ export default function ProblemSolver({ problem, isSolved, userId, relatedLesson
               {showReflection && (
                 <PostSolveReflection
                   problemId={problem.id}
-                  solveTimeSeconds={Math.round((Date.now() - solveStartTime.current) / 1000)}
+                  solveTimeSeconds={solveTimeSeconds}
                   onComplete={() => setShowReflection(false)}
                   onSkip={() => setShowReflection(false)}
                 />

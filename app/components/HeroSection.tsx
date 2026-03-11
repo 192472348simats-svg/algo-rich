@@ -157,7 +157,7 @@ const HeroSection = () => {
                     {"\n"}
                     <span className="text-white/40">        </span>
                     <span className="text-white/80">mid = (lo + hi) </span>
-                    <span className="text-[#c678dd]">//</span>
+                    <span className="text-[#c678dd]">{"//"}</span>
                     <span className="text-white/80"> </span>
                     <span className="text-[#d19a66]">2</span>
                     {"\n\n"}

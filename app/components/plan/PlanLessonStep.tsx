@@ -27,7 +27,7 @@ export default function PlanLessonStep({ step, onComplete }: Props) {
   const data = step.data as LessonData;
   const [lesson, setLesson] = useState<LessonResponse | null>(null);
   const [loading, setLoading] = useState(true);
-  const [startTime] = useState(Date.now());
+  const [startTime] = useState(() => Date.now());
 
   useEffect(() => {
     fetch(`/api/lessons/${data.lessonId}`)

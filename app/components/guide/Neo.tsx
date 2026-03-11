@@ -27,8 +27,8 @@ export default function Neo() {
 
   // Refresh tip when path changes
   useEffect(() => {
-    refreshTip();
-  }, [refreshTip]);
+    setTip(getNeoTip(pathname).text);
+  }, [pathname]);
 
   // Auto-show tip after a delay, but only if not permanently hidden
   useEffect(() => {

@@ -51,7 +51,8 @@ export default function CodeStage({ config, onComplete }: Props) {
   const [showApproach, setShowApproach] = useState(false);
   const [hintText, setHintText] = useState<string | null>(null);
   const [result, setResult] = useState<ExecutionResult | null>(null);
-  const startTimeRef = useRef(Date.now());
+  const startTimeRef = useRef(0);
+  useEffect(() => { startTimeRef.current = Date.now(); }, []);
 
   const { status: pyStatus, runCode } = usePyodide();
 
@@ -111,6 +112,15 @@ export default function CodeStage({ config, onComplete }: Props) {
     };
   }, [config.hintAfterMinutes, config.approachAfterMinutes]);
 
+  const handleSolved = useCallback(() => {
+    const timeSpent = Math.round(
+      (Date.now() - startTimeRef.current) / 1000
+    );
+    const xp = timeSpent < 300 ? 50 : timeSpent < 600 ? 35 : 20;
+    setSolved(true);
+    setTimeout(() => onComplete({ score: xp, timeSpent }), 2000);
+  }, [onComplete]);
+
   const handleRunTests = useCallback(async () => {
     if (!problem || pyStatus !== "ready") return;
     setResult(null);
@@ -130,16 +140,7 @@ export default function CodeStage({ config, onComplete }: Props) {
     if (allPassed) {
       handleSolved();
     }
-  }, [problem, pyStatus, code, runCode]);
-
-  function handleSolved() {
-    const timeSpent = Math.round(
-      (Date.now() - startTimeRef.current) / 1000
-    );
-    const xp = timeSpent < 300 ? 50 : timeSpent < 600 ? 35 : 20;
-    setSolved(true);
-    setTimeout(() => onComplete({ score: xp, timeSpent }), 2000);
-  }
+  }, [problem, pyStatus, code, runCode, handleSolved]);
 
   function handleGiveUp() {
     onComplete({

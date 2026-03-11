@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { patterns, type Pattern } from "@/lib/patterns/patternDefinitions";
 
@@ -22,12 +22,13 @@ export default function PatternRecognition({
   const [selectedPattern, setSelectedPattern] = useState<string | null>(null);
   const [showResult, setShowResult] = useState(false);
   const [hintIndex, setHintIndex] = useState(-1);
-  const [startTime] = useState(Date.now());
+  const [startTime] = useState(() => Date.now());
 
   const correctPattern = patterns.find((p) => p.id === correctPatternId);
   const isCorrect = selectedPattern === correctPatternId;
 
-  const shuffledPatterns = useMemo(() => {
+  // Shuffle answer options once on mount
+  const [shuffledPatterns] = useState(() => {
     // Show 4 patterns including the correct one
     const others = patterns
       .filter((p) => p.id !== correctPatternId)
@@ -35,7 +36,7 @@ export default function PatternRecognition({
       .slice(0, 3);
     const options = [correctPattern!, ...others].sort(() => Math.random() - 0.5);
     return options;
-  }, [correctPatternId, correctPattern]);
+  });
 
   const handleSelect = useCallback(
     (patternId: string) => {

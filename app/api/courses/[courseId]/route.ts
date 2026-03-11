@@ -33,7 +33,7 @@ export async function GET(
     }
 
     // Fetch user progress for all lessons if authenticated
-    let progressMap: Record<
+    const progressMap: Record<
       string,
       { completed: boolean; masteryLevel: string }
     > = {};

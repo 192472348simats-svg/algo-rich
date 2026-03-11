@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useCallback, useRef } from "react";
+import { useState, useMemo, useCallback, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   buildTree,
@@ -65,7 +65,8 @@ export default function CardDeck({ cards, onComplete }: CardDeckProps) {
   const [finished, setFinished] = useState(false);
   const [cardsForTomorrow, setCardsForTomorrow] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
-  const startTimeRef = useRef(Date.now());
+  const startTimeRef = useRef(0);
+  useEffect(() => { startTimeRef.current = Date.now(); }, []);
 
   const card = cards[currentIdx];
   const total = cards.length;
@@ -89,7 +90,7 @@ export default function CardDeck({ cards, onComplete }: CardDeckProps) {
     }
     walk(tree);
     return { nodes: allNodes, edges: edgeList };
-  }, [card]);
+  }, [card, isTreeCard]);
 
   /* ── Hint text ───────────────────────────── */
   const hintText = useMemo(() => {
