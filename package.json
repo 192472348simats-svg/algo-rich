@@ -13,7 +13,8 @@
     "seed:problems-v2": "node prisma/seed-problems-v2.js",
     "seed:ds": "node prisma/seed-ds.js",
     "seed:all": "ts-node --compiler-options {\"module\":\"CommonJS\"} prisma/seed-runner.ts",
-    "seed-phases-3-5": "ts-node --compiler-options {\"module\":\"CommonJS\"} prisma/seed-phases-3-5.ts"
+    "seed-phases-3-5": "ts-node --compiler-options {\"module\":\"CommonJS\"} prisma/seed-phases-3-5.ts",
+    "seed:master": "npx tsx prisma/seed-master.ts"
   },
   "dependencies": {
     "@monaco-editor/react": "^4.7.0",
