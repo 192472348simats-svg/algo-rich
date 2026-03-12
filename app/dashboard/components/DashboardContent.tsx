@@ -1250,10 +1250,10 @@ function ProblemOfTheDay() {
       </div>
       <div className="flex items-center gap-2 mb-3">
         <span className="text-sm font-medium text-white">{data.problem?.title ?? "Untitled"}</span>
-        <span className={`text-[10px] px-2 py-0.5 rounded-full capitalize ${diffColor[data.problem.difficulty] ?? "text-white/40 bg-white/10"}`}>
-          {data.problem.difficulty}
+        <span className={`text-[10px] px-2 py-0.5 rounded-full capitalize ${diffColor[data.problem?.difficulty ?? ""] ?? "text-white/40 bg-white/10"}`}>
+          {data.problem?.difficulty ?? ""}
         </span>
-        {data.problem.pattern && (
+        {data.problem?.pattern && (
           <span className="text-[10px] text-white/30 bg-white/5 px-2 py-0.5 rounded-full">
             {data.problem.pattern}
           </span>
@@ -1262,7 +1262,7 @@ function ProblemOfTheDay() {
       {data.solvedToday ? (
         <p className="text-xs text-emerald-400">✅ You solved today&apos;s problem!</p>
       ) : (
-        <Link href={`/dashboard/practice/${data.problem.slug}`}>
+        <Link href={`/dashboard/practice/${data.problem?.slug ?? ""}`}>
           <div className="rounded-lg bg-primary/10 border border-primary/20 py-2 text-center text-xs text-primary font-medium hover:bg-primary/20 transition-colors cursor-pointer">
             Solve Now →
           </div>

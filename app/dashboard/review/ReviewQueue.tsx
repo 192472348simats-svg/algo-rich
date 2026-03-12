@@ -251,17 +251,17 @@ export default function ReviewQueue({ userId }: { userId: string }) {
                 {/* Problem info */}
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-white truncate">
-                    {review.problem.title}
+                    {review.problem?.title ?? "Untitled"}
                   </p>
                   <div className="flex items-center gap-2 mt-1">
                     <span
                       className={`text-xs px-2 py-0.5 rounded-full ${difficultyColor(
-                        review.problem.difficulty
+                        review.problem?.difficulty ?? ""
                       )}`}
                     >
-                      {review.problem.difficulty}
+                      {review.problem?.difficulty ?? ""}
                     </span>
-                    {review.problem.pattern && (
+                    {review.problem?.pattern && (
                       <span className="text-xs text-white/20">
                         {review.problem.pattern}
                       </span>
