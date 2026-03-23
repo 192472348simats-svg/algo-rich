@@ -3,8 +3,9 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 model User {
@@ -61,7 +62,7 @@ model Problem {
   topics                 String?
   companies              String?
   companyTags            String?
-  company                String?         @default("")  // JSON array stored as string, e.g: "[\"Google\",\"Meta\"]"
+  company                String[]        @default([])
   description            String
   examples               String?
   constraints            String?

@@ -22,9 +22,9 @@ interface ProblemSeed {
 }
 
 const problems: ProblemSeed[] = [
-  // ═══════════════════════════════════════════════════════════
-  // PHASE 1 — WEEK 1: Arrays & Hashing (Problems 1-5)
-  // ═══════════════════════════════════════════════════════════
+  // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+  // PHASE 1 â€” WEEK 1: Arrays & Hashing (Problems 1-5)
+  // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
   {
     slug: "two-sum",
     title: "Two Sum",
@@ -137,9 +137,9 @@ print(contains_duplicate(nums))`,
   {
     slug: "valid-anagram",
     title: "Valid Anagram",
-    description: "Given two strings s and t, return true if t is an anagram of s and false otherwise. An anagram uses the exact same letters in any order.",
+    description: "Given two strings s and t, return True if t is an anagram of s, and False otherwise. An anagram is a word or phrase formed by rearranging the letters of a different word or phrase, typically using all the original letters exactly once.",
     difficulty: "easy",
-    pattern: "hash-map",
+    pattern: "sorting",
     category: "strings",
     phase: 1,
     weekNumber: 1,
@@ -294,9 +294,9 @@ print(max_subarray(nums))`,
     ]),
   },
 
-  // ═══════════════════════════════════════════════════════════
-  // PHASE 1 — WEEK 2: Arrays & Hashing (Problems 6-10)
-  // ═══════════════════════════════════════════════════════════
+  // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+  // PHASE 1 â€” WEEK 2: Arrays & Hashing (Problems 6-10)
+  // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
   {
     slug: "move-zeroes",
     title: "Move Zeroes",
@@ -464,7 +464,7 @@ print(length_of_longest_substring(s))`,
   {
     slug: "valid-parentheses",
     title: "Valid Parentheses",
-    description: "Given a string containing only the characters '(', ')', '{', '}', '[', ']', determine if the input string is valid. A string is valid if every opening bracket has a corresponding closing bracket in the correct order.",
+    description: "Given a string containing only the characters '(', ')', '{', '}', '[' and ']', determine if the input string is valid.",
     difficulty: "easy",
     pattern: "stack",
     category: "stacks",
@@ -517,7 +517,7 @@ print(is_valid(s))`,
   {
     slug: "group-anagrams",
     title: "Group Anagrams",
-    description: "Given an array of strings, group the anagrams together. Return a list of groups in any order. Strings in the same group are anagrams of each other.",
+    description: "Given an array of strings, group the anagrams together. You can return the answer in any order.",
     difficulty: "medium",
     pattern: "hash-map",
     category: "strings",
@@ -562,14 +562,14 @@ print(json.dumps(group_anagrams(strs)))`,
     ]),
     hints: JSON.stringify([
       "How can you create a canonical form for anagrams so they map to the same key?",
-      "Sort each word alphabetically — all anagrams will have the same sorted form. Use this as a dictionary key.",
+      "Sort each word alphabetically â€” all anagrams will have the same sorted form. Use this as a dictionary key.",
       "For each word: key = ''.join(sorted(word)). Group words by key in a dict. Return list(dict.values()).",
     ]),
   },
 
-  // ═══════════════════════════════════════════════════════════
-  // PHASE 2 — WEEK 3: Core Data Structures (Problems 11-15)
-  // ═══════════════════════════════════════════════════════════
+  // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+  // PHASE 2 â€” WEEK 3: Core Data Structures (Problems 11-15)
+  // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
   {
     slug: "reverse-linked-list",
     title: "Reverse Linked List",
@@ -843,9 +843,9 @@ print(search(data["nums"], data["target"]))`,
     ]),
   },
 
-  // ═══════════════════════════════════════════════════════════
-  // PHASE 2 — WEEK 4: Trees & More DS (Problems 16-20)
-  // ═══════════════════════════════════════════════════════════
+  // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+  // PHASE 2 â€” WEEK 4: Trees & More DS (Problems 16-20)
+  // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
   {
     slug: "maximum-depth-binary-tree",
     title: "Maximum Depth of Binary Tree",
@@ -1140,9 +1140,9 @@ print(num_islands(grid))`,
     ]),
   },
 
-  // ═══════════════════════════════════════════════════════════
-  // PHASE 3 — WEEK 5: Patterns (Problems 21-24)
-  // ═══════════════════════════════════════════════════════════
+  // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+  // PHASE 3 â€” WEEK 5: Patterns (Problems 21-24)
+  // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
   {
     slug: "3sum",
     title: "3Sum",
@@ -1152,7 +1152,7 @@ print(num_islands(grid))`,
     category: "arrays",
     phase: 3,
     weekNumber: 5,
-    timeComplexity: "O(n²)",
+    timeComplexity: "O(nÂ²)",
     spaceComplexity: "O(1)",
     correctPattern: "Two Pointers",
     starterCode: `def three_sum(nums: list) -> list:
@@ -1370,9 +1370,9 @@ print(climb_stairs(n))`,
     ]),
   },
 
-  // ═══════════════════════════════════════════════════════════
-  // PHASE 3 — WEEK 6: DP & Intervals (Problems 25-27)
-  // ═══════════════════════════════════════════════════════════
+  // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+  // PHASE 3 â€” WEEK 6: DP & Intervals (Problems 25-27)
+  // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
   {
     slug: "coin-change",
     title: "Coin Change",
@@ -1434,7 +1434,7 @@ print(coin_change(data["coins"], data["amount"]))`,
     category: "dynamic-programming",
     phase: 3,
     weekNumber: 6,
-    timeComplexity: "O(n²)",
+    timeComplexity: "O(nÂ²)",
     spaceComplexity: "O(n)",
     correctPattern: "Dynamic Programming",
     starterCode: `def length_of_lis(nums: list) -> int:
@@ -1532,9 +1532,9 @@ print(json.dumps(merge(intervals)))`,
     ]),
   },
 
-  // ═══════════════════════════════════════════════════════════
-  // PHASE 3 — WEEK 7: Heap & Backtracking (Problems 28-30)
-  // ═══════════════════════════════════════════════════════════
+  // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+  // PHASE 3 â€” WEEK 7: Heap & Backtracking (Problems 28-30)
+  // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
   {
     slug: "kth-largest-element",
     title: "Kth Largest Element in Array",
@@ -1695,9 +1695,9 @@ print(json.dumps(generate_parenthesis(n)))`,
     ]),
   },
 
-  // ═══════════════════════════════════════════════════════════
-  // PHASE 4 — WEEK 8: Backtracking (Problems 31-33)
-  // ═══════════════════════════════════════════════════════════
+  // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+  // PHASE 4 â€” WEEK 8: Backtracking (Problems 31-33)
+  // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
   {
     slug: "word-search",
     title: "Word Search",
@@ -1809,7 +1809,7 @@ print(json.dumps(subsets(nums)))`,
     hints: JSON.stringify([
       "At each element, you have two choices: include it or skip it. How does this build all subsets?",
       "Backtracking: at each index, add current element, recurse, then remove (backtrack). Start from index to avoid duplicates.",
-      "backtrack(start, current): add current[:] to result. For i from start to end: append nums[i], backtrack(i+1, current), pop().",
+      "backtrack(start, current): add current[:] to result. For i from start to end: append nums[i], backtrack(current, remaining without i), pop().",
     ]),
   },
   {
@@ -1868,9 +1868,9 @@ print(json.dumps(permute(nums)))`,
     ]),
   },
 
-  // ═══════════════════════════════════════════════════════════
-  // PHASE 4 — WEEK 9: Graphs & Trees (Problems 34-37)
-  // ═══════════════════════════════════════════════════════════
+  // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+  // PHASE 4 â€” WEEK 9: Graphs & Trees (Problems 34-37)
+  // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
   {
     slug: "course-schedule",
     title: "Course Schedule",
@@ -2054,7 +2054,7 @@ print(lca_bst(data["tree"], data["p"], data["q"]))`,
   {
     slug: "binary-tree-level-order",
     title: "Binary Tree Level Order Traversal",
-    description: "Given a binary tree represented as an array, return its level order traversal as a list of lists — each inner list contains the values at that level.",
+    description: "Given a binary tree represented as an array, return its level order traversal as a list of lists â€” each inner list contains the values at that level.",
     difficulty: "medium",
     pattern: "bfs",
     category: "trees",
@@ -2117,9 +2117,9 @@ print(json.dumps(level_order(tree)))`,
     ]),
   },
 
-  // ═══════════════════════════════════════════════════════════
-  // PHASE 4 — WEEK 10: Advanced (Problems 38-40)
-  // ═══════════════════════════════════════════════════════════
+  // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+  // PHASE 4 â€” WEEK 10: Advanced (Problems 38-40)
+  // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
   {
     slug: "design-add-search-words",
     title: "Design Add and Search Words Data Structure",
@@ -2320,9 +2320,9 @@ print(json.dumps(serialize_deserialize(tree)))`,
     ]),
   },
 
-  // ═══════════════════════════════════════════════════════════
-  // PHASE 5 — WEEK 11: Interview Hard (Problems 41-44)
-  // ═══════════════════════════════════════════════════════════
+  // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+  // PHASE 5 â€” WEEK 11: Interview Hard (Problems 41-44)
+  // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
   {
     slug: "trapping-rain-water",
     title: "Trapping Rain Water",
@@ -2401,7 +2401,7 @@ print(trap(height))`,
     
     Example:
         longest_consecutive([100,4,200,1,3,2]) -> 4
-        longest_consecutive([0,3,7,2,5,8,4,6,0,1]) -> 9
+        longest_consecutive([0,1,0,3,2,3]) -> 4
     """
     pass
 
@@ -2426,12 +2426,12 @@ nums = json.loads(input())
 print(longest_consecutive(nums))`,
     testCases: JSON.stringify([
       { input: "[100,4,200,1,3,2]", expected: "4" },
-      { input: "[0,3,7,2,5,8,4,6,0,1]", expected: "9" },
-      { input: "[1,2,0,1]", expected: "3" },
+      { input: "[0,1,0,3,2,3]", expected: "4" },
+      { input: "[7,7,7,7,7]", expected: "1" },
     ]),
     hiddenTestCases: JSON.stringify([
-      { input: "[]", expected: "0" },
       { input: "[1]", expected: "1" },
+      { input: "[1,2,3,4,5]", expected: "5" },
     ]),
     hints: JSON.stringify([
       "Sorting would give O(n log n). Can you do better with a set?",
@@ -2448,7 +2448,7 @@ print(longest_consecutive(nums))`,
     category: "graphs",
     phase: 5,
     weekNumber: 11,
-    timeComplexity: "O(n * m²)",
+    timeComplexity: "O(n * mÂ²)",
     spaceComplexity: "O(n * m)",
     correctPattern: "BFS",
     starterCode: `def ladder_length(beginWord: str, endWord: str, wordList: list) -> int:
@@ -2575,9 +2575,9 @@ print(alien_order(words))`,
     ]),
   },
 
-  // ═══════════════════════════════════════════════════════════
-  // PHASE 5 — WEEK 12: Interview Hard (Problems 45-50)
-  // ═══════════════════════════════════════════════════════════
+  // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+  // PHASE 5 â€” WEEK 12: Interview Hard (Problems 45-50)
+  // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
   {
     slug: "maximum-product-subarray",
     title: "Maximum Product Subarray",
@@ -2699,8 +2699,8 @@ print(min_distance(data["word1"], data["word2"]))`,
     category: "dynamic-programming",
     phase: 5,
     weekNumber: 12,
-    timeComplexity: "O(n³)",
-    spaceComplexity: "O(n²)",
+    timeComplexity: "O(nÂ³)",
+    spaceComplexity: "O(nÂ²)",
     correctPattern: "Dynamic Programming",
     starterCode: `def max_coins(nums: list) -> int:
     """
@@ -2739,7 +2739,7 @@ print(max_coins(nums))`,
     ]),
     hiddenTestCases: JSON.stringify([
       { input: "[9,76,64,21]", expected: "116718" },
-      { input: "[5,5,5]", expected: "175" },
+      { input: "[5,1,3]", expected: "175" },
     ]),
     hints: JSON.stringify([
       "Think about which balloon to burst LAST in a range, not first. This makes the subproblems independent.",
@@ -2934,62 +2934,62 @@ print(json.dumps(lru_cache_ops(data["capacity"], data["operations"])))`,
 ];
 
 export async function seedProblems() {
-  console.log("🧩 Seeding 50 problems...\n");
+  console.log(`ðŸ§© Seeding 50 problems...`);
 
-  let created = 0;
-  for (const problem of problems) {
+  let createdCount = 0;
+  for (const p of problems) {
     try {
-      await prisma.problem.upsert({
-        where: { slug: problem.slug },
+      const problem = await prisma.problem.upsert({
+        where: { slug: p.slug },
         update: {
-          title: problem.title,
-          description: problem.description,
-          difficulty: problem.difficulty,
-          pattern: problem.pattern,
-          category: problem.category,
-          phase: problem.phase,
-          weekNumber: problem.weekNumber,
-          timeComplexity: problem.timeComplexity,
-          spaceComplexity: problem.spaceComplexity,
-          correctPattern: problem.correctPattern,
-          starterCode: problem.starterCode,
-          solutionCode: problem.solutionCode,
-          testCases: problem.testCases,
-          hiddenTestCases: problem.hiddenTestCases,
-          hints: problem.hints,
+          title: p.title,
+          description: p.description,
+          difficulty: p.difficulty,
+          pattern: p.pattern,
+          category: p.category,
+          phase: p.phase,
+          weekNumber: p.weekNumber,
+          timeComplexity: p.timeComplexity,
+          spaceComplexity: p.spaceComplexity,
+          correctPattern: p.correctPattern,
+          starterCode: p.starterCode,
+          solutionCode: p.solutionCode,
+          testCases: p.testCases,
+          hiddenTestCases: p.hiddenTestCases,
+          hints: p.hints,
         },
         create: {
-          slug: problem.slug,
-          title: problem.title,
-          description: problem.description,
-          difficulty: problem.difficulty,
-          pattern: problem.pattern,
-          category: problem.category,
-          phase: problem.phase,
-          weekNumber: problem.weekNumber,
-          timeComplexity: problem.timeComplexity,
-          spaceComplexity: problem.spaceComplexity,
-          correctPattern: problem.correctPattern,
-          starterCode: problem.starterCode,
-          solutionCode: problem.solutionCode,
-          testCases: problem.testCases,
-          hiddenTestCases: problem.hiddenTestCases,
-          hints: problem.hints,
+          slug: p.slug,
+          title: p.title,
+          description: p.description,
+          difficulty: p.difficulty,
+          pattern: p.pattern,
+          category: p.category,
+          phase: p.phase,
+          weekNumber: p.weekNumber,
+          timeComplexity: p.timeComplexity,
+          spaceComplexity: p.spaceComplexity,
+          correctPattern: p.correctPattern,
+          starterCode: p.starterCode,
+          solutionCode: p.solutionCode,
+          testCases: p.testCases,
+          hiddenTestCases: p.hiddenTestCases,
+          hints: p.hints,
         },
       });
-      created++;
-      console.log(`  ✓ ${problem.title} (${problem.difficulty}) [P${problem.phase}W${problem.weekNumber}]`);
+      console.log(`âœ… Upserted problem: ${problem.title}`);
     } catch (e) {
-      console.log(`  ⚠ Skipped ${problem.slug}: ${(e as Error).message?.slice(0, 80)}`);
+      console.warn(`  âš  Skipped ${p.slug}: `);
+      console.error(e);
     }
   }
-
-  console.log(`\n✅ Seeded ${created}/${problems.length} problems`);
-  console.log(`   Total problems in DB: ${await prisma.problem.count()}`);
+  const totalProblems = await prisma.problem.count();
+  console.log(`\n  âœ… Seeded ${createdCount}/${problems.length} problems`);
+  console.log(`     Total problems in DB: ${totalProblems}`);
 }
 
 if (require.main === module || process.argv[1]?.includes('seed-problems-complete')) {
   seedProblems()
-    .catch((e) => { console.error("❌ Seed failed:", e); process.exit(1); })
+    .catch((e) => { console.error("âŒ Seed failed:", e); process.exit(1); })
     .finally(() => prisma.$disconnect());
 }

@@ -1,0 +1,409 @@
+generator client {
+  provider        = "prisma-client-js"
+}
+
+datasource db {`r`n  provider  = "postgresql"`r`n  url       = env("DATABASE_URL")`r`n  directUrl = env("DIRECT_URL")`r`n}
+
+model User {
+  id                   String              @id @default(uuid())
+  name                 String
+  email                String              @unique
+  password             String
+  createdAt            DateTime            @default(now())
+  experienceLevel      String?
+  learningGoal         String?
+  onboardingCompleted  Boolean             @default(false)
+  dailyGoalMinutes     Int                 @default(20)
+  totalXP              Int                 @default(0)
+  firstLessonAt        DateTime?
+  firstSolveAt         DateTime?
+  firstVisualizerAt    DateTime?
+  firstPlanAt          DateTime?
+
+  // Phase tracking (Learning Roadmap)
+  currentPhase        Int       @default(1)   // 1=Python, 2=Logic, 3=DS, 4=Patterns, 5=Interview
+  currentWeek         Int       @default(1)
+  phaseStartedAt      DateTime?
+  phase1CompletedAt   DateTime?
+  phase2CompletedAt   DateTime?
+  phase3CompletedAt   DateTime?
+  phase4CompletedAt   DateTime?
+
+  // Streak mechanics
+  streakFreezes           Int       @default(0)       // Task 12: available freeze tokens
+  streakRepairAvailable   Boolean   @default(false)   // Task 13: one-time repair available
+  streakRepairedAt        DateTime?                   // Task 13: when last repaired
+
+  // Interview prep
+  targetInterviewDate     DateTime?                   // F1: target interview date
+  lastBossCompletedAt     DateTime?                   // F9: last boss challenge completion
+  bossProblemsWon         Int       @default(0)        // F9: total boss problems won
+
+  // Email verification
+  emailVerified       Boolean   @default(true)        // Task 15: true for legacy users; new signups start false
+  verificationToken   String?                          // Task 15: bcrypt-hashed OTP
+  verificationExpiry  DateTime?                        // Task 15: OTP expiry
+
+  progress             Progress[]
+  submissions          Submission[]
+  preferences          UserPreferences?
+  patternProgress      PatternProgress[]
+  flashCards           FlashCard[]
+  quizResults          QuizResult[]
+  cardReviews          CardReview[]
+  feedbacks            Feedback[]
+  sessionProgress      SessionProgress[]
+  problemReviews       ProblemReview[]
+  reflections          Reflection[]
+}
+
+model Problem {
+  id                  String   @id @default(uuid())
+  slug                String   @unique
+  title               String
+  difficulty          String   // "easy" | "medium" | "hard"
+
+  // Categorization
+  pattern             String?  // Pattern type: "two_pointers", "sliding_window", etc.
+  topics              String?  // JSON array: ["arrays", "strings"]
+  companies           String?  // JSON array: ["Google", "Amazon"]
+  companyTags         String?  // JSON array: ["Amazon", "Google"] (alternate)
+  company             String[] @default([])  // F13: proper array for filtering
+
+  // Problem Content
+  description         String   // Markdown description
+  examples            String?  // JSON array of {input, output, explanation}
+  constraints         String?  // JSON array of constraint strings
+  hints               String?  // JSON array of hint strings
+
+  // Code
+  starterCode         String   // Template code for user
+  solutionCode        String?  // Correct solution
+  solutionExplanation String?  // How the solution works
+
+  // Complexity
+  timeComplexity      String?  // "O(n)", "O(log n)", etc.
+  spaceComplexity     String?  // "O(1)", "O(n)", etc.
+
+  // Test Cases
+  testCases           String   // JSON array: [{input: {}, expected: any}]
+  hiddenTestCases     String?  // JSON array for validation (not shown to user)
+
+  // Metadata
+  order               Int      @default(0)
+  isActive            Boolean  @default(true)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  // Topic ordering for guided progression
+  topicOrder          Int      @default(0)
+
+  // Relations
+  submissions         Submission[]
+  patternModel        Pattern? @relation(fields: [pattern], references: [slug])
+  lessons             LessonProblem[]
+  reviews             ProblemReview[]
+  reflections         Reflection[]
+  category            String?  @default("DSA")
+  solutionApproach    String?
+  visualizationType   String?
+
+  // Learning Roadmap metadata
+  phase               Int      @default(3)   // 1=Python basics, 2=Logic, 3=DS, 4=Patterns, 5=Interview
+  weekNumber          Int      @default(1)   // which week in the roadmap
+  prerequisiteProblems String?               // JSON array of slugs to solve first
+  conceptTaught       String?               // what concept this problem teaches
+
+  // Reflection validation data (correct answers)
+  correctPattern          String?  // "sliding-window", "hash-map", etc.
+  correctTimeComplexity   String?  // "O(n)", "O(n log n)", etc.
+  correctSpaceComplexity  String?  // "O(1)", "O(n)", etc.
+  isOptimal               Boolean  @default(true)
+}
+
+model Submission {
+  id            String   @id @default(uuid())
+
+  userId        String
+  problemId     String
+
+  code          String   // User's submitted code
+  language      String   @default("python")
+
+  // Results
+  status        String   // "accepted" | "wrong_answer" | "error" | "timeout"
+  passedTests   Int      @default(0)
+  totalTests    Int      @default(0)
+  executionTime Int?     // milliseconds
+  errorMessage  String?
+
+  // Relations
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  problem       Problem  @relation(fields: [problemId], references: [id], onDelete: Cascade)
+
+  createdAt     DateTime @default(now())
+
+  @@index([userId])
+  @@index([problemId])
+}
+
+model Course {
+  id          String   @id @default(uuid())
+  slug        String   @unique
+  title       String
+  description String
+  category    String
+  difficulty  String   @default("beginner")
+  icon        String   @default("=ƒôÿ")
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  lessons     Lesson[]
+}
+
+model Lesson {
+  id            String     @id @default(uuid())
+  slug          String     @unique
+  courseId       String
+  course         Course     @relation(fields: [courseId], references: [id])
+  title         String
+  content       String
+  codeExample   String?
+  order         Int
+  difficulty    String
+  estimatedTime Int
+  progress      Progress[]
+  problems      LessonProblem[]
+}
+
+model Progress {
+  id          String    @id @default(uuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id])
+  lessonId    String
+  lesson      Lesson    @relation(fields: [lessonId], references: [id])
+  completed    Boolean   @default(false)
+  completedAt  DateTime?
+  masteryLevel String    @default("none") // none | read | practiced | mastered
+  practicedAt  DateTime?
+
+  @@unique([userId, lessonId])
+}
+
+model LessonProblem {
+  id        String  @id @default(uuid())
+  lessonId  String
+  problemId String
+  order     Int     @default(0) // ordering within the lesson
+  lesson    Lesson  @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  problem   Problem @relation(fields: [problemId], references: [id], onDelete: Cascade)
+
+  @@unique([lessonId, problemId])
+  @@index([lessonId])
+  @@index([problemId])
+}
+
+model Pattern {
+  id              String   @id @default(uuid())
+  slug            String   @unique
+  name            String
+  description     String
+  whenToUse       String   // JSON: Array of recognition signals
+  template        String   // Python code template
+  timeComplexity  String
+  spaceComplexity String
+  difficulty      Int      // 1-5
+  order           Int      @default(0)
+
+  // Relations
+  problems        Problem[]
+  progress        PatternProgress[]
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model PatternProgress {
+  id                    String   @id @default(uuid())
+  userId                String
+  user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  patternSlug           String
+  pattern               Pattern  @relation(fields: [patternSlug], references: [slug])
+
+  // Progress tracking
+  status                String   @default("locked") // locked, learning, practicing, mastered
+  visualizationWatched  Boolean  @default(false)
+  memoryVisualWatched   Boolean  @default(false)
+  templateStudied       Boolean  @default(false)
+  quizPassed            Boolean  @default(false)
+
+  // Performance
+  recognitionAccuracy   Float    @default(0) // 0-1
+  problemsSolved        Int      @default(0)
+  averageTime           Int?     // seconds
+
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@unique([userId, patternSlug])
+}
+
+model FlashCard {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type        String   // "pattern" | "complexity" | "concept" | "memory"
+  front       String   // Question/prompt
+  back        String   // Answer
+  code        String?  // Optional code snippet
+  patternId   String?  // Optional link to pattern
+  ease        Float    @default(2.5) // SM-2 ease factor
+  interval    Int      @default(1) // Days until next review
+  repetitions Int      @default(0)
+  nextReview  DateTime @default(now())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model QuizResult {
+  id         String   @id @default(uuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  quizType   String   // "pattern_recognition" | "complexity" | "memory" | "debug"
+  topic      String
+  question   String   @default("")
+  userAnswer String   @default("")
+  correct    Boolean
+  timeSpent  Int      // seconds
+  createdAt  DateTime @default(now())
+}
+
+
+model UserPreferences {
+  id              String   @id @default(uuid())
+  userId          String   @unique
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  experienceLevel String   // "beginner" | "intermediate" | "interview_prep"
+  learningGoal    String   // "python" | "dsa" | "both"
+  dailyGoalMins   Int      @default(30)
+  onboardingDone  Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model Feedback {
+  id        String   @id @default(uuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  type      String   // "bug" | "feature" | "general" | "content"
+  message   String
+  page      String?
+  createdAt DateTime @default(now())
+}
+
+model PredictionCard {
+  id            String       @id @default(uuid())
+  challengeId   String?      @unique // matches TreeChallenge.id (optional for non-tree cards)
+  type          String       // "predict-output" | "insert-parent" | "traversal-order" | etc.
+  topic         String?      // "arrays" | "trees" | "linked-lists" | etc.
+  difficulty    String       // "beginner" | "intermediate" | "advanced"
+  treeValues    String?      // JSON array GÇö insertion order (tree cards only)
+  question      String
+  visualData    String?      // JSON visual data for non-tree cards
+  options       String?      // JSON array of multiple-choice options
+  correctAnswer String       // JSON-encoded or plain text
+  explanation   String
+  xpReward      Int          @default(10)
+  createdAt     DateTime     @default(now())
+  reviews       CardReview[]
+}
+
+model CardReview {
+  id              String         @id @default(uuid())
+  userId          String
+  user            User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  cardId          String
+  card            PredictionCard @relation(fields: [cardId], references: [id], onDelete: Cascade)
+  correct         Boolean
+  responseTimeMs  Int?
+  // SM-2 scheduling fields
+  easeFactor      Float          @default(2.5)
+  interval        Int            @default(1) // days
+  repetitions     Int            @default(0)
+  nextReviewAt    DateTime       @default(now())
+  createdAt       DateTime       @default(now())
+}
+
+model SessionProgress {
+  id                String    @id @default(uuid())
+  userId            String
+  sessionSlug       String
+  currentStageIndex Int       @default(0)
+  completed         Boolean   @default(false)
+  stageResults      String    @default("{}") // JSON: { stageId: { score, timeSpent } }
+  startedAt         DateTime  @default(now())
+  completedAt       DateTime?
+  totalXPEarned     Int       @default(0)
+
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, sessionSlug])
+  @@index([userId, completed])
+}
+
+model ProblemReview {
+  id            String   @id @default(uuid())
+  userId        String
+  problemId     String
+
+  // SM-2 scheduling fields
+  easeFactor    Float    @default(2.5)
+  interval      Int      @default(1)   // days until next review
+  repetitions   Int      @default(0)
+  nextReviewAt  DateTime @default(now())
+
+  // Performance tracking
+  lastRating    Int?     // 0-5 quality rating from last review
+  totalReviews  Int      @default(0)
+  lastReviewedAt DateTime?
+  enrolledAt    DateTime @default(now())
+
+  // Relations
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  problem       Problem  @relation(fields: [problemId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, problemId])
+  @@index([userId, nextReviewAt])
+}
+
+model Reflection {
+  id                  String   @id @default(uuid())
+  userId              String
+  problemId           String
+  submissionId        String?
+
+  // What the user selected/typed
+  patternUsed         String?    // "sliding-window", "hash-map", etc.
+  timeComplexity      String?    // "O(1)", "O(n)", etc.
+  spaceComplexity     String?    // same options
+  canOptimize         String?    // "yes", "no", "unsure"
+  approachExplanation String?    // free text, 1-3 sentences
+
+  // Correctness (evaluated against problem metadata)
+  patternCorrect      Boolean?
+  timeCorrect         Boolean?
+  spaceCorrect        Boolean?
+  optimizeCorrect     Boolean?
+
+  // Metadata
+  solveTimeSeconds    Int?
+  skipped             Boolean  @default(false)
+  createdAt           DateTime @default(now())
+
+  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  problem             Problem  @relation(fields: [problemId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([userId, problemId])
+}
+
