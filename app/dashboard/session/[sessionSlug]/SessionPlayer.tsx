@@ -34,6 +34,44 @@ export interface StageResult {
   details?: Record<string, unknown>;
 }
 
+// Guide Star component — appears after failed reflect
+function GuideStar({ topic, onDismiss }: { topic: string; onDismiss: () => void }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20, scale: 0.95 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      exit={{ opacity: 0, y: 10, scale: 0.95 }}
+      className="fixed bottom-24 right-6 z-50 max-w-xs w-72 rounded-2xl p-4 shadow-2xl"
+      style={{ background: '#0f1629', border: '1px solid #E5A82950' }}
+    >
+      <div className="flex items-start gap-3">
+        <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0"
+          style={{ background: '#1a1400', border: '1px solid #E5A829' }}>
+          <span className="text-lg">⭐</span>
+        </div>
+        <div className="flex-1">
+          <p className="text-sm font-semibold text-white mb-1">Need a review?</p>
+          <p className="text-xs leading-relaxed mb-3" style={{ color: '#6b7a99' }}>
+            You missed some questions. Go back to the course lesson to reinforce the concept.
+          </p>
+          <div className="flex gap-2">
+            <a href="/dashboard/courses"
+              className="flex-1 py-2 rounded-lg text-xs font-semibold text-center transition-all hover:opacity-90"
+              style={{ background: '#E5A829', color: '#0a0f24' }}>
+              Review Lesson →
+            </a>
+            <button onClick={onDismiss}
+              className="px-3 py-2 rounded-lg text-xs transition-all"
+              style={{ background: '#1E3A5F', color: '#6b7a99' }}>
+              Dismiss
+            </button>
+          </div>
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
 export default function SessionPlayer({ sessionSlug }: SessionPlayerProps) {
   const [definition, setDefinition] = useState<SessionDefinition | null>(null);
   const [currentStageIndex, setCurrentStageIndex] = useState(0);
@@ -44,6 +82,7 @@ export default function SessionPlayer({ sessionSlug }: SessionPlayerProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [sessionStartTime] = useState(Date.now());
+  const [showGuideStar, setShowGuideStar] = useState(false);
 
   // Fetch session definition and progress
   useEffect(() => {
@@ -110,6 +149,11 @@ export default function SessionPlayer({ sessionSlug }: SessionPlayerProps) {
         console.error("Failed to save progress:", err);
       }
 
+      // Show guide star if reflect stage score < 70%
+      if (stage.type === "reflect" && finalResult.score < 70) {
+        setShowGuideStar(true);
+      }
+
       // Advance to next stage
       if (!isLastStage) {
         setCurrentStageIndex((prev) => prev + 1);
@@ -118,6 +162,9 @@ export default function SessionPlayer({ sessionSlug }: SessionPlayerProps) {
     },
     [definition, currentStageIndex, stageResults, stageStartTime, sessionSlug]
   );
+
+  // ─── Render ───────────────────────────────────────────────
+  const currentTopic = definition?.topic ?? "this topic";
 
   // Loading state
   if (loading) {
@@ -220,6 +267,12 @@ export default function SessionPlayer({ sessionSlug }: SessionPlayerProps) {
 
   return (
     <div className="min-h-screen bg-[#0a0a0f] flex flex-col">
+      {/* Guide Star */}
+      <AnimatePresence>
+        {showGuideStar && (
+          <GuideStar topic={currentTopic} onDismiss={() => setShowGuideStar(false)} />
+        )}
+      </AnimatePresence>
       {/* Top bar — progress + exit */}
       <div className="sticky top-0 z-50 bg-[#0a0a0f]/80 backdrop-blur-lg border-b border-white/[0.04]">
         <div className="max-w-4xl mx-auto px-4 py-3 flex items-center gap-4">

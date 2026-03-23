@@ -1,20 +1,14 @@
+// REDESIGNED: Sessions integrated into Learning Path — topics expand to show sessions with locked/unlocked state
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import {
-  Check,
-  Lock,
-  ChevronDown,
-  ChevronUp,
-  Sparkles,
-  ArrowRight,
-  Trophy,
-  Target,
-  Zap,
-  Circle,
+  Check, Lock, ChevronDown, ChevronUp, ArrowRight,
+  Target, Zap, Circle, BookOpen, Play,
 } from "lucide-react";
+import { getAllSessionDefinitions } from "@/lib/sessionDefinitions";
 
 // ─── Types ─────────────────────────────────────────────────
 
@@ -50,13 +44,63 @@ interface PathContentProps {
   currentWeek: number;
 }
 
-// ─── Checkpoint requirements ─────────────────────────────
+// ─── Phase 1 topic/session map ─────────────────────────────
 
-const checkpointLabels: Record<number, string> = {
-  1: "Solve 8/12 Python problems to unlock Phase 2",
-  2: "Solve 5/6 Logic problems to unlock Phase 3",
-  3: "Solve 50% of DS problems to unlock Phase 4",
-  4: "Solve 50% of Pattern problems to unlock Phase 5",
+const PHASE1_TOPICS = [
+  {
+    id: "intro",
+    title: "Introduction to Python",
+    emoji: "🐍",
+    sessions: ["first-python-program", "variables-basics"],
+  },
+  {
+    id: "datatypes",
+    title: "Data Types",
+    emoji: "🗂️",
+    sessions: ["data-types", "type-conversion"],
+  },
+  {
+    id: "control",
+    title: "Control Statements",
+    emoji: "🤔",
+    sessions: ["if-else-basics", "loops-basics", "while-loops"],
+  },
+  {
+    id: "functions",
+    title: "Functions",
+    emoji: "🛠️",
+    sessions: ["functions-basics", "functions-scope"],
+  },
+  {
+    id: "collections",
+    title: "Lists & Strings",
+    emoji: "📋",
+    sessions: ["lists-basics", "strings-basics"],
+  },
+];
+
+const PHASE2_TOPICS = [
+  {
+    id: "arrays",
+    title: "Arrays & Big-O",
+    emoji: "📊",
+    sessions: ["arrays-and-big-o"],
+  },
+];
+
+const PHASE3_TOPICS = [
+  {
+    id: "trees",
+    title: "Trees",
+    emoji: "🌳",
+    sessions: ["binary-search-trees"],
+  },
+];
+
+const PHASE_TOPICS: Record<number, typeof PHASE1_TOPICS> = {
+  1: PHASE1_TOPICS,
+  2: PHASE2_TOPICS,
+  3: PHASE3_TOPICS,
 };
 
 const difficultyColors: Record<string, string> = {
@@ -65,18 +109,260 @@ const difficultyColors: Record<string, string> = {
   hard: "text-red-400 bg-red-500/10 border-red-500/20",
 };
 
-// ─── Component ─────────────────────────────────────────────
+const checkpointLabels: Record<number, string> = {
+  1: "Solve 8/12 Python problems to unlock Phase 2",
+  2: "Solve 5/6 Logic problems to unlock Phase 3",
+  3: "Solve 50% of DS problems to unlock Phase 4",
+  4: "Solve 50% of Pattern problems to unlock Phase 5",
+};
 
-export default function PathContent({
-  phases,
-  currentPhase,
-  currentWeek,
-}: PathContentProps) {
-  const [expandedPhase, setExpandedPhase] = useState<number | null>(
-    currentPhase
+// ─── Session progress hook ─────────────────────────────────
+
+function useSessionProgress() {
+  const [progressMap, setProgressMap] = useState<
+    Record<string, { completed: boolean; currentStage: number; totalXP: number }>
+  >({});
+
+  useEffect(() => {
+    fetch("/api/sessions")
+      .then((r) => (r.ok ? r.json() : { progress: {} }))
+      .then((d) => setProgressMap(d.progress ?? {}))
+      .catch(() => {});
+  }, []);
+
+  return progressMap;
+}
+
+// ─── Sessions Tab ──────────────────────────────────────────
+
+function SessionsTab({ phaseNum }: { phaseNum: number }) {
+  const allSessions = getAllSessionDefinitions();
+  const sessionMap = Object.fromEntries(allSessions.map((s) => [s.slug, s]));
+  const progressMap = useSessionProgress();
+  const topics = PHASE_TOPICS[phaseNum];
+
+  if (!topics || topics.length === 0) {
+    return (
+      <div className="py-8 text-center">
+        <p className="text-sm" style={{ color: '#6b7a99' }}>
+          Sessions for this phase are coming soon.
+        </p>
+      </div>
+    );
+  }
+
+  // Determine which sessions are unlocked
+  // A session is unlocked if it has no prerequisite, or its prerequisite is completed
+  const isUnlocked = (slug: string): boolean => {
+    const def = sessionMap[slug];
+    if (!def) return false;
+    if (!def.prerequisiteSessionSlug) return true;
+    return progressMap[def.prerequisiteSessionSlug]?.completed ?? false;
+  };
+
+  return (
+    <div className="space-y-4 mt-2">
+      {topics.map((topic) => {
+        const topicSessions = topic.sessions
+          .map((slug) => sessionMap[slug])
+          .filter(Boolean);
+
+        const completedCount = topicSessions.filter(
+          (s) => progressMap[s.slug]?.completed
+        ).length;
+
+        return (
+          <div key={topic.id} className="rounded-xl overflow-hidden"
+            style={{ background: '#0a0f24', border: '1px solid #1E3A5F' }}>
+            {/* Topic header */}
+            <div className="flex items-center justify-between px-4 py-3"
+              style={{ borderBottom: '1px solid #1E3A5F' }}>
+              <div className="flex items-center gap-2">
+                <span className="text-base">{topic.emoji}</span>
+                <span className="text-sm font-semibold text-white">{topic.title}</span>
+              </div>
+              <span className="text-xs" style={{ color: completedCount === topicSessions.length && topicSessions.length > 0 ? '#10b981' : '#6b7a99' }}>
+                {completedCount}/{topicSessions.length} done
+              </span>
+            </div>
+
+            {/* Sessions list */}
+            <div className="divide-y" style={{ borderColor: '#1E3A5F' }}>
+              {topicSessions.map((sess, idx) => {
+                const prog = progressMap[sess.slug];
+                const isDone = prog?.completed ?? false;
+                const stagesDone = prog?.currentStage ?? 0;
+                const unlocked = isUnlocked(sess.slug);
+                const inProgress = !isDone && stagesDone > 0;
+                const pct = Math.round((stagesDone / sess.stages.length) * 100);
+
+                return (
+                  <div key={sess.slug}>
+                    {unlocked ? (
+                      <Link href={`/dashboard/session/${sess.slug}`}>
+                        <div className="flex items-center gap-3 px-4 py-3 transition-all duration-200 group"
+                          style={{ background: 'transparent' }}
+                          onMouseEnter={e => (e.currentTarget as HTMLDivElement).style.background = '#0f1629'}
+                          onMouseLeave={e => (e.currentTarget as HTMLDivElement).style.background = 'transparent'}>
+                          {/* Status icon */}
+                          <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0"
+                            style={{
+                              background: isDone ? '#051a12' : inProgress ? '#1a1400' : '#0f1629',
+                              border: `1px solid ${isDone ? '#10b981' : inProgress ? '#E5A829' : '#1E3A5F'}`
+                            }}>
+                            {isDone
+                              ? <Check size={14} color="#10b981" />
+                              : inProgress
+                                ? <Play size={12} color="#E5A829" />
+                                : <span className="text-xs font-bold" style={{ color: '#6b7a99' }}>{idx + 1}</span>
+                            }
+                          </div>
+
+                          {/* Session info */}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span className={`text-sm font-medium ${isDone ? 'line-through' : ''}`}
+                                style={{ color: isDone ? '#6b7a99' : '#fff' }}>
+                                {sess.title.split(' — ')[0]}
+                              </span>
+                              {inProgress && (
+                                <span className="text-xs px-1.5 py-0.5 rounded"
+                                  style={{ background: '#1a1400', color: '#E5A829', fontSize: '10px' }}>
+                                  In progress
+                                </span>
+                              )}
+                            </div>
+                            {/* Progress bar */}
+                            {(inProgress || isDone) && (
+                              <div className="mt-1.5 h-1 rounded-full overflow-hidden" style={{ background: '#1E3A5F' }}>
+                                <div className="h-full rounded-full transition-all"
+                                  style={{
+                                    width: `${isDone ? 100 : pct}%`,
+                                    background: isDone ? '#10b981' : '#E5A829'
+                                  }} />
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Right side */}
+                          <div className="flex items-center gap-2 flex-shrink-0">
+                            <span className="text-xs" style={{ color: '#6b7a99' }}>~{sess.estimatedMinutes}m</span>
+                            <span className="text-xs font-medium" style={{ color: '#E5A829' }}>{sess.xpTotal}xp</span>
+                            <ArrowRight size={14} color="#6b7a99" className="group-hover:translate-x-0.5 transition-transform" />
+                          </div>
+                        </div>
+                      </Link>
+                    ) : (
+                      <div className="flex items-center gap-3 px-4 py-3" style={{ opacity: 0.4 }}>
+                        <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0"
+                          style={{ background: '#0f1629', border: '1px solid #1E3A5F' }}>
+                          <Lock size={12} color="#6b7a99" />
+                        </div>
+                        <div className="flex-1">
+                          <span className="text-sm" style={{ color: '#6b7a99' }}>
+                            {sess.title.split(' — ')[0]}
+                          </span>
+                          <p className="text-xs mt-0.5" style={{ color: '#6b7a99' }}>
+                            Complete previous session to unlock
+                          </p>
+                        </div>
+                        <span className="text-xs" style={{ color: '#6b7a99' }}>~{sess.estimatedMinutes}m</span>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })}
+    </div>
   );
+}
+
+// ─── Problems Tab ──────────────────────────────────────────
+
+function ProblemsTab({
+  phase,
+  currentWeek,
+}: {
+  phase: PhaseData;
+  currentWeek: number;
+}) {
+  return (
+    <div className="space-y-4 mt-2">
+      <Link
+        href={`/dashboard/practice?phase=${phase.phase}`}
+        className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+        style={{ background: '#1a1400', color: '#E5A829', border: '1px solid #E5A82930' }}
+      >
+        <Zap size={14} />
+        Practice All
+        <ArrowRight size={14} />
+      </Link>
+
+      {Object.entries(phase.weekProblems).map(([weekStr, problems]) => {
+        const weekNum = parseInt(weekStr, 10);
+        const isCurrentWeek = phase.status === "current" && weekNum === currentWeek;
+        if (!problems || problems.length === 0) return null;
+
+        return (
+          <div key={weekNum} className="rounded-xl overflow-hidden"
+            style={{ background: '#0a0f24', border: '1px solid #1E3A5F' }}>
+            <div className="flex items-center gap-2 px-4 py-2.5"
+              style={{ borderBottom: '1px solid #1E3A5F' }}>
+              <span className="text-xs font-semibold uppercase tracking-wider"
+                style={{ color: isCurrentWeek ? '#E5A829' : '#6b7a99' }}>
+                Week {weekNum}
+              </span>
+              {isCurrentWeek && (
+                <span className="text-xs px-1.5 py-0.5 rounded"
+                  style={{ background: '#1a1400', color: '#E5A829', fontSize: '9px' }}>
+                  You are here
+                </span>
+              )}
+              <span className="text-xs ml-auto" style={{ color: '#6b7a99' }}>
+                {problems.filter((p) => p.solved).length}/{problems.length}
+              </span>
+            </div>
+            <div className="divide-y" style={{ borderColor: '#1E3A5F' }}>
+              {problems.map((problem) => (
+                <Link key={problem.id} href={`/dashboard/practice/${problem.slug}`}>
+                  <div className="flex items-center gap-3 px-4 py-2.5 transition-all group"
+                    style={{ background: 'transparent' }}
+                    onMouseEnter={e => (e.currentTarget as HTMLDivElement).style.background = '#0f1629'}
+                    onMouseLeave={e => (e.currentTarget as HTMLDivElement).style.background = 'transparent'}>
+                    {problem.solved
+                      ? <Check size={14} color="#10b981" className="flex-shrink-0" />
+                      : <Circle size={14} color="#1E3A5F" className="flex-shrink-0" />
+                    }
+                    <span className={`text-sm flex-1 ${problem.solved ? 'line-through' : 'group-hover:text-white'}`}
+                      style={{ color: problem.solved ? '#6b7a99' : '#c8d0e0' }}>
+                      {problem.title}
+                    </span>
+                    <span className={`text-xs px-2 py-0.5 rounded capitalize border ${difficultyColors[problem.difficulty] ?? ''}`}>
+                      {problem.difficulty}
+                    </span>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ─── Main Component ────────────────────────────────────────
+
+export default function PathContent({ phases, currentPhase, currentWeek }: PathContentProps) {
+  const [expandedPhase, setExpandedPhase] = useState<number | null>(currentPhase);
+  const [activeTab, setActiveTab] = useState<Record<number, "learn" | "practice">>({});
   const [advancing, setAdvancing] = useState(false);
   const [advanceMsg, setAdvanceMsg] = useState<string | null>(null);
+
+  const getTab = (phase: number) => activeTab[phase] ?? "learn";
 
   const handleAdvance = async () => {
     setAdvancing(true);
@@ -84,20 +370,17 @@ export default function PathContent({
     try {
       const checkRes = await fetch("/api/checkpoint");
       const checkData = await checkRes.json();
-
       if (!checkData.canAdvance) {
         setAdvanceMsg(checkData.message);
         setAdvancing(false);
         return;
       }
-
       const advRes = await fetch("/api/user/phase", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "advance" }),
       });
       const advData = await advRes.json();
-
       if (advData.success) {
         setAdvanceMsg(advData.message);
         setTimeout(() => window.location.reload(), 1500);
@@ -113,191 +396,119 @@ export default function PathContent({
   return (
     <div className="max-w-4xl mx-auto">
       {/* Header */}
-      <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="mb-8"
-      >
-        <h1 className="text-2xl sm:text-3xl font-bold gradient-text flex items-center gap-3">
-          <Target className="text-primary" size={28} />
+      <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
+        <div className="inline-flex items-center gap-2 mb-3">
+          <span className="w-5 h-px" style={{ background: '#E5A829' }} />
+          <span className="text-xs font-medium tracking-widest uppercase" style={{ color: '#E5A829' }}>Your Journey</span>
+        </div>
+        <h1 className="text-2xl sm:text-3xl font-bold text-white flex items-center gap-3" style={{ letterSpacing: '-0.02em' }}>
+          <Target size={26} color="#E5A829" />
           Your Learning Path
         </h1>
-        <p className="text-muted-foreground mt-2 text-sm sm:text-base">
+        <p className="mt-2 text-sm" style={{ color: '#6b7a99' }}>
           From zero to placement ready — track your journey across 5 phases
         </p>
         <div className="mt-3 flex items-center gap-2 text-sm">
-          <span className="px-3 py-1 rounded-full bg-primary/15 text-primary font-medium">
+          <span className="px-3 py-1 rounded-full text-xs font-semibold"
+            style={{ background: '#1a1400', color: '#E5A829', border: '1px solid #E5A82930' }}>
             Phase {currentPhase}
           </span>
-          <span className="text-white/30">•</span>
-          <span className="text-muted-foreground">Week {currentWeek}</span>
+          <span style={{ color: '#1E3A5F' }}>•</span>
+          <span className="text-sm" style={{ color: '#6b7a99' }}>Week {currentWeek}</span>
         </div>
       </motion.div>
 
       {/* Timeline */}
       <div className="relative">
-        {/* Vertical line */}
-        <div className="absolute left-6 sm:left-8 top-0 bottom-0 w-0.5 bg-white/[0.06]" />
+        <div className="absolute left-6 sm:left-8 top-0 bottom-0 w-px" style={{ background: '#1E3A5F' }} />
 
         {phases.map((phase, index) => {
           const isExpanded = expandedPhase === phase.phase;
           const isCurrent = phase.status === "current";
           const isCompleted = phase.status === "completed";
           const isLocked = phase.status === "locked";
+          const tab = getTab(phase.phase);
 
           return (
-            <motion.div
-              key={phase.phase}
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: index * 0.1 }}
-              className="relative mb-4"
-            >
+            <motion.div key={phase.phase} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: index * 0.08 }} className="relative mb-4">
+
               {/* Timeline node */}
               <div className="absolute left-6 sm:left-8 -translate-x-1/2 z-10">
-                <div
-                  className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center border-2 transition-all ${
-                    isCompleted
-                      ? "bg-emerald-500/20 border-emerald-500 text-emerald-400"
-                      : isCurrent
-                        ? "bg-primary/20 border-primary text-primary glow-green"
-                        : "bg-white/5 border-white/10 text-white/20"
-                  }`}
-                >
-                  {isCompleted ? (
-                    <Check size={20} />
-                  ) : isLocked ? (
-                    <Lock size={16} />
-                  ) : (
-                    <span className="text-lg">{phase.icon}</span>
-                  )}
+                <div className="w-10 h-10 rounded-full flex items-center justify-center border-2 transition-all"
+                  style={{
+                    background: isCompleted ? '#051a12' : isCurrent ? '#1a1400' : '#0a0f24',
+                    borderColor: isCompleted ? '#10b981' : isCurrent ? '#E5A829' : '#1E3A5F',
+                  }}>
+                  {isCompleted
+                    ? <Check size={18} color="#10b981" />
+                    : isLocked
+                      ? <Lock size={14} color="#1E3A5F" />
+                      : <span className="text-base">{phase.icon}</span>
+                  }
                 </div>
               </div>
 
               {/* Card */}
               <div className="ml-14 sm:ml-20">
                 <button
-                  onClick={() =>
-                    setExpandedPhase(isExpanded ? null : phase.phase)
-                  }
-                  className={`w-full text-left p-4 sm:p-5 rounded-xl border transition-all duration-300 ${
-                    isCurrent
-                      ? `${phase.borderColor} ${phase.bgColor} shadow-lg`
-                      : isCompleted
-                        ? "border-emerald-500/20 bg-emerald-500/5 hover:bg-emerald-500/10"
-                        : "border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.04]"
-                  }`}
+                  onClick={() => setExpandedPhase(isExpanded ? null : phase.phase)}
+                  className="w-full text-left p-4 sm:p-5 rounded-xl border transition-all duration-200"
+                  style={{
+                    background: isCurrent ? '#0f1629' : isCompleted ? '#051a12' : '#0a0f24',
+                    borderColor: isCurrent ? '#E5A82940' : isCompleted ? '#10b98130' : '#1E3A5F',
+                    opacity: isLocked ? 0.5 : 1,
+                  }}
                 >
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-1">
-                        <span className="text-lg">{phase.icon}</span>
-                        <h3
-                          className={`text-base sm:text-lg font-semibold ${
-                            isLocked
-                              ? "text-white/30"
-                              : isCurrent
-                                ? "text-white"
-                                : "text-white/80"
-                          }`}
-                        >
+                        <span className="text-base">{phase.icon}</span>
+                        <h3 className="text-base sm:text-lg font-semibold"
+                          style={{ color: isLocked ? '#6b7a99' : '#fff' }}>
                           Phase {phase.phase}: {phase.name}
                         </h3>
                         {isCurrent && (
-                          <span className="px-2 py-0.5 rounded text-[10px] uppercase font-bold bg-primary/20 text-primary tracking-wider glow-green">
+                          <span className="px-2 py-0.5 rounded text-xs font-bold uppercase"
+                            style={{ background: '#1a1400', color: '#E5A829', fontSize: '10px' }}>
                             Current
                           </span>
                         )}
-                        {isCompleted && (
-                          <Check
-                            size={16}
-                            className="text-emerald-400 flex-shrink-0"
-                          />
-                        )}
+                        {isCompleted && <Check size={15} color="#10b981" />}
                       </div>
-                      <p
-                        className={`text-sm ${isLocked ? "text-white/20" : "text-white/40"}`}
-                      >
-                        {phase.subtitle}
-                      </p>
-                      <div className="flex items-center gap-3 mt-2">
-                        <span
-                          className={`text-xs ${isLocked ? "text-white/15" : "text-white/30"}`}
-                        >
-                          {phase.weeks}
-                        </span>
-                        {phase.totalProblems > 0 && !isLocked && (
+                      <p className="text-sm" style={{ color: '#6b7a99' }}>{phase.subtitle}</p>
+                      <div className="flex items-center gap-3 mt-1.5">
+                        <span className="text-xs" style={{ color: '#6b7a99' }}>{phase.weeks}</span>
+                        {!isLocked && phase.totalProblems > 0 && (
                           <>
-                            <span className="text-white/10">•</span>
-                            <span className="text-xs text-white/30">
-                              {phase.solvedProblems}/{phase.totalProblems}{" "}
-                              problems
+                            <span style={{ color: '#1E3A5F' }}>•</span>
+                            <span className="text-xs" style={{ color: '#6b7a99' }}>
+                              {phase.solvedProblems}/{phase.totalProblems} problems
                             </span>
                           </>
                         )}
                       </div>
                     </div>
-                    <div className="flex items-center gap-3">
-                      {/* Progress circle */}
+                    <div className="flex items-center gap-2">
                       {!isLocked && phase.totalProblems > 0 && (
-                        <div className="relative w-10 h-10 sm:w-12 sm:h-12">
-                          <svg className="w-full h-full -rotate-90">
-                            <circle
-                              cx="50%"
-                              cy="50%"
-                              r="40%"
-                              fill="none"
-                              stroke="currentColor"
-                              className="text-white/[0.06]"
-                              strokeWidth="3"
-                            />
-                            <circle
-                              cx="50%"
-                              cy="50%"
-                              r="40%"
-                              fill="none"
-                              stroke="currentColor"
-                              className={
-                                isCompleted
-                                  ? "text-emerald-400"
-                                  : "text-primary"
-                              }
-                              strokeWidth="3"
-                              strokeDasharray={`${phase.progress * 2.51} 251`}
-                              strokeLinecap="round"
-                            />
-                          </svg>
-                          <span className="absolute inset-0 flex items-center justify-center text-xs font-bold text-white/60">
-                            {phase.progress}%
-                          </span>
-                        </div>
+                        <span className="text-sm font-bold" style={{ color: '#E5A829' }}>{phase.progress}%</span>
                       )}
-                      {isExpanded ? (
-                        <ChevronUp
-                          size={18}
-                          className="text-white/30 flex-shrink-0"
-                        />
-                      ) : (
-                        <ChevronDown
-                          size={18}
-                          className="text-white/30 flex-shrink-0"
-                        />
-                      )}
+                      {isExpanded
+                        ? <ChevronUp size={16} color="#6b7a99" />
+                        : <ChevronDown size={16} color="#6b7a99" />
+                      }
                     </div>
                   </div>
 
                   {/* Progress bar */}
                   {!isLocked && phase.totalProblems > 0 && (
-                    <div className="mt-3 h-1.5 rounded-full bg-white/[0.06] overflow-hidden">
+                    <div className="mt-3 h-1 rounded-full overflow-hidden" style={{ background: '#1E3A5F' }}>
                       <motion.div
                         initial={{ width: 0 }}
                         animate={{ width: `${phase.progress}%` }}
                         transition={{ duration: 0.8, delay: index * 0.1 }}
-                        className={`h-full rounded-full bg-gradient-to-r ${
-                          isCompleted
-                            ? "from-emerald-500 to-emerald-400"
-                            : phase.color
-                        }`}
+                        className="h-full rounded-full"
+                        style={{ background: isCompleted ? '#10b981' : '#E5A829' }}
                       />
                     </div>
                   )}
@@ -310,233 +521,63 @@ export default function PathContent({
                       initial={{ opacity: 0, height: 0 }}
                       animate={{ opacity: 1, height: "auto" }}
                       exit={{ opacity: 0, height: 0 }}
-                      transition={{ duration: 0.3 }}
+                      transition={{ duration: 0.25 }}
                       className="overflow-hidden"
                     >
-                      <div className="p-4 sm:p-5 mt-1 rounded-xl border border-white/[0.06] bg-white/[0.02]">
-                        {/* Action buttons */}
-                        <div className="flex flex-wrap gap-2 mb-4">
-                          <Link
-                            href={`/dashboard/practice?phase=${phase.phase}`}
-                            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary/10 text-primary text-sm font-medium hover:bg-primary/20 transition-colors glow-green"
-                          >
-                            <Zap size={14} />
-                            Practice All
-                            <ArrowRight size={14} />
-                          </Link>
-                          {phase.phase <= 2 && (
-                            <Link
-                              href="/dashboard/courses"
-                              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-white/[0.04] text-white/60 text-sm font-medium hover:bg-white/[0.08] transition-colors"
-                            >
-                              <Sparkles size={14} />
-                              View Lessons
-                            </Link>
-                          )}
+                      <div className="mt-1 p-4 rounded-xl" style={{ background: '#0a0f24', border: '1px solid #1E3A5F' }}>
+
+                        {/* Tab switcher */}
+                        <div className="flex gap-1 mb-4 p-1 rounded-lg w-fit" style={{ background: '#0f1629' }}>
+                          <button
+                            onClick={() => setActiveTab(prev => ({ ...prev, [phase.phase]: "learn" }))}
+                            className="flex items-center gap-1.5 px-4 py-1.5 rounded-md text-sm font-medium transition-all"
+                            style={{
+                              background: tab === "learn" ? '#1a1400' : 'transparent',
+                              color: tab === "learn" ? '#E5A829' : '#6b7a99',
+                              border: tab === "learn" ? '1px solid #E5A82930' : '1px solid transparent',
+                            }}>
+                            <BookOpen size={13} />
+                            Learn
+                          </button>
+                          <button
+                            onClick={() => setActiveTab(prev => ({ ...prev, [phase.phase]: "practice" }))}
+                            className="flex items-center gap-1.5 px-4 py-1.5 rounded-md text-sm font-medium transition-all"
+                            style={{
+                              background: tab === "practice" ? '#1a1400' : 'transparent',
+                              color: tab === "practice" ? '#E5A829' : '#6b7a99',
+                              border: tab === "practice" ? '1px solid #E5A82930' : '1px solid transparent',
+                            }}>
+                            <Zap size={13} />
+                            Practice
+                          </button>
                         </div>
 
-                        {/* Per-week problem lists */}
-                        <div className="space-y-4">
-                          {Object.entries(phase.weekProblems).map(
-                            ([weekStr, problems]) => {
-                              const weekNum = parseInt(weekStr, 10);
-                              const isCurrentWeek =
-                                isCurrent && weekNum === currentWeek;
+                        {/* Tab content */}
+                        {tab === "learn" && <SessionsTab phaseNum={phase.phase} />}
+                        {tab === "practice" && <ProblemsTab phase={phase} currentWeek={currentWeek} />}
 
-                              if (!problems || problems.length === 0)
-                                return null;
-
-                              return (
-                                <div key={weekNum}>
-                                  <div className="flex items-center gap-2 mb-2">
-                                    <h4
-                                      className={`text-xs font-semibold uppercase tracking-wider ${
-                                        isCurrentWeek
-                                          ? "text-primary"
-                                          : "text-white/30"
-                                      }`}
-                                    >
-                                      Week {weekNum}
-                                    </h4>
-                                    {isCurrentWeek && (
-                                      <span className="text-[9px] px-1.5 py-0.5 rounded bg-primary/20 text-primary font-bold uppercase">
-                                        You are here
-                                      </span>
-                                    )}
-                                    <span className="text-[10px] text-white/20">
-                                      {
-                                        problems.filter((p) => p.solved)
-                                          .length
-                                      }
-                                      /{problems.length}
-                                    </span>
-                                  </div>
-                                  <div className="space-y-1">
-                                    {problems.map((problem) => (
-                                      <Link
-                                        key={problem.id}
-                                        href={`/dashboard/practice/${problem.slug}`}
-                                        className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/[0.04] transition-colors group"
-                                      >
-                                        {problem.solved ? (
-                                          <Check
-                                            size={14}
-                                            className="text-emerald-400 flex-shrink-0"
-                                          />
-                                        ) : (
-                                          <Circle
-                                            size={14}
-                                            className="text-white/15 flex-shrink-0"
-                                          />
-                                        )}
-                                        <span
-                                          className={`text-sm flex-1 ${
-                                            problem.solved
-                                              ? "text-white/40 line-through"
-                                              : "text-white/70 group-hover:text-white"
-                                          }`}
-                                        >
-                                          {problem.title}
-                                        </span>
-                                        <span
-                                          className={`text-[10px] px-1.5 py-0.5 rounded border ${
-                                            difficultyColors[
-                                              problem.difficulty
-                                            ] ||
-                                            "text-white/30 bg-white/5 border-white/10"
-                                          }`}
-                                        >
-                                          {problem.difficulty}
-                                        </span>
-                                      </Link>
-                                    ))}
-                                  </div>
-                                </div>
-                              );
-                            }
-                          )}
-
-                          {/* If no problems in any week for this phase */}
-                          {Object.values(phase.weekProblems).every(
-                            (probs) => probs.length === 0
-                          ) && (
-                            <p className="text-sm text-white/25 text-center py-4">
-                              No problems assigned to this phase yet.
-                            </p>
-                          )}
-                        </div>
-
-                        {/* Phase stats */}
-                        <div className="grid grid-cols-3 gap-3 mt-4">
-                          <div className="p-3 rounded-lg bg-white/[0.03] text-center">
-                            <div className="text-lg font-bold text-white">
-                              {phase.solvedProblems}
-                            </div>
-                            <div className="text-[10px] uppercase text-white/30 tracking-wider">
-                              Solved
-                            </div>
-                          </div>
-                          <div className="p-3 rounded-lg bg-white/[0.03] text-center">
-                            <div className="text-lg font-bold text-white">
-                              {phase.totalProblems}
-                            </div>
-                            <div className="text-[10px] uppercase text-white/30 tracking-wider">
-                              Total
-                            </div>
-                          </div>
-                          <div className="p-3 rounded-lg bg-white/[0.03] text-center">
-                            <div className="text-lg font-bold text-white">
-                              {phase.progress}%
-                            </div>
-                            <div className="text-[10px] uppercase text-white/30 tracking-wider">
-                              Complete
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Checkpoint gate */}
+                        {/* Checkpoint */}
                         {isCurrent && checkpointLabels[phase.phase] && (
-                          <div className="mt-4 p-3 rounded-lg border border-primary/20 bg-primary/5">
-                            <div className="flex items-start gap-2">
-                              <Trophy
-                                size={16}
-                                className="text-primary mt-0.5 flex-shrink-0"
-                              />
-                              <div className="flex-1">
-                                <p className="text-sm font-medium text-primary">
-                                  Phase Exit Gate
-                                </p>
-                                <p className="text-xs text-white/40 mt-1">
-                                  {checkpointLabels[phase.phase]}
-                                </p>
-                              </div>
-                            </div>
+                          <div className="mt-4 p-3 rounded-lg text-xs" style={{ background: '#0f1629', color: '#6b7a99', border: '1px solid #1E3A5F' }}>
+                            🎯 {checkpointLabels[phase.phase]}
+                          </div>
+                        )}
+
+                        {/* Advance button */}
+                        {isCurrent && (
+                          <div className="mt-3">
                             <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleAdvance();
-                              }}
+                              onClick={handleAdvance}
                               disabled={advancing}
-                              className="mt-3 w-full px-4 py-2 rounded-lg bg-primary text-primary-foreground font-semibold text-sm hover:opacity-90 transition-all glow-green disabled:opacity-50"
-                            >
-                              {advancing
-                                ? "Checking..."
-                                : "Check if I'm ready →"}
+                              className="w-full py-2.5 rounded-lg text-sm font-semibold transition-all hover:opacity-90 disabled:opacity-50"
+                              style={{ background: '#E5A829', color: '#0a0f24' }}>
+                              {advancing ? "Checking..." : "Advance to Next Phase →"}
                             </button>
-                            <AnimatePresence>
-                              {advanceMsg && (
-                                <motion.p
-                                  initial={{ opacity: 0, y: -5 }}
-                                  animate={{ opacity: 1, y: 0 }}
-                                  exit={{ opacity: 0 }}
-                                  className="mt-2 text-xs text-center text-white/60"
-                                >
-                                  {advanceMsg}
-                                </motion.p>
-                              )}
-                            </AnimatePresence>
+                            {advanceMsg && (
+                              <p className="text-xs mt-2 text-center" style={{ color: '#6b7a99' }}>{advanceMsg}</p>
+                            )}
                           </div>
                         )}
-
-                        {/* Completed celebration */}
-                        {isCompleted && phase.completedAt && (
-                          <div className="mt-4 p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
-                            <div className="flex items-center gap-2">
-                              <Check
-                                size={16}
-                                className="text-emerald-400"
-                              />
-                              <span className="text-sm text-emerald-400 font-medium">
-                                Completed{" "}
-                                {new Date(
-                                  phase.completedAt
-                                ).toLocaleDateString()}
-                              </span>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-
-                {/* Locked message */}
-                <AnimatePresence>
-                  {isExpanded && isLocked && (
-                    <motion.div
-                      initial={{ opacity: 0, height: 0 }}
-                      animate={{ opacity: 1, height: "auto" }}
-                      exit={{ opacity: 0, height: 0 }}
-                      className="overflow-hidden"
-                    >
-                      <div className="p-4 mt-1 rounded-xl border border-white/[0.04] bg-white/[0.01] text-center">
-                        <Lock
-                          size={24}
-                          className="mx-auto text-white/15 mb-2"
-                        />
-                        <p className="text-sm text-white/25">
-                          Complete Phase {phase.phase - 1} to unlock this stage
-                        </p>
                       </div>
                     </motion.div>
                   )}
