@@ -1,141 +1,53 @@
+// REDESIGNED: Horizontal timeline desktop, step numbers muted not gold, dashed connector
 "use client";
 
 import { motion } from "framer-motion";
 
+const steps = [
+  { number: "01", title: "Pick your level", description: "Tell us where you are. We build a personalized curriculum starting from your current knowledge." },
+  { number: "02", title: "Learn the concept", description: "Short, focused lessons explain each data structure or algorithm from first principles." },
+  { number: "03", title: "Solve problems", description: "Apply what you learned in the in-browser editor with instant test feedback." },
+  { number: "04", title: "Review and retain", description: "Spaced repetition brings back problems at the right intervals so nothing fades." },
+];
+
 const HowItWorksSection = () => {
-  const steps = [
-    {
-      number: "01",
-      title: "Learn",
-      description:
-        "Watch carefully curated lessons that explain concepts from first principles. No fluff, just clarity.",
-      icon: "📚",
-    },
-    {
-      number: "02",
-      title: "Practice",
-      description:
-        "Solve progressively challenging problems. Build muscle memory through deliberate practice.",
-      icon: "✏️",
-    },
-    {
-      number: "03",
-      title: "Master",
-      description:
-        "Combine knowledge with intuition. Apply patterns to new problems with confidence.",
-      icon: "🏆",
-    },
-  ];
-
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: {
-        staggerChildren: 0.2,
-        delayChildren: 0.1,
-      },
-    },
-  };
-
-  const itemVariants = {
-    hidden: { opacity: 0, x: -20 },
-    visible: {
-      opacity: 1,
-      x: 0,
-      transition: {
-        duration: 0.6,
-        ease: "easeOut" as const,
-      },
-    },
-  };
-
   return (
-    <section
-      id="how-it-works"
-      className="py-24 px-4 md:px-8 bg-gradient-to-b from-navy-dark/30 to-transparent"
-    >
-      <div className="max-w-5xl mx-auto">
-        {/* Section Header */}
-        <motion.div
-          className="text-center mb-20"
-          initial={{ opacity: 0, y: -20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-          viewport={{ once: true }}
-        >
-          <h2 className="text-4xl md:text-5xl font-bold text-white mb-4">
-            How It Works
-          </h2>
-          <p className="text-xl text-gray-light">
-            A three-step approach to mastery
-          </p>
+    <section id="how-it-works" className="py-24 px-4 md:px-8">
+      <div className="max-w-7xl mx-auto">
+        <motion.div className="mb-16" initial={{ opacity: 0, y: -16 }} whileInView={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} viewport={{ once: true }}>
+          <h2 className="text-4xl font-bold text-white mb-3" style={{ letterSpacing: '-0.02em' }}>How it works</h2>
+          <p className="text-lg" style={{ color: '#6b7a99' }}>Four steps from signup to solving hard problems.</p>
         </motion.div>
 
-        {/* Steps Container */}
-        <motion.div
-          className="space-y-8 md:space-y-0 md:flex md:flex-col"
-          variants={containerVariants}
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true }}
-        >
+        <div className="hidden md:grid grid-cols-4 gap-0 relative">
+          <div className="absolute top-8 left-[12.5%] right-[12.5%] h-px" style={{ borderTop: '1px dashed #1a2847', zIndex: 0 }} />
           {steps.map((step, index) => (
-            <motion.div
-              key={index}
-              variants={itemVariants}
-              className="relative flex flex-col md:flex-row gap-8 items-start md:items-center"
-            >
-              {/* Left side - Number and Icon */}
-              <div className="flex-shrink-0">
-                <div className="flex items-center gap-6">
-                  {/* Number Circle */}
-                  <motion.div
-                    className="w-24 h-24 rounded-full bg-gradient-to-br from-gold-primary/30 to-gold-light/10 border-2 border-gold-primary flex items-center justify-center flex-shrink-0"
-                    whileHover={{ scale: 1.1, boxShadow: "0 0 20px rgba(212, 175, 55, 0.4)" }}
-                  >
-                    <span className="text-3xl font-bold text-gold-primary">
-                      {step.number}
-                    </span>
-                  </motion.div>
-
-                  {/* Icon */}
-                  <motion.div
-                    className="text-5xl hidden md:block"
-                    whileHover={{ scale: 1.3, rotate: 15 }}
-                  >
-                    {step.icon}
-                  </motion.div>
-                </div>
+            <motion.div key={index} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: index * 0.1 }} viewport={{ once: true }} className="flex flex-col items-center text-center px-6 relative z-10">
+              <div className="w-16 h-16 rounded-full flex items-center justify-center mb-6" style={{ background: '#0f1629', border: '1px solid #1a2847' }}>
+                <span className="text-xl font-bold" style={{ color: '#2d3f6b' }}>{step.number}</span>
               </div>
-
-              {/* Right side - Content */}
-              <motion.div
-                className="flex-grow"
-                whileHover={{ x: 10 }}
-                transition={{ duration: 0.3 }}
-              >
-                <h3 className="text-3xl font-bold text-gold-light mb-3">
-                  {step.title}
-                </h3>
-                <p className="text-lg text-gray-light leading-relaxed">
-                  {step.description}
-                </p>
-              </motion.div>
-
-              {/* Connector line */}
-              {index < steps.length - 1 && (
-                <motion.div
-                  className="hidden md:block absolute left-12 top-24 w-0.5 h-24 bg-gradient-to-b from-gold-primary/50 to-transparent"
-                  initial={{ scaleY: 0 }}
-                  whileInView={{ scaleY: 1 }}
-                  transition={{ duration: 0.6, delay: 0.3 }}
-                  viewport={{ once: true }}
-                />
-              )}
+              <h3 className="text-base font-semibold text-white mb-2">{step.title}</h3>
+              <p className="text-sm leading-relaxed" style={{ color: '#6b7a99' }}>{step.description}</p>
             </motion.div>
           ))}
-        </motion.div>
+        </div>
+
+        <div className="md:hidden space-y-0">
+          {steps.map((step, index) => (
+            <motion.div key={index} initial={{ opacity: 0, x: -16 }} whileInView={{ opacity: 1, x: 0 }} transition={{ duration: 0.4, delay: index * 0.08 }} viewport={{ once: true }} className="flex gap-5 pb-8">
+              <div className="flex flex-col items-center">
+                <div className="w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: '#0f1629', border: '1px solid #1a2847' }}>
+                  <span className="text-base font-bold" style={{ color: '#2d3f6b' }}>{step.number}</span>
+                </div>
+                {index < steps.length - 1 && <div className="w-px flex-1 mt-3" style={{ borderLeft: '1px dashed #1a2847' }} />}
+              </div>
+              <div className="pt-2">
+                <h3 className="text-base font-semibold text-white mb-1">{step.title}</h3>
+                <p className="text-sm leading-relaxed" style={{ color: '#6b7a99' }}>{step.description}</p>
+              </div>
+            </motion.div>
+          ))}
+        </div>
       </div>
     </section>
   );
