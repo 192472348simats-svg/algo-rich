@@ -81,19 +81,43 @@ const PHASE1_TOPICS = [
 
 const PHASE2_TOPICS = [
   {
+    id: "thinking",
+    title: "Thinking Like a Programmer",
+    emoji: "🧠",
+    sessions: ["problem-thinking", "brute-force-first"],
+  },
+  {
+    id: "bigo",
+    title: "Big-O Notation",
+    emoji: "📈",
+    sessions: ["big-o-basics", "big-o-reading"],
+  },
+  {
     id: "arrays",
-    title: "Arrays & Big-O",
+    title: "Arrays Deep Dive",
     emoji: "📊",
-    sessions: ["arrays-and-big-o"],
+    sessions: ["arrays-and-big-o", "two-pointers", "sliding-window"],
   },
 ];
 
 const PHASE3_TOPICS = [
   {
+    id: "linked-lists",
+    title: "Linked Lists",
+    emoji: "🔗",
+    sessions: ["linked-lists-intro"],
+  },
+  {
+    id: "stacks-queues",
+    title: "Stacks & Queues",
+    emoji: "📚",
+    sessions: ["stacks-basics", "queues-basics"],
+  },
+  {
     id: "trees",
     title: "Trees",
     emoji: "🌳",
-    sessions: ["binary-search-trees"],
+    sessions: ["binary-search-trees", "bst-deletion"],
   },
 ];
 
