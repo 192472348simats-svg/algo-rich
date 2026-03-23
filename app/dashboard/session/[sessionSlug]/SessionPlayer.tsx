@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import type {
   SessionDefinition,
@@ -83,6 +84,7 @@ export default function SessionPlayer({ sessionSlug }: SessionPlayerProps) {
   const [error, setError] = useState<string | null>(null);
   const [sessionStartTime] = useState(Date.now());
   const [showGuideStar, setShowGuideStar] = useState(false);
+  const router = useRouter();
 
   // Fetch session definition and progress
   useEffect(() => {
@@ -154,10 +156,15 @@ export default function SessionPlayer({ sessionSlug }: SessionPlayerProps) {
         setShowGuideStar(true);
       }
 
-      // Advance to next stage
+      // Advance to next stage or redirect on completion
       if (!isLastStage) {
         setCurrentStageIndex((prev) => prev + 1);
         setStageStartTime(Date.now());
+      } else {
+        // Session fully complete — go back to sessions list
+        setTimeout(() => {
+          router.push("/dashboard/sessions");
+        }, 1800);
       }
     },
     [definition, currentStageIndex, stageResults, stageStartTime, sessionSlug]
@@ -273,28 +280,33 @@ export default function SessionPlayer({ sessionSlug }: SessionPlayerProps) {
           <GuideStar topic={currentTopic} onDismiss={() => setShowGuideStar(false)} />
         )}
       </AnimatePresence>
-      {/* Top bar — progress + exit */}
-      <div className="sticky top-0 z-50 bg-[#0a0a0f]/80 backdrop-blur-lg border-b border-white/[0.04]">
-        <div className="max-w-4xl mx-auto px-4 py-3 flex items-center gap-4">
-          <a
-            href="/dashboard"
-            className="text-white/20 hover:text-white/50 transition-colors text-sm flex-shrink-0"
-          >
-            ✕
-          </a>
-
-          <div className="flex-1 h-1.5 rounded-full bg-white/[0.06] overflow-hidden">
-            <motion.div
-              className="h-full rounded-full bg-gradient-to-r from-cyan-500 to-cyan-400"
-              initial={{ width: 0 }}
-              animate={{ width: `${progressPercent}%` }}
-              transition={{ duration: 0.5, ease: "easeOut" }}
-            />
+      {/* Top bar — stage pills + exit */}
+      <div className="sticky top-0 z-50 backdrop-blur-lg" style={{ background: "rgba(10,15,36,0.9)", borderBottom: "1px solid #1E3A5F" }}>
+        <div className="max-w-4xl mx-auto px-4 py-3 flex items-center gap-3">
+          <a href="/dashboard/sessions" className="text-sm flex-shrink-0 transition-colors" style={{ color: "#6b7a99" }}>✕</a>
+          <div className="flex-1 flex items-center gap-1 overflow-x-auto scrollbar-none">
+            {definition.stages.map((stage, i) => {
+              const stageNames: Record<string, string> = { hook: "Hook", watch: "Watch", predict: "Predict", learn: "Learn", "guided-build": "Build", code: "Code", reflect: "Reflect", summary: "Done" };
+              const isDone = i < currentStageIndex;
+              const isCurrent = i === currentStageIndex;
+              return (
+                <div key={stage.id} className="flex items-center gap-1 flex-shrink-0">
+                  <div className="px-2.5 py-1 rounded-full text-xs font-medium transition-all"
+                    style={{
+                      background: isDone ? "#051a12" : isCurrent ? "#1a1400" : "#0a0f24",
+                      color: isDone ? "#10b981" : isCurrent ? "#E5A829" : "#6b7a99",
+                      border: `1px solid ${isDone ? "#10b98140" : isCurrent ? "#E5A829" : "#1E3A5F"}`,
+                    }}>
+                    {isDone ? "✓" : stageNames[stage.type] ?? stage.type}
+                  </div>
+                  {i < definition.stages.length - 1 && (
+                    <div className="w-3 h-px flex-shrink-0" style={{ background: "#1E3A5F" }} />
+                  )}
+                </div>
+              );
+            })}
           </div>
-
-          <span className="text-[11px] text-white/20 flex-shrink-0 tabular-nums">
-            {currentStageIndex + 1}/{totalStages}
-          </span>
+          <span className="text-xs flex-shrink-0" style={{ color: "#6b7a99" }}>{definition.title.split(" — ")[0].split(" ").slice(0,3).join(" ")}</span>
         </div>
       </div>
 

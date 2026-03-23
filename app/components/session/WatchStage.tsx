@@ -1,13 +1,13 @@
+// REDESIGNED: Manual step-by-step watch stage — user clicks Next, big narration, slow and clear
 "use client";
 
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import type {
   WatchConfig,
   TextFlowStep,
   BoxAnimationStep,
   CounterAnimationStep,
-  MachineAnimationStep,
 } from "@/lib/sessionDefinitions";
 import type { StageResult } from "@/app/dashboard/session/[sessionSlug]/SessionPlayer";
 import {
@@ -24,92 +24,160 @@ interface Props {
 }
 
 const CANVAS_WIDTH = 800;
-const CANVAS_HEIGHT = 400;
+const CANVAS_HEIGHT = 380;
 
-// ─── Legacy Tree Visualizer ─────────────────────────────────────────────────
+// ─── Shared Next Button ──────────────────────────────────────────────────────
 
-function TreeVisualizer({ config, onComplete }: { config: WatchConfig; onComplete: (r: StageResult) => void }) {
-  const [currentStep, setCurrentStep] = useState(-1);
-  const [narration, setNarration] = useState("");
+function StepControls({
+  stepIdx,
+  total,
+  onNext,
+  onComplete,
+}: {
+  stepIdx: number;
+  total: number;
+  onNext: () => void;
+  onComplete: () => void;
+}) {
+  const isLast = stepIdx >= total - 1;
+  return (
+    <div className="flex flex-col items-center gap-3 mt-6">
+      <div className="flex gap-1.5">
+        {Array.from({ length: total }).map((_, i) => (
+          <div
+            key={i}
+            className="h-1.5 rounded-full transition-all duration-300"
+            style={{
+              width: i === stepIdx ? "24px" : "8px",
+              background: i <= stepIdx ? "#E5A829" : "#1E3A5F",
+            }}
+          />
+        ))}
+      </div>
+      <button
+        onClick={isLast ? onComplete : onNext}
+        className="px-8 py-3 rounded-xl font-semibold text-sm transition-all hover:opacity-90"
+        style={{ background: "#E5A829", color: "#0a0f24" }}
+      >
+        {isLast ? "Got it — continue →" : "Next step →"}
+      </button>
+      <p className="text-xs" style={{ color: "#6b7a99" }}>
+        Step {stepIdx + 1} of {total}
+      </p>
+    </div>
+  );
+}
+
+// ─── Narration Card ──────────────────────────────────────────────────────────
+
+function NarrationCard({ text }: { text: string }) {
+  return (
+    <AnimatePresence mode="wait">
+      <motion.div
+        key={text}
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: -10 }}
+        transition={{ duration: 0.3 }}
+        className="rounded-xl p-4 text-center"
+        style={{ background: "#0f1629", border: "1px solid #E5A82940" }}
+      >
+        <p className="text-sm leading-relaxed text-white">{text}</p>
+      </motion.div>
+    </AnimatePresence>
+  );
+}
+
+// ─── Tree Visualizer (manual) ────────────────────────────────────────────────
+
+function TreeVisualizer({
+  config,
+  onComplete,
+}: {
+  config: WatchConfig;
+  onComplete: (r: StageResult) => void;
+}) {
+  const [stepIdx, setStepIdx] = useState(0);
   const [treeRoot, setTreeRoot] = useState<TreeNode | null>(null);
-  const [isComplete, setIsComplete] = useState(false);
   const [latestValue, setLatestValue] = useState<number | null>(null);
-  const playingRef = useRef(true);
-  const hasStarted = useRef(false);
-
-  useEffect(() => { resetIdCounter(); }, []);
+  const steps = config.autoPlaySteps ?? [];
 
   useEffect(() => {
-    if (hasStarted.current) return;
-    hasStarted.current = true;
-    async function autoPlay() {
-      await new Promise((r) => setTimeout(r, 800));
+    resetIdCounter();
+    const step = steps[stepIdx];
+    if (!step) return;
+    if (step.action === "insert" && step.value !== undefined) {
+      resetIdCounter();
+      const values = steps
+        .slice(0, stepIdx + 1)
+        .filter((s) => s.action === "insert" && s.value !== undefined)
+        .map((s) => s.value as number);
       let root: TreeNode | null = null;
-      const steps = config.autoPlaySteps ?? [];
-      for (let i = 0; i < steps.length; i++) {
-        if (!playingRef.current) break;
-        const step = steps[i];
-        setCurrentStep(i);
-        setNarration(step.narration);
-        if (step.action === "insert" && step.value !== undefined) {
-          resetIdCounter();
-          const values = steps.slice(0, i + 1)
-            .filter((s) => s.action === "insert" && s.value !== undefined)
-            .map((s) => s.value as number);
-          root = null;
-          for (const v of values) root = insertBST(root, v);
-          if (root) computeLayout(root, CANVAS_WIDTH);
-          setTreeRoot(root ? { ...root } : null);
-          setLatestValue(step.value);
-        }
-        await new Promise((r) => setTimeout(r, step.delayAfterMs));
-      }
-      setIsComplete(true);
+      for (const v of values) root = insertBST(root, v);
+      if (root) computeLayout(root, CANVAS_WIDTH);
+      setTreeRoot(root ? { ...root } : null);
+      setLatestValue(step.value);
     }
-    autoPlay();
-    return () => { playingRef.current = false; };
-  }, [config]);
+  }, [stepIdx]);
 
   const nodes = useMemo(() => (treeRoot ? collectNodes(treeRoot) : []), [treeRoot]);
   const edges = useMemo(() => {
     const result: { fromX: number; fromY: number; toX: number; toY: number }[] = [];
     function walk(node: TreeNode | null) {
       if (!node) return;
-      if (node.left) { result.push({ fromX: node.x, fromY: node.y, toX: node.left.x, toY: node.left.y }); walk(node.left); }
-      if (node.right) { result.push({ fromX: node.x, fromY: node.y, toX: node.right.x, toY: node.right.y }); walk(node.right); }
+      if (node.left) {
+        result.push({ fromX: node.x, fromY: node.y, toX: node.left.x, toY: node.left.y });
+        walk(node.left);
+      }
+      if (node.right) {
+        result.push({ fromX: node.x, fromY: node.y, toX: node.right.x, toY: node.right.y });
+        walk(node.right);
+      }
     }
     walk(treeRoot);
     return result;
   }, [treeRoot]);
 
-  useEffect(() => {
-    if (isComplete) {
-      const t = setTimeout(() => onComplete({ score: 0, timeSpent: 0 }), 2500);
-      return () => clearTimeout(t);
-    }
-  }, [isComplete, onComplete]);
+  const currentStep = steps[stepIdx];
 
   return (
-    <div className="space-y-6">
-      <div className="text-center">
-        <p className="text-xs uppercase tracking-widest text-white/20 mb-1">Watch &amp; Observe</p>
-        <p className="text-sm text-white/40">See how the data structure builds itself</p>
-      </div>
-      <div className="relative rounded-2xl border border-white/[0.06] bg-white/[0.02] overflow-hidden" style={{ height: CANVAS_HEIGHT }}>
-        <svg width="100%" height="100%" viewBox={`0 0 ${CANVAS_WIDTH} ${CANVAS_HEIGHT}`}>
+    <div className="space-y-4">
+      <div className="rounded-xl overflow-hidden" style={{ border: "1px solid #1E3A5F", background: "#0a0f24" }}>
+        <svg width="100%" height={CANVAS_HEIGHT} viewBox={`0 0 ${CANVAS_WIDTH} ${CANVAS_HEIGHT}`}>
           {edges.map((edge, i) => (
-            <motion.line key={`edge-${i}`} x1={edge.fromX} y1={edge.fromY} x2={edge.toX} y2={edge.toY}
-              stroke="rgba(148,163,184,0.2)" strokeWidth={2} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.4 }} />
+            <motion.line
+              key={`edge-${i}`}
+              x1={edge.fromX} y1={edge.fromY} x2={edge.toX} y2={edge.toY}
+              stroke="#1E3A5F" strokeWidth={2}
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.4 }}
+            />
           ))}
           {nodes.map((node) => {
             const isLatest = node.value === latestValue;
             return (
               <motion.g key={node.id}>
-                {isLatest && <motion.circle cx={node.x} cy={node.y} r={30} fill="hsl(43 96% 56% / 0.12)" initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ duration: 0.3 }} />}
-                <motion.circle cx={node.x} cy={node.y} r={22} fill="#1e293b" stroke={isLatest ? "hsl(43 96% 56%)" : "#334155"} strokeWidth={2}
-                  initial={{ scale: 0, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ type: "spring", stiffness: 300, damping: 20 }} />
-                <motion.text x={node.x} y={node.y} textAnchor="middle" dominantBaseline="central" fill="white" fontSize={15} fontWeight={700}
-                  fontFamily="monospace" style={{ pointerEvents: "none" }} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.15 }}>
+                {isLatest && (
+                  <motion.circle cx={node.x} cy={node.y} r={32}
+                    fill="rgba(229,168,41,0.12)"
+                    initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ duration: 0.3 }}
+                  />
+                )}
+                <motion.circle cx={node.x} cy={node.y} r={22}
+                  fill="#0f1629"
+                  stroke={isLatest ? "#E5A829" : "#1E3A5F"}
+                  strokeWidth={isLatest ? 2 : 1.5}
+                  initial={{ scale: 0, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                />
+                <motion.text
+                  x={node.x} y={node.y}
+                  textAnchor="middle" dominantBaseline="central"
+                  fill={isLatest ? "#E5A829" : "#c8d0e0"}
+                  fontSize={14} fontWeight={700} fontFamily="monospace"
+                  style={{ pointerEvents: "none" }}
+                  initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.15 }}
+                >
                   {node.value}
                 </motion.text>
               </motion.g>
@@ -117,271 +185,324 @@ function TreeVisualizer({ config, onComplete }: { config: WatchConfig; onComplet
           })}
         </svg>
       </div>
-      <AnimatePresence mode="wait">
-        {narration && (
-          <motion.div key={narration} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} className="text-center">
-            <p className="text-sm text-white/60 italic">&ldquo;{narration}&rdquo;</p>
-            <p className="text-xs text-white/20 mt-2">Step {currentStep + 1} of {(config.autoPlaySteps ?? []).length}</p>
-          </motion.div>
-        )}
-      </AnimatePresence>
-      {isComplete && <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center text-xs text-white/20">Continuing...</motion.p>}
+      {currentStep && <NarrationCard text={currentStep.narration} />}
+      <StepControls
+        stepIdx={stepIdx}
+        total={steps.length}
+        onNext={() => setStepIdx((p) => p + 1)}
+        onComplete={() => onComplete({ score: 0, timeSpent: 0 })}
+      />
     </div>
   );
 }
 
-// ─── Text-Flow Visualizer ────────────────────────────────────────────────────
+// ─── Box Animation Visualizer (manual) ──────────────────────────────────────
 
-function TextFlowVisualizer({ steps, onComplete }: { steps: TextFlowStep[]; onComplete: (r: StageResult) => void }) {
-  const [visible, setVisible] = useState(1);
-
-  useEffect(() => {
-    const timers: NodeJS.Timeout[] = [];
-    for (let i = 1; i < steps.length; i++) {
-      timers.push(setTimeout(() => setVisible(i + 1), i * 2200));
-    }
-    timers.push(setTimeout(() => onComplete({ score: 0, timeSpent: 0 }), steps.length * 2200 + 1000));
-    return () => timers.forEach(clearTimeout);
-  }, [steps, onComplete]);
-
-  return (
-    <div className="space-y-4">
-      <p className="text-center text-xs uppercase tracking-widest text-white/20">How Code Runs</p>
-      <div className="flex flex-col sm:flex-row items-center justify-center gap-3 flex-wrap">
-        {steps.map((step, i) => (
-          <div key={i} className="flex flex-col sm:flex-row items-center gap-3">
-            <AnimatePresence>
-              {i < visible && (
-                <motion.div
-                  initial={{ opacity: 0, y: 20, scale: 0.9 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  transition={{ type: "spring", stiffness: 200, damping: 20 }}
-                  className="glass rounded-xl px-5 py-4 min-w-[140px] text-center border border-primary/20"
-                >
-                  <p className="text-[10px] uppercase tracking-widest text-primary/70 mb-1">{step.label}</p>
-                  <p className="text-sm font-mono text-white/80 break-all">{step.text}</p>
-                </motion.div>
-              )}
-            </AnimatePresence>
-            {i < steps.length - 1 && i < visible - 1 && (
-              <motion.span initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.4 }}
-                className="text-primary text-xl hidden sm:inline">→</motion.span>
-            )}
-          </div>
-        ))}
-      </div>
-      <p className="text-center text-xs text-white/30">Each arrow shows how Python processes your code</p>
-    </div>
-  );
-}
-
-// ─── Box Animation Visualizer ────────────────────────────────────────────────
-
-function BoxAnimationVisualizer({ steps, onComplete }: { steps: BoxAnimationStep[]; onComplete: (r: StageResult) => void }) {
+function BoxAnimationVisualizer({
+  steps,
+  onComplete,
+}: {
+  steps: BoxAnimationStep[];
+  onComplete: (r: StageResult) => void;
+}) {
   const [stepIdx, setStepIdx] = useState(0);
 
+  // Build box state up to current step
   const boxes = useMemo(() => {
-    const map: Record<string, { value: string | null; state: "empty" | "filled" | "glowing" | "updating"; oldValue?: string }> = {};
+    const map: Record<string, {
+      value: string | null;
+      state: "empty" | "filled" | "glowing" | "updating";
+      oldValue?: string;
+      output?: string;
+    }> = {};
     for (let i = 0; i <= stepIdx && i < steps.length; i++) {
       const s = steps[i];
-      if (s.action === "create") map[s.label] = { value: null, state: "empty" };
-      else if (s.action === "fill") map[s.label] = { value: s.value ?? null, state: "filled" };
-      else if (s.action === "read") map[s.label] = { ...(map[s.label] ?? { value: null }), state: "glowing" };
-      else if (s.action === "update") map[s.label] = { value: s.newValue ?? null, state: "updating", oldValue: s.oldValue };
+      const key = s.label.split("=")[0].trim().split("(")[0].trim();
+      if (s.action === "create") {
+        map[key] = { value: s.value ?? null, state: "filled", output: s.output };
+      } else if (s.action === "fill") {
+        map[key] = { value: s.value ?? null, state: "filled", output: s.output };
+      } else if (s.action === "read") {
+        Object.keys(map).forEach((k) => { map[k] = { ...map[k], state: "filled" }; });
+        map[key] = { ...(map[key] ?? { value: null }), state: "glowing", output: s.output };
+      } else if (s.action === "update") {
+        map[key] = { value: s.newValue ?? null, state: "updating", oldValue: s.oldValue ?? map[key]?.value ?? "", output: s.output };
+      }
     }
     return map;
   }, [stepIdx, steps]);
 
   const currentStep = steps[stepIdx];
 
-  useEffect(() => {
-    if (stepIdx >= steps.length - 1) {
-      const t = setTimeout(() => onComplete({ score: 0, timeSpent: 0 }), 1500);
-      return () => clearTimeout(t);
-    }
-    const t = setTimeout(() => setStepIdx((p) => p + 1), 2000);
-    return () => clearTimeout(t);
-  }, [stepIdx, steps.length, onComplete]);
-
   return (
-    <div className="space-y-6">
-      <p className="text-center text-xs uppercase tracking-widest text-white/20">Variables in Memory</p>
-      <div className="flex flex-wrap justify-center gap-8 min-h-[120px] items-center">
+    <div className="space-y-4">
+      {/* Current code line */}
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={currentStep?.label}
+          initial={{ opacity: 0, x: -10 }}
+          animate={{ opacity: 1, x: 0 }}
+          exit={{ opacity: 0 }}
+          className="rounded-lg px-4 py-2.5 font-mono text-sm"
+          style={{ background: "#0a0f24", border: "1px solid #E5A82940", color: "#E5A829" }}
+        >
+          → {currentStep?.label}
+        </motion.div>
+      </AnimatePresence>
+
+      {/* Memory boxes */}
+      <div className="flex flex-wrap justify-center gap-6 min-h-[120px] items-center p-4 rounded-xl"
+        style={{ background: "#0a0f24", border: "1px solid #1E3A5F" }}>
         {Object.entries(boxes).map(([label, box]) => (
-          <motion.div key={label} layout initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ type: "spring", stiffness: 250, damping: 22 }}>
+          <motion.div key={label} layout
+            initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
+            transition={{ type: "spring", stiffness: 250, damping: 22 }}>
             <div className="text-center">
-              <p className="text-[10px] uppercase tracking-widest text-primary mb-1">{label}</p>
+              <p className="text-xs font-mono mb-2" style={{ color: "#E5A829" }}>{label}</p>
               <motion.div
                 className="w-28 h-16 rounded-xl flex items-center justify-center"
                 animate={{
-                  boxShadow: box.state === "glowing" ? "0 0 20px hsl(43 96% 56% / 0.5)" : "0 0 0px transparent",
-                  borderColor: box.state === "empty" ? "hsl(228 30% 22% / 0.4)" : "hsl(43 96% 56% / 0.5)",
-                  borderStyle: box.state === "empty" ? "dashed" : "solid",
-                  borderWidth: "1px",
+                  boxShadow: box.state === "glowing" ? "0 0 20px rgba(229,168,41,0.4)" : "none",
+                  borderColor: box.state === "glowing" ? "#E5A829" : box.state === "filled" ? "#E5A82950" : "#1E3A5F",
                 }}
-                style={{ background: "hsl(228 40% 12% / 0.6)" }}
-                transition={{ duration: 0.4 }}
+                style={{ background: "#0f1629", border: "1px solid #1E3A5F" }}
+                transition={{ duration: 0.3 }}
               >
                 {box.state === "updating" ? (
                   <div className="relative w-full h-full flex items-center justify-center">
-                    <motion.span key={`old-${box.oldValue}`} initial={{ opacity: 1 }} animate={{ opacity: 0, color: "#ef4444" }} transition={{ duration: 0.4 }} className="absolute font-mono text-sm">{box.oldValue}</motion.span>
-                    <motion.span key={`new-${box.value}`} initial={{ opacity: 0 }} animate={{ opacity: 1, color: "#34d399" }} transition={{ duration: 0.4, delay: 0.4 }} className="absolute font-mono text-sm">{box.value}</motion.span>
+                    <motion.span key={`old-${box.oldValue}`}
+                      initial={{ opacity: 1 }} animate={{ opacity: 0 }}
+                      transition={{ duration: 0.3 }}
+                      className="absolute font-mono text-sm" style={{ color: "#ef4444" }}>
+                      {box.oldValue}
+                    </motion.span>
+                    <motion.span key={`new-${box.value}`}
+                      initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                      transition={{ duration: 0.3, delay: 0.3 }}
+                      className="absolute font-mono text-sm" style={{ color: "#10b981" }}>
+                      {box.value}
+                    </motion.span>
                   </div>
                 ) : box.value == null ? (
-                  <span className="text-white/20 text-xs">empty</span>
+                  <span className="text-xs" style={{ color: "#1E3A5F" }}>empty</span>
                 ) : (
-                  <motion.span key={box.value} initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} className="font-mono text-sm text-white/80">{box.value}</motion.span>
+                  <motion.span key={box.value}
+                    initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }}
+                    className="font-mono text-sm text-white">
+                    {box.value}
+                  </motion.span>
                 )}
               </motion.div>
             </div>
           </motion.div>
         ))}
+        {Object.keys(boxes).length === 0 && (
+          <p className="text-sm" style={{ color: "#6b7a99" }}>Memory is empty — press Next to start</p>
+        )}
       </div>
-      <div className="text-center">
-        <p className="text-xs text-white/30">Step {stepIdx + 1} of {steps.length}</p>
-        {currentStep && <p className="text-[10px] text-white/20 mt-1 capitalize">{currentStep.action} → {currentStep.label}</p>}
-      </div>
+
+      {/* Output / explanation */}
+      {currentStep?.output && (
+        <NarrationCard text={currentStep.output} />
+      )}
+
+      <StepControls
+        stepIdx={stepIdx}
+        total={steps.length}
+        onNext={() => setStepIdx((p) => p + 1)}
+        onComplete={() => onComplete({ score: 0, timeSpent: 0 })}
+      />
     </div>
   );
 }
 
-// ─── Counter Animation Visualizer ───────────────────────────────────────────
+// ─── Counter / Loop Visualizer (manual) ─────────────────────────────────────
 
-function CounterAnimationVisualizer({ steps, onComplete }: { steps: CounterAnimationStep[]; onComplete: (r: StageResult) => void }) {
+function CounterAnimationVisualizer({
+  steps,
+  onComplete,
+}: {
+  steps: CounterAnimationStep[];
+  onComplete: (r: StageResult) => void;
+}) {
   const [stepIdx, setStepIdx] = useState(0);
-
-  useEffect(() => {
-    if (stepIdx >= steps.length - 1) {
-      const t = setTimeout(() => onComplete({ score: 0, timeSpent: 0 }), 1500);
-      return () => clearTimeout(t);
-    }
-    const t = setTimeout(() => setStepIdx((p) => p + 1), 1800);
-    return () => clearTimeout(t);
-  }, [stepIdx, steps.length, onComplete]);
-
   const step = steps[stepIdx];
-  const outputLines = step.output?.split("\n").filter(Boolean) ?? [];
+
+  // Collect all unique code lines for the code panel
   const codeLines = Array.from(new Set(steps.map((s) => s.code)));
 
   return (
     <div className="space-y-4">
-      <p className="text-center text-xs uppercase tracking-widest text-white/20">Loop Execution</p>
-      <div className="grid grid-cols-3 gap-3">
-        <div className="glass rounded-xl p-3">
-          <p className="text-[10px] uppercase tracking-widest text-primary/60 mb-2">CODE</p>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        {/* Code panel */}
+        <div className="rounded-xl p-4" style={{ background: "#0a0f24", border: "1px solid #1E3A5F" }}>
+          <p className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: "#E5A829" }}>Code</p>
           {codeLines.map((line, i) => (
-            <motion.p key={i}
-              animate={{ backgroundColor: line === step.code ? "hsl(43 96% 56% / 0.12)" : "transparent" }}
-              className="rounded px-1 font-mono text-xs text-white/70 whitespace-pre leading-5 transition-colors"
-            >{line}</motion.p>
+            <motion.div key={i}
+              animate={{ background: line === step.code ? "rgba(229,168,41,0.12)" : "transparent" }}
+              className="rounded px-2 py-1 mb-0.5 transition-colors"
+            >
+              <code className="font-mono text-xs text-white whitespace-pre">{line}</code>
+            </motion.div>
           ))}
         </div>
-        <div className="flex flex-col items-center justify-center">
-          <p className="text-[10px] uppercase tracking-widest text-primary/60 mb-2">i =</p>
-          <motion.div key={String(step.counter)} initial={{ scale: 0.7, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+
+        {/* Counter */}
+        <div className="flex flex-col items-center justify-center gap-2">
+          <p className="text-xs" style={{ color: "#6b7a99" }}>Variable value</p>
+          <motion.div
+            key={String(step.counter)}
+            initial={{ scale: 0.7, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
             transition={{ type: "spring", stiffness: 300, damping: 20 }}
-            className="w-14 h-14 rounded-full border-2 border-primary/50 flex items-center justify-center"
-            style={{ background: "hsl(43 96% 56% / 0.08)" }}>
-            <span className="font-mono text-xl font-bold text-primary">{step.counter === null ? "?" : step.counter}</span>
+            className="w-16 h-16 rounded-full flex items-center justify-center"
+            style={{ background: "#1a1400", border: "2px solid #E5A829" }}
+          >
+            <span className="font-mono text-2xl font-bold" style={{ color: "#E5A829" }}>
+              {step.counter === null ? "?" : step.counter}
+            </span>
           </motion.div>
         </div>
-        <div className="glass rounded-xl p-3">
-          <p className="text-[10px] uppercase tracking-widest text-primary/60 mb-2">OUTPUT</p>
-          <div className="space-y-0.5">
-            {outputLines.map((line, i) => (
-              <motion.p key={`${stepIdx}-${i}`}
-                initial={i === outputLines.length - 1 ? { opacity: 0, x: -8 } : { opacity: 1, x: 0 }}
-                animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.25 }}
-                className="font-mono text-xs text-green-400">{line}</motion.p>
-            ))}
-          </div>
+
+        {/* Output */}
+        <div className="rounded-xl p-4" style={{ background: "#0a0f24", border: "1px solid #1E3A5F" }}>
+          <p className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: "#10b981" }}>Output</p>
+          <AnimatePresence mode="wait">
+            <motion.p key={`${stepIdx}-output`}
+              initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }}
+              className="font-mono text-xs" style={{ color: "#10b981" }}>
+              {step.output || "—"}
+            </motion.p>
+          </AnimatePresence>
         </div>
       </div>
-      <AnimatePresence mode="wait">
-        {step.narration && (
-          <motion.p key={step.narration} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="text-center text-sm text-white/50 italic">{step.narration}</motion.p>
-        )}
-      </AnimatePresence>
-      <p className="text-center text-xs text-white/20">Step {stepIdx + 1} of {steps.length}</p>
+
+      {step.narration && <NarrationCard text={step.narration} />}
+
+      <StepControls
+        stepIdx={stepIdx}
+        total={steps.length}
+        onNext={() => setStepIdx((p) => p + 1)}
+        onComplete={() => onComplete({ score: 0, timeSpent: 0 })}
+      />
     </div>
   );
 }
 
-// ─── Machine Animation Visualizer ───────────────────────────────────────────
+// ─── Text Flow Visualizer (manual) ──────────────────────────────────────────
 
-function MachineAnimationVisualizer({ steps, onComplete }: { steps: MachineAnimationStep[]; onComplete: (r: StageResult) => void }) {
+function TextFlowVisualizer({
+  steps,
+  onComplete,
+}: {
+  steps: TextFlowStep[];
+  onComplete: (r: StageResult) => void;
+}) {
   const [stepIdx, setStepIdx] = useState(0);
-
-  useEffect(() => {
-    if (stepIdx >= steps.length - 1) {
-      const t = setTimeout(() => onComplete({ score: 0, timeSpent: 0 }), 1500);
-      return () => clearTimeout(t);
-    }
-    const t = setTimeout(() => setStepIdx((p) => p + 1), 2500);
-    return () => clearTimeout(t);
-  }, [stepIdx, steps.length, onComplete]);
-
-  const step = steps[stepIdx];
+  const currentStep = steps[stepIdx];
 
   return (
     <div className="space-y-4">
-      <p className="text-center text-xs uppercase tracking-widest text-white/20">Function Machine</p>
-      {step.action === "compare" ? (
-        <div className="grid grid-cols-2 gap-4 max-w-lg mx-auto">
-          <div className="glass rounded-xl p-4 border border-red-500/20">
-            <p className="text-[10px] text-red-400 uppercase tracking-widest mb-2">❌ print — shows only</p>
-            <code className="font-mono text-sm text-white/60">{step.print_ver}</code>
-            <p className="text-[10px] text-white/30 mt-2">Can&apos;t capture result</p>
-          </div>
-          <div className="glass rounded-xl p-4 border border-green-500/20">
-            <p className="text-[10px] text-green-400 uppercase tracking-widest mb-2">✅ return — sends back</p>
-            <code className="font-mono text-sm text-white/60">{step.return_ver}</code>
-            <p className="text-[10px] text-white/30 mt-2">result = add(3,4) ✓</p>
-          </div>
-        </div>
-      ) : step.action === "code" ? (
-        <div className="glass rounded-xl p-5 max-w-sm mx-auto">
-          <p className="text-[10px] uppercase tracking-widest text-primary/60 mb-2">Python Code</p>
-          <pre className="font-mono text-sm text-white/80 whitespace-pre">{step.code}</pre>
-        </div>
-      ) : (
-        <div className="flex items-center justify-center gap-6">
-          <div className="flex flex-col gap-2">
-            {(step.inputs ?? []).map((inp, i) => (
-              <motion.div key={`inp-${stepIdx}-${i}`} initial={{ opacity: 0, x: -30 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.15, type: "spring", stiffness: 200 }}
-                className="px-3 py-1.5 rounded-full text-sm font-mono font-bold"
-                style={{ background: "hsl(43 96% 56% / 0.15)", color: "hsl(43 96% 56%)", border: "1px solid hsl(43 96% 56% / 0.3)" }}>
-                {inp}
-              </motion.div>
-            ))}
-          </div>
-          <motion.div animate={{ scale: [1, 1.05, 1] }} transition={{ duration: 1, repeat: 2 }}
-            className="glass rounded-2xl w-24 h-24 flex flex-col items-center justify-center border border-primary/20">
-            <span className="text-3xl">⚙️</span>
-            <p className="text-[10px] text-primary/60 mt-1 font-mono">{step.name ?? "fn"}</p>
+      {/* Show all revealed steps */}
+      <div className="space-y-2">
+        {steps.slice(0, stepIdx + 1).map((step, i) => (
+          <motion.div
+            key={i}
+            initial={{ opacity: 0, x: -16 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.3 }}
+            className="rounded-xl p-4"
+            style={{
+              background: i === stepIdx ? "#0f1629" : "#0a0f24",
+              border: `1px solid ${i === stepIdx ? "#E5A82950" : "#1E3A5F"}`,
+            }}
+          >
+            <p className="text-xs mb-1.5" style={{ color: "#E5A829" }}>{step.label}</p>
+            <code className="font-mono text-sm text-white whitespace-pre-wrap">{step.text}</code>
           </motion.div>
-          {step.output !== undefined && (
-            <motion.div key={`out-${stepIdx}`} initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.6, type: "spring", stiffness: 200 }}
-              className="px-3 py-1.5 rounded-full text-sm font-mono font-bold"
-              style={{ background: "hsl(142 76% 36% / 0.15)", color: "#34d399", border: "1px solid rgba(52,211,153,0.3)" }}>
-              {String(step.output)}
-            </motion.div>
-          )}
-        </div>
-      )}
-      {step.narration && <p className="text-center text-sm text-white/50 italic">{step.narration}</p>}
-      <p className="text-center text-xs text-white/20">Step {stepIdx + 1} of {steps.length}</p>
+        ))}
+      </div>
+
+      <StepControls
+        stepIdx={stepIdx}
+        total={steps.length}
+        onNext={() => setStepIdx((p) => p + 1)}
+        onComplete={() => onComplete({ score: 0, timeSpent: 0 })}
+      />
     </div>
   );
 }
 
-// ─── BeginnerHeader ──────────────────────────────────────────────────────────
+// ─── Array Visualizer (manual) ───────────────────────────────────────────────
 
-function BeginnerHeader() {
+function ArrayVisualizer({
+  config,
+  onComplete,
+}: {
+  config: WatchConfig;
+  onComplete: (r: StageResult) => void;
+}) {
+  const [stepIdx, setStepIdx] = useState(0);
+  const steps = config.autoPlaySteps ?? [];
+  const [items, setItems] = useState<{ value: number; highlight: boolean }[]>([]);
+
+  useEffect(() => {
+    const step = steps[stepIdx];
+    if (!step) return;
+    if (step.action === "insert" && step.value !== undefined) {
+      setItems((prev) => [
+        ...prev.map((x) => ({ ...x, highlight: false })),
+        { value: step.value!, highlight: true },
+      ]);
+    } else if (step.action === "delete" && step.value !== undefined) {
+      setItems((prev) =>
+        prev.filter((x) => x.value !== step.value).map((x) => ({ ...x, highlight: false }))
+      );
+    } else if (step.action === "search" && step.value !== undefined) {
+      setItems((prev) =>
+        prev.map((x) => ({ ...x, highlight: x.value === step.value }))
+      );
+    }
+  }, [stepIdx]);
+
+  const currentStep = steps[stepIdx];
+
   return (
-    <div className="text-center">
-      <p className="text-xs uppercase tracking-widest text-white/20 mb-1">Watch &amp; Observe</p>
-      <p className="text-sm text-white/40">Follow along step by step</p>
+    <div className="space-y-4">
+      {/* Array display */}
+      <div className="flex items-end justify-center gap-2 p-6 rounded-xl min-h-[120px]"
+        style={{ background: "#0a0f24", border: "1px solid #1E3A5F" }}>
+        {items.length === 0 ? (
+          <p className="text-sm" style={{ color: "#6b7a99" }}>Array is empty — press Next to start</p>
+        ) : (
+          items.map((item, i) => (
+            <motion.div key={`${i}-${item.value}`}
+              initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
+              transition={{ type: "spring", stiffness: 300, damping: 20 }}
+              className="flex flex-col items-center gap-1">
+              <div className="w-12 h-12 rounded-lg flex items-center justify-center font-mono font-bold text-sm transition-all"
+                style={{
+                  background: item.highlight ? "#1a1400" : "#0f1629",
+                  border: `1px solid ${item.highlight ? "#E5A829" : "#1E3A5F"}`,
+                  color: item.highlight ? "#E5A829" : "#c8d0e0",
+                  boxShadow: item.highlight ? "0 0 12px rgba(229,168,41,0.3)" : "none",
+                }}>
+                {item.value}
+              </div>
+              <span className="text-xs" style={{ color: "#6b7a99" }}>[{i}]</span>
+            </motion.div>
+          ))
+        )}
+      </div>
+
+      {currentStep && <NarrationCard text={currentStep.narration} />}
+
+      <StepControls
+        stepIdx={stepIdx}
+        total={steps.length}
+        onNext={() => setStepIdx((p) => p + 1)}
+        onComplete={() => onComplete({ score: 0, timeSpent: 0 })}
+      />
     </div>
   );
 }
@@ -391,36 +512,32 @@ function BeginnerHeader() {
 export default function WatchStage({ config, onComplete }: Props) {
   const { visualizerType, steps } = config;
 
-  switch (visualizerType) {
-    case "text-flow":
-      return (
-        <div className="space-y-6">
-          <BeginnerHeader />
-          <TextFlowVisualizer steps={steps as TextFlowStep[]} onComplete={onComplete} />
-        </div>
-      );
-    case "box-animation":
-      return (
-        <div className="space-y-6">
-          <BeginnerHeader />
-          <BoxAnimationVisualizer steps={steps as BoxAnimationStep[]} onComplete={onComplete} />
-        </div>
-      );
-    case "counter-animation":
-      return (
-        <div className="space-y-6">
-          <BeginnerHeader />
-          <CounterAnimationVisualizer steps={steps as CounterAnimationStep[]} onComplete={onComplete} />
-        </div>
-      );
-    case "machine-animation":
-      return (
-        <div className="space-y-6">
-          <BeginnerHeader />
-          <MachineAnimationVisualizer steps={steps as MachineAnimationStep[]} onComplete={onComplete} />
-        </div>
-      );
-    default:
-      return <TreeVisualizer config={config} onComplete={onComplete} />;
-  }
+  return (
+    <div className="space-y-4">
+      <div className="text-center">
+        <p className="text-xs font-semibold uppercase tracking-widest mb-1" style={{ color: "#E5A829" }}>
+          Watch & Understand
+        </p>
+        <p className="text-sm" style={{ color: "#6b7a99" }}>
+          Go at your own pace — press Next when you're ready
+        </p>
+      </div>
+
+      {visualizerType === "box-animation" && (
+        <BoxAnimationVisualizer steps={steps as BoxAnimationStep[]} onComplete={onComplete} />
+      )}
+      {visualizerType === "counter-animation" && (
+        <CounterAnimationVisualizer steps={steps as CounterAnimationStep[]} onComplete={onComplete} />
+      )}
+      {visualizerType === "text-flow" && (
+        <TextFlowVisualizer steps={steps as TextFlowStep[]} onComplete={onComplete} />
+      )}
+      {visualizerType === "array" && (
+        <ArrayVisualizer config={config} onComplete={onComplete} />
+      )}
+      {(visualizerType === "tree" || visualizerType === "linked-list" || visualizerType === "stack-queue" || visualizerType === "graph" || !visualizerType) && (
+        <TreeVisualizer config={config} onComplete={onComplete} />
+      )}
+    </div>
+  );
 }
