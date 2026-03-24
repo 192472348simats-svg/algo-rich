@@ -194,7 +194,7 @@ export default function SessionPlayer({ sessionSlug }: SessionPlayerProps) {
         <p className="text-white/60 mb-4">{error || "Session not found"}</p>
         <a
           href="/dashboard"
-          className="text-cyan-400 hover:underline text-sm"
+          className="text-sm hover:underline" style={{ color: "#E5A829" }}
         >
           ← Back to Dashboard
         </a>

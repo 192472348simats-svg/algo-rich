@@ -223,7 +223,7 @@ export default function CodeStage({ config, onComplete }: Props) {
           className={`px-6 py-2.5 rounded-lg text-sm font-medium transition-all ${
             pyStatus !== "ready" || solved
               ? "bg-white/5 text-white/20 cursor-not-allowed"
-              : "bg-gradient-to-r from-cyan-500 to-cyan-400 text-black hover:shadow-lg hover:shadow-cyan-500/20 cursor-pointer"
+              : "cursor-pointer""
           }`}
         >
           {pyStatus === "loading"

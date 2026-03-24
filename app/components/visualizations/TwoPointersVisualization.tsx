@@ -140,7 +140,7 @@ export default function TwoPointersVisualization({
         <ArrayVisualization
           data={array}
           pointers={[
-            { name: "L", index: interactiveLeft, color: "#06b6d4" },
+            { name: "L", index: interactiveLeft, color: "#E5A829" },
             { name: "R", index: interactiveRight, color: "#d4af37" },
           ]}
           highlighted={interactiveFound ? [interactiveLeft, interactiveRight] : []}
@@ -225,7 +225,7 @@ export default function TwoPointersVisualization({
           <ArrayVisualization
             data={array}
             pointers={[
-              { name: "L", index: step.left, color: "#06b6d4" },
+              { name: "L", index: step.left, color: "#E5A829" },
               { name: "R", index: step.right, color: "#d4af37" },
             ]}
             highlighted={step.found ? [step.left, step.right] : []}

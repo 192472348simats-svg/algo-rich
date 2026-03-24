@@ -135,7 +135,7 @@ export default function VisualizeTypePage({
           onClick={() => setGuidedOpen((o) => !o)}
           className={`px-4 py-2 text-xs font-semibold rounded-lg border transition-colors ${
             guidedOpen
-              ? "bg-cyan-500/20 border-cyan-500/40 text-cyan-300"
+              ? "" style={{ background: '#1a1400', border: '1px solid #E5A82950', color: '#E5A829' }}"
               : "border-white/10 text-white/50 hover:text-white hover:border-white/20"
           }`}
         >

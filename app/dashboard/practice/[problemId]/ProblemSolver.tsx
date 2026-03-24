@@ -1008,14 +1008,27 @@ export default function ProblemSolver({ problem, isSolved, userId, relatedLesson
                 Running code...
               </div>
             ) : pyStatus === "loading" ? (
-              <div className="flex flex-col items-center justify-center h-full gap-3 text-gray-light/50">
-                <div className="w-8 h-8 border-2 border-gold-primary border-t-transparent rounded-full animate-spin" />
-                <span className="text-xs">
-                  Loading Python environment...
-                </span>
-                <span className="text-xs text-gray-light/30">
-                  This may take a few seconds
-                </span>
+              <div className="flex flex-col items-center justify-center h-full gap-4 px-6">
+                <div className="w-full max-w-xs">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs font-medium text-white">
+                      {pyodideProgress < 25 ? "Starting Python environment..." :
+                       pyodideProgress < 60 ? "Loading standard library..." :
+                       pyodideProgress < 90 ? "Compiling modules..." :
+                       "Almost ready..."}
+                    </span>
+                    <span className="text-xs" style={{ color: "#E5A829" }}>{pyodideProgress}%</span>
+                  </div>
+                  <div className="h-1.5 rounded-full overflow-hidden" style={{ background: "#1E3A5F" }}>
+                    <div
+                      className="h-full rounded-full transition-all duration-500"
+                      style={{ width: `${pyodideProgress}%`, background: "#E5A829" }}
+                    />
+                  </div>
+                  <p className="text-xs mt-2 text-center" style={{ color: "#6b7a99" }}>
+                    First load takes ~5 seconds
+                  </p>
+                </div>
               </div>
             ) : !result ? (
               <div className="text-gray-light/30 text-xs">

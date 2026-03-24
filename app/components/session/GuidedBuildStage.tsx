@@ -356,7 +356,7 @@ function BSTBuilderStage({ config, onComplete }: Props) {
                   cy={node.y}
                   r={22}
                   fill="#1e293b"
-                  stroke={isLatest ? "#22d3ee" : "#334155"}
+                  stroke={isLatest ? "#E5A829" : "#334155"}
                   strokeWidth={2}
                   initial={{ scale: 0, opacity: 0 }}
                   animate={{ scale: 1, opacity: 1 }}

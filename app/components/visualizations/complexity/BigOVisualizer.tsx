@@ -26,7 +26,7 @@ const COMPLEXITIES: ComplexityClass[] = [
   {
     label: "O(log n)",
     fn: (n) => Math.max(1, Math.log2(n)),
-    color: "#06b6d4",
+    color: "#E5A829",
     description: "Logarithmic — halves each step",
     example: "Binary search",
   },

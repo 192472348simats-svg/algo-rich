@@ -165,6 +165,13 @@ function SessionsTab({ phaseNum }: { phaseNum: number }) {
   const progressMap = useSessionProgress();
   const topics = PHASE_TOPICS[phaseNum];
 
+  // Track which topics are open — completed topics collapsed by default
+  const [openTopics, setOpenTopics] = useState<Record<string, boolean>>({});
+
+  const toggleTopic = (topicId: string) => {
+    setOpenTopics(prev => ({ ...prev, [topicId]: !prev[topicId] }));
+  };
+
   if (!topics || topics.length === 0) {
     return (
       <div className="py-8 text-center">
@@ -176,7 +183,6 @@ function SessionsTab({ phaseNum }: { phaseNum: number }) {
   }
 
   // Determine which sessions are unlocked
-  // A session is unlocked if it has no prerequisite, or its prerequisite is completed
   const isUnlocked = (slug: string): boolean => {
     const def = sessionMap[slug];
     if (!def) return false;
@@ -185,7 +191,7 @@ function SessionsTab({ phaseNum }: { phaseNum: number }) {
   };
 
   return (
-    <div className="space-y-4 mt-2">
+    <div className="space-y-3 mt-2">
       {topics.map((topic) => {
         const topicSessions = topic.sessions
           .map((slug) => sessionMap[slug])
@@ -195,30 +201,65 @@ function SessionsTab({ phaseNum }: { phaseNum: number }) {
           (s) => progressMap[s.slug]?.completed
         ).length;
 
+        const allDone = completedCount === topicSessions.length && topicSessions.length > 0;
+        const hasInProgress = topicSessions.some(s => {
+          const p = progressMap[s.slug];
+          return p && !p.completed && p.currentStage > 0;
+        });
+
+        // Default: completed topics collapsed, in-progress/new topics open
+        const isOpen = openTopics[topic.id] !== undefined
+          ? openTopics[topic.id]
+          : (!allDone || hasInProgress);
+
         return (
           <div key={topic.id} className="rounded-xl overflow-hidden"
-            style={{ background: '#0a0f24', border: '1px solid #1E3A5F' }}>
-            {/* Topic header */}
-            <div className="flex items-center justify-between px-4 py-3"
-              style={{ borderBottom: '1px solid #1E3A5F' }}>
+            style={{ background: '#0a0f24', border: `1px solid ${allDone ? '#10b98130' : '#1E3A5F'}` }}>
+            {/* Topic header — always visible, click to toggle */}
+            <button
+              onClick={() => toggleTopic(topic.id)}
+              className="w-full flex items-center justify-between px-4 py-3 transition-all"
+              style={{ borderBottom: isOpen ? '1px solid #1E3A5F' : 'none' }}
+            >
               <div className="flex items-center gap-2">
                 <span className="text-base">{topic.emoji}</span>
-                <span className="text-sm font-semibold text-white">{topic.title}</span>
+                <span className="text-sm font-semibold" style={{ color: allDone ? '#6b7a99' : '#fff' }}>
+                  {topic.title}
+                </span>
+                {allDone && (
+                  <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: '#051a12', color: '#10b981' }}>
+                    ✓ Complete
+                  </span>
+                )}
               </div>
-              <span className="text-xs" style={{ color: completedCount === topicSessions.length && topicSessions.length > 0 ? '#10b981' : '#6b7a99' }}>
-                {completedCount}/{topicSessions.length} done
-              </span>
-            </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs" style={{ color: allDone ? '#10b981' : '#6b7a99' }}>
+                  {completedCount}/{topicSessions.length}
+                </span>
+                <span className="text-xs" style={{ color: '#6b7a99' }}>
+                  {isOpen ? '▲' : '▼'}
+                </span>
+              </div>
+            </button>
 
-            {/* Sessions list */}
-            <div className="divide-y" style={{ borderColor: '#1E3A5F' }}>
-              {topicSessions.map((sess, idx) => {
-                const prog = progressMap[sess.slug];
-                const isDone = prog?.completed ?? false;
-                const stagesDone = prog?.currentStage ?? 0;
-                const unlocked = isUnlocked(sess.slug);
-                const inProgress = !isDone && stagesDone > 0;
-                const pct = Math.round((stagesDone / sess.stages.length) * 100);
+            {/* Sessions list — only shown when open */}
+            <AnimatePresence>
+              {isOpen && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="overflow-hidden"
+                >
+                  <div className="divide-y" style={{ borderColor: '#1E3A5F' }}>
+                    {topicSessions.map((sess, idx) => {
+                      const prog = progressMap[sess.slug];
+                      const isDone = prog?.completed ?? false;
+                      const stagesDone = prog?.currentStage ?? 0;
+                      const unlocked = isUnlocked(sess.slug);
+                      const inProgress = !isDone && stagesDone > 0;
+                      const pct = Math.round((stagesDone / sess.stages.length) * 100);
 
                 return (
                   <div key={sess.slug}>
@@ -297,6 +338,9 @@ function SessionsTab({ phaseNum }: { phaseNum: number }) {
                 );
               })}
             </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
         );
       })}

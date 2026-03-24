@@ -5,6 +5,7 @@ import Sidebar from "./components/Sidebar";
 import MobileNav from "@/app/components/ui/MobileNav";
 import PageTransition from "./components/PageTransition";
 import StreakUrgencyBanner from "./components/StreakUrgencyBanner";
+import Zyra from "@/app/components/Zyra";
 import { computeStreak } from "@/lib/streakUtils";
 
 export default async function DashboardLayout({
@@ -133,6 +134,9 @@ export default async function DashboardLayout({
 
       {/* Mobile bottom nav */}
       <MobileNav />
+
+      {/* Zyra — always visible inside dashboard */}
+      <Zyra context="dashboard" />
     </div>
   );
 }

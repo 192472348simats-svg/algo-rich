@@ -48,9 +48,8 @@ export default function HookStage({ config, onComplete }: Props) {
         onClick={() => onComplete({ score: 0, timeSpent: 0 })}
         whileHover={{ scale: 1.03 }}
         whileTap={{ scale: 0.97 }}
-        className="rounded-xl bg-gradient-to-r from-cyan-500 to-cyan-400 px-8 py-3
-                   text-sm font-semibold text-black shadow-lg shadow-cyan-500/20
-                   hover:shadow-cyan-500/30 transition-shadow cursor-pointer"
+        className="rounded-xl px-8 py-3 text-sm font-semibold transition-all hover:opacity-90"
+          style={{ background: '#E5A829', color: '#0a0f24' }} cursor-pointer"
       >
         Let&apos;s go →
       </motion.button>
