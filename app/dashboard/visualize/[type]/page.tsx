@@ -133,11 +133,11 @@ export default function VisualizeTypePage({
         </div>
         <button
           onClick={() => setGuidedOpen((o) => !o)}
-          className={`px-4 py-2 text-xs font-semibold rounded-lg border transition-colors ${
-            guidedOpen
-              ? "" style={{ background: '#1a1400', border: '1px solid #E5A82950', color: '#E5A829' }}"
-              : "border-white/10 text-white/50 hover:text-white hover:border-white/20"
-          }`}
+          className={`px-4 py-2 text-xs font-semibold rounded-lg border transition-colors`}
+          style={guidedOpen
+            ? { background: '#1a1400', border: '1px solid #E5A82950', color: '#E5A829' }
+            : { borderColor: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.5)' }
+          }
         >
           {guidedOpen ? "✕ Close Guide" : "🎓 Guided Mode"}
         </button>

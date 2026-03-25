@@ -166,11 +166,6 @@ function ZyraStar({ mood, onClick }: { mood: ZyraMood; onClick: () => void }) {
       {/* Star shape */}
       <motion.div
         className="absolute inset-0 flex items-center justify-center"
-        style={{
-          background: "linear-gradient(145deg, #FFD700 0%, #FFC300 50%, #e6a800 100%)",
-          borderRadius: "50%",
-          boxShadow: `0 4px 20px ${glowColor}, 0 2px 8px rgba(0,0,0,0.3)`,
-        }}
         animate={{
           y: mood === "thinking" ? [0, -4, 0] : [0, -8, 0],
           rotate: mood === "thinking" ? [0, -5, 5, 0] : [0, 2, -2, 0],
@@ -181,6 +176,39 @@ function ZyraStar({ mood, onClick }: { mood: ZyraMood; onClick: () => void }) {
           ease: "easeInOut",
         }}
       >
+        {/* 5-pointed star SVG */}
+        <svg
+          width="72"
+          height="72"
+          viewBox="0 0 100 100"
+          style={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            filter: `drop-shadow(0 4px 12px ${glowColor}) drop-shadow(0 2px 6px rgba(0,0,0,0.4))`,
+          }}
+        >
+          <defs>
+            <linearGradient id="starGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#FFE566" />
+              <stop offset="50%" stopColor="#FFD700" />
+              <stop offset="100%" stopColor="#e6a800" />
+            </linearGradient>
+          </defs>
+          <polygon
+            points="50,5 61,35 95,35 68,57 79,91 50,70 21,91 32,57 5,35 39,35"
+            fill="url(#starGrad)"
+            stroke="#c8900a"
+            strokeWidth="1.5"
+            strokeLinejoin="round"
+          />
+        </svg>
+
+        {/* Face centered over star */}
+        <div style={{ position: "relative", zIndex: 1, marginTop: "2px" }}>
+          <ZyraFace mood={mood} />
+        </div>
+
         {/* Happy sparkles */}
         {mood === "happy" && (
           <>
@@ -188,12 +216,12 @@ function ZyraStar({ mood, onClick }: { mood: ZyraMood; onClick: () => void }) {
               <motion.div
                 key={i}
                 className="absolute w-1.5 h-1.5 rounded-full"
-                style={{ background: "#FFD700" }}
+                style={{ background: "#FFD700", zIndex: 2 }}
                 initial={{ scale: 0, x: 0, y: 0 }}
                 animate={{
                   scale: [0, 1, 0],
-                  x: [0, (i % 2 === 0 ? 1 : -1) * 30],
-                  y: [0, (i < 2 ? -1 : 1) * 25],
+                  x: [0, (i % 2 === 0 ? 1 : -1) * 32],
+                  y: [0, (i < 2 ? -1 : 1) * 28],
                   opacity: [1, 0.5, 0],
                 }}
                 transition={{ duration: 0.8, delay: i * 0.1, repeat: Infinity, repeatDelay: 1 }}
@@ -201,7 +229,6 @@ function ZyraStar({ mood, onClick }: { mood: ZyraMood; onClick: () => void }) {
             ))}
           </>
         )}
-        <ZyraFace mood={mood} />
       </motion.div>
     </motion.div>
   );
