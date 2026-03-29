@@ -15,7 +15,7 @@ const features = [
 
 const FeaturesSection = () => {
   return (
-    <section className="py-24 px-4 md:px-8">
+    <section id="features" className="py-24 px-4 md:px-8">
       <div className="max-w-7xl mx-auto">
         <motion.div className="mb-14" initial={{ opacity: 0, y: -16 }} whileInView={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} viewport={{ once: true }}>
           <div className="inline-flex items-center gap-2 mb-4">
