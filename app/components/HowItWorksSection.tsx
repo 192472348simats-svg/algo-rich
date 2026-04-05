@@ -1,16 +1,15 @@
-// REDESIGNED v2: Navy+gold theme, gold step numbers, dashed connector
 "use client";
 
 import { motion } from "framer-motion";
 
 const steps = [
-  { number: "01", title: "Pick your level", description: "Tell us where you are. We build a personalized curriculum from your current knowledge." },
-  { number: "02", title: "Learn the concept", description: "Short focused lessons explain each data structure or algorithm from first principles." },
-  { number: "03", title: "Solve problems", description: "Apply what you learned in the in-browser editor with instant test case feedback." },
-  { number: "04", title: "Review and retain", description: "Spaced repetition brings back problems at the right intervals so nothing fades." },
+  { number: "01", title: "Pick your level", description: "Tell us where you are. We build your path from there." },
+  { number: "02", title: "Learn the concept", description: "Short sessions. One idea at a time. Watch it, then do it." },
+  { number: "03", title: "Solve problems", description: "Apply it in the editor. Real code, real test cases." },
+  { number: "04", title: "Stay consistent", description: "XP and streaks keep you moving. Progress compounds." },
 ];
 
-const HowItWorksSection = () => {
+export default function HowItWorksSection() {
   return (
     <section id="how-it-works" className="py-24 px-4 md:px-8">
       <div className="max-w-7xl mx-auto">
@@ -20,7 +19,7 @@ const HowItWorksSection = () => {
             <span className="text-xs font-medium tracking-widest uppercase" style={{ color: '#E5A829' }}>The Process</span>
           </div>
           <h2 className="text-4xl font-bold text-white mb-3" style={{ letterSpacing: '-0.02em' }}>How it works</h2>
-          <p className="text-lg" style={{ color: '#6b7a99' }}>Four steps from signup to solving hard problems.</p>
+          <p className="text-lg" style={{ color: '#6b7a99' }}>Four steps. Signup to solving hard problems.</p>
         </motion.div>
         <div className="hidden md:grid grid-cols-4 gap-0 relative">
           <div className="absolute top-8 left-[12.5%] right-[12.5%] h-px" style={{ borderTop: '1px dashed #1E3A5F', zIndex: 0 }} />
@@ -53,6 +52,4 @@ const HowItWorksSection = () => {
       </div>
     </section>
   );
-};
-
-export default HowItWorksSection;
+}
