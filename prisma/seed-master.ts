@@ -12,7 +12,7 @@ if (fs.existsSync(envLocalPath)) {
 import { PrismaClient } from "@prisma/client";
 import { seedCoursesAndLessons } from "./seed-courses-full";
 import { seedPatterns } from "./seed-patterns";
-import { seedProblems } from "./seed-problems-complete";
+import { seedProblems } from "./seed-problems";
 import { seedLessonProblems } from "./seed-lesson-problems";
 
 const prisma = new PrismaClient();
@@ -31,7 +31,7 @@ async function main() {
   await seedPatterns();
 
   // Step 3: Problems (depends on Step 2 for foreign key)
-  console.log("\n🧩 Step 3/4: Seeding 50 problems...");
+  console.log("\n🧩 Step 3/4: Seeding canonical problem set...");
   await seedProblems();
 
   // Step 4: Lesson-Problem links (depends on Step 1 + 3)

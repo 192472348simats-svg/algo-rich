@@ -62,6 +62,7 @@ const navGroups: NavGroup[] = [
     label: "PRACTICE",
     items: [
       { href: "/dashboard/practice", label: "Problems", icon: <Code size={18} /> },
+      { href: "/dashboard/mock-interview", label: "Mock Interview", icon: <Brain size={18} />, minPhase: 2 },
       { href: "/dashboard/review", label: "Review", icon: <Brain size={18} />, badgeKey: "review" as const, minPhase: 2 },
       { href: "/dashboard/patterns", label: "Patterns", icon: <GitBranch size={18} />, minPhase: 3 },
     ],

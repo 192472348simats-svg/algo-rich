@@ -1,6 +1,7 @@
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import prisma from "@/lib/prisma";
+import { parseAndNormalizeTestCases } from "@/lib/types/problem";
 import ProblemSolver from "./ProblemSolver";
 
 interface Props {
@@ -67,17 +68,10 @@ export default async function ProblemPage({ params }: Props) {
     });
   }
 
-  const testCases = JSON.parse(problem.testCases) as Array<{
-    input: Record<string, unknown> | string;
-    expectedOutput: unknown;
-  }>;
+  const testCases = parseAndNormalizeTestCases(problem.testCases);
 
-  const hiddenTestCases = problem.hiddenTestCases
-    ? (JSON.parse(problem.hiddenTestCases) as Array<{
-        input: Record<string, unknown> | string;
-        expectedOutput: unknown;
-      }>)
-    : [];
+  const hasHiddenTests = problem.hiddenTestCases && problem.hiddenTestCases.length > 2; // Check if parsing is needed or just check string isn't "[]"
+  const hasHidden = problem.hiddenTestCases !== null && problem.hiddenTestCases !== "[]" && problem.hiddenTestCases !== "";
 
   const relatedLessons = problem.lessons.map((lp) => lp.lesson);
 
@@ -91,7 +85,7 @@ export default async function ProblemPage({ params }: Props) {
         category: problem.pattern || "DSA",
         starterCode: problem.starterCode,
         testCases,
-        hiddenTestCases,
+        hasHiddenTests: hasHidden,
         hints: problem.hints ?? undefined,
         correctPattern: problem.correctPattern ?? undefined,
         solutionApproach: problem.solutionApproach ?? undefined,

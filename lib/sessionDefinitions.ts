@@ -11,8 +11,8 @@ export interface HookConfig {
 }
 
 export interface WatchAutoPlayStep {
-  action: "insert" | "delete" | "search" | "traverse";
-  value?: number;
+  action: "insert" | "delete" | "search" | "traverse" | "lookup" | "push" | "pop" | "enqueue" | "dequeue";
+  value?: number | string;
   narration: string;
   delayAfterMs: number;
 }
@@ -50,7 +50,7 @@ export interface MachineAnimationStep {
 export interface WatchConfig {
   visualizerType:
     | "tree" | "array" | "linked-list" | "stack-queue" | "graph"
-    | "text-flow" | "box-animation" | "counter-animation" | "machine-animation";
+    | "text-flow" | "box-animation" | "counter-animation" | "machine-animation" | "hashmap";
   // Legacy tree/array steps
   autoPlaySteps?: WatchAutoPlayStep[];
   // Phase 1 beginner steps (typed loosely, each visualizer handles its own step shape)
@@ -102,7 +102,7 @@ export interface LearnConfig {
 export interface GuidedBuildStep {
   instruction: string;
   hint?: string;
-  celebration?: string;
+  celebration?: string | boolean;
   expectedOutput?: string | null;
 }
 
@@ -3189,5 +3189,1091 @@ registerSession({
         message: "Two patterns down. Two pointers + sliding window covers a massive chunk of Easy and Medium LeetCode. You're building real DSA fluency.",
       } satisfies SummaryConfig,
     },
+  ],
+});
+
+// ============================================================
+// SESSION 4: LINKED LISTS
+// ============================================================
+registerSession({
+  id: "session-linked-lists",
+  slug: "linked-lists",
+  title: "Linked Lists",
+  topic: "linked-lists",
+  description: "Understand how nodes chain together and why linked lists beat arrays at insertions.",
+  estimatedMinutes: 20,
+  xpTotal: 100,
+  prerequisiteSessionSlug: "arrays-and-big-o",
+  nextSessionSlug: "stacks-and-queues",
+  stages: [
+    {
+      id: "ll-hook",
+      type: "hook",
+      config: {
+        headline: "What if each element knew where the next one lived?\nNo contiguous memory. No shifting. Just pointers.",
+        subtext: "In 20 minutes you'll understand the data structure behind music playlists, browser history, and undo/redo.",
+        backgroundEmoji: "🔗",
+      }
+    },
+    {
+      id: "ll-watch",
+      type: "watch",
+      config: {
+        visualizerType: "linked-list",
+        autoPlaySteps: [
+          { action: "insert", value: 10, narration: "Create the head node with value 10.", delayAfterMs: 1800 },
+          { action: "insert", value: 20, narration: "Append 20 — head.next now points to this node.", delayAfterMs: 1800 },
+          { action: "insert", value: 30, narration: "Append 30. Each node holds a value and a next pointer.", delayAfterMs: 1800 },
+          { action: "delete", value: 20, narration: "Delete 20 — we just rewire the pointer. O(1) once found.", delayAfterMs: 2000 },
+        ],
+      }
+    },
+    {
+      id: "ll-predict",
+      type: "predict",
+      config: {
+        questions: [
+          {
+            id: "ll-pred-1",
+            question: "What is the time complexity of inserting at the HEAD of a linked list?",
+            answerType: "multiple-choice",
+            options: ["O(n)", "O(log n)", "O(1)", "O(n²)"],
+            correctAnswer: "O(1)",
+            feedbackCorrect: "Inserting at the head only rewires one pointer — no shifting needed.",
+            feedbackWrong: "Unlike arrays, linked lists don't shift elements. Head insertion is O(1).",
+            xp: 10,
+          },
+          {
+            id: "ll-pred-2",
+            question: "What is the time complexity of accessing the 5th element in a linked list?",
+            answerType: "multiple-choice",
+            options: ["O(1)", "O(log n)", "O(n)", "O(5)"],
+            correctAnswer: "O(n)",
+            feedbackCorrect: "You must traverse from head — no direct index access.",
+            feedbackWrong: "Unlike arrays, linked lists have no index. You walk node by node — O(n).",
+            xp: 10,
+          }
+        ]
+      }
+    },
+    {
+      id: "ll-learn",
+      type: "learn",
+      config: {
+        title: "Linked Lists: Nodes and Pointers",
+        keyRule: {
+          emoji: "🔗",
+          text: "Each node stores a value and a pointer to the next node. Insertions are O(1). Access is O(n).",
+        },
+        content: "A linked list is a chain of nodes. Each node has two things: a value and a next pointer. The last node points to None. There is no index — to reach element 5 you walk from the head.",
+        codeSnippet: {
+          language: "python",
+          code: `class Node:
+    def __init__(self, val):
+        self.val = val
+        self.next = None
+
+class LinkedList:
+    def __init__(self):
+        self.head = None
+
+    def append(self, val):
+        new_node = Node(val)
+        if not self.head:
+            self.head = new_node
+            return
+        curr = self.head
+        while curr.next:
+            curr = curr.next
+        curr.next = new_node
+
+    def prepend(self, val):        # O(1)
+        new_node = Node(val)
+        new_node.next = self.head
+        self.head = new_node`,
+          caption: "Basic linked list with O(1) prepend and O(n) append",
+        },
+      }
+    },
+    {
+      id: "ll-guided",
+      type: "guided-build",
+      config: {
+        visualizerType: "linked-list",
+        instructions: "Build a linked list by inserting values one at a time. Watch how the pointers connect.",
+        valuesToInsert: [5, 15, 25, 35],
+        completionMessage: "You built a 4-node linked list. Every node knows exactly where the next one lives.",
+        bonusChallenge: {
+          instruction: "Now delete the middle node (15). What happens to the pointers?",
+          values: [15],
+          insightMessage: "The previous node's pointer jumps over the deleted node. The chain stays intact.",
+        }
+      }
+    },
+    {
+      id: "ll-reflect",
+      type: "reflect",
+      config: {
+        questions: [
+          {
+            question: "Why is inserting at the middle of a linked list O(n)?",
+            options: [
+              "Because nodes need to be copied",
+              "Because you must traverse to find the position first",
+              "Because memory needs to be reallocated",
+              "Because linked lists are sorted",
+            ],
+            correctIndex: 1,
+            explanation: "The pointer rewire is O(1), but finding the insertion point requires O(n) traversal.",
+          }
+        ]
+      }
+    },
+    { id: "ll-summary", type: "summary", config: {} }
+  ],
+});
+
+// ============================================================
+// SESSION 5: STACKS AND QUEUES
+// ============================================================
+registerSession({
+  id: "session-stacks-queues",
+  slug: "stacks-and-queues",
+  title: "Stacks & Queues",
+  topic: "stacks-queues",
+  description: "Master LIFO and FIFO — the two access patterns that power undo, BFS, and call stacks.",
+  estimatedMinutes: 20,
+  xpTotal: 100,
+  prerequisiteSessionSlug: "linked-lists",
+  nextSessionSlug: "hashmaps",
+  stages: [
+    {
+      id: "sq-hook",
+      type: "hook",
+      config: {
+        headline: "Undo in VS Code. Breadth-first search. Your browser's back button.\nAll three use exactly one of these two structures.",
+        subtext: "Stacks and Queues are constraints, not data structures. Learn when each one is the answer.",
+        backgroundEmoji: "📚",
+      }
+    },
+    {
+      id: "sq-watch",
+      type: "watch",
+      config: {
+        visualizerType: "stack-queue",
+        autoPlaySteps: [
+          { action: "push", value: 1, narration: "Push 1 onto the stack. Last in, first out.", delayAfterMs: 1600 },
+          { action: "push", value: 2, narration: "Push 2. It sits on top of 1.", delayAfterMs: 1600 },
+          { action: "push", value: 3, narration: "Push 3. Stack top is now 3.", delayAfterMs: 1600 },
+          { action: "pop", narration: "Pop — 3 comes off first. LIFO.", delayAfterMs: 1800 },
+          { action: "enqueue", value: 10, narration: "Switch to queue. Enqueue 10 at the back.", delayAfterMs: 1800 },
+          { action: "enqueue", value: 20, narration: "Enqueue 20. It waits behind 10.", delayAfterMs: 1600 },
+          { action: "dequeue", narration: "Dequeue — 10 leaves first. FIFO.", delayAfterMs: 1800 },
+        ],
+      }
+    },
+    {
+      id: "sq-predict",
+      type: "predict",
+      config: {
+        questions: [
+          {
+            id: "sq-pred-1",
+            question: "Which data structure would you use to implement an undo feature?",
+            answerType: "multiple-choice",
+            options: ["Queue", "Stack", "Array", "Linked List"],
+            correctAnswer: "Stack",
+            feedbackCorrect: "Undo reverses the most recent action first — that's LIFO, a stack.",
+            feedbackWrong: "Undo needs the most recent action first. That's LIFO — a stack.",
+            xp: 10,
+          },
+          {
+            id: "sq-pred-2",
+            question: "What is the time complexity of push and pop on a stack?",
+            answerType: "multiple-choice",
+            options: ["O(n)", "O(log n)", "O(1)", "O(n²)"],
+            correctAnswer: "O(1)",
+            feedbackCorrect: "Both push and pop only touch the top element — always O(1).",
+            feedbackWrong: "Stack operations only touch the top. No traversal needed — O(1).",
+            xp: 10,
+          }
+        ]
+      }
+    },
+    {
+      id: "sq-learn",
+      type: "learn",
+      config: {
+        title: "Stack: LIFO — Queue: FIFO",
+        keyRule: {
+          emoji: "📚",
+          text: "Stack = Last In First Out. Queue = First In First Out. Both are O(1) for their core operations.",
+        },
+        content: "A stack only allows access at one end (the top). A queue adds at the back and removes from the front. Python lists work as stacks. Use collections.deque for efficient queues.",
+        codeSnippet: {
+          language: "python",
+          code: `from collections import deque
+
+# Stack using list
+stack = []
+stack.append(1)   # push
+stack.append(2)
+stack.pop()       # pop → 2 (LIFO)
+
+# Queue using deque
+queue = deque()
+queue.append(1)    # enqueue
+queue.append(2)
+queue.popleft()    # dequeue → 1 (FIFO)`,
+          caption: "Stack with list, Queue with deque — both O(1)",
+        },
+      }
+    },
+    {
+      id: "sq-guided",
+      type: "guided-build",
+      config: {
+        steps: [
+          {
+            instruction: "Create an empty stack as a Python list and push the values 10, 20, 30 onto it. Print the stack.",
+            expectedOutput: "[10, 20, 30]",
+            hint: "Use list.append() to push. Print the list directly.",
+            celebration: false,
+          },
+          {
+            instruction: "Pop the top value and print it. Then print the remaining stack.",
+            expectedOutput: "30\n[10, 20]",
+            hint: "stack.pop() returns the removed value. Print it, then print the stack.",
+            celebration: true,
+          },
+          {
+            instruction: "Now create a deque queue. Enqueue 'a', 'b', 'c'. Dequeue one item and print it.",
+            expectedOutput: "a",
+            hint: "from collections import deque. Use .append() to enqueue and .popleft() to dequeue.",
+            celebration: true,
+          }
+        ]
+      }
+    },
+    {
+      id: "sq-reflect",
+      type: "reflect",
+      config: {
+        questions: [
+          {
+            question: "Why is collections.deque preferred over a list for queues in Python?",
+            options: [
+              "Deque uses less memory",
+              "list.pop(0) is O(n) but deque.popleft() is O(1)",
+              "Deque is sorted automatically",
+              "Lists cannot store strings",
+            ],
+            correctIndex: 1,
+            explanation: "Removing from the front of a list shifts every element — O(n). Deque is optimized for both ends — O(1).",
+          }
+        ]
+      }
+    },
+    { id: "sq-summary", type: "summary", config: {} }
+  ],
+});
+
+// ============================================================
+// SESSION 6: HASHMAPS
+// ============================================================
+registerSession({
+  id: "session-hashmaps",
+  slug: "hashmaps",
+  title: "Hash Maps",
+  topic: "hashmaps",
+  description: "Understand why hash maps give O(1) lookup and how to use them to solve problems in one pass.",
+  estimatedMinutes: 25,
+  xpTotal: 120,
+  prerequisiteSessionSlug: "stacks-and-queues",
+  nextSessionSlug: "recursion",
+  stages: [
+    {
+      id: "hm-hook",
+      type: "hook",
+      config: {
+        headline: "Two Sum. Frequency count. Anagram detection.\nEvery one of these problems becomes trivial with one data structure.",
+        subtext: "Hash maps trade memory for speed. Once you internalize this, you'll spot the pattern in every interview problem.",
+        backgroundEmoji: "🗂️",
+      }
+    },
+    {
+      id: "hm-watch",
+      type: "watch",
+      config: {
+        visualizerType: "hashmap",
+        autoPlaySteps: [
+          { action: "insert", value: "name:Alice", narration: "Insert key 'name', value 'Alice'. Hash function maps it to a bucket.", delayAfterMs: 2000 },
+          { action: "insert", value: "age:25", narration: "Insert key 'age', value 25. Different bucket.", delayAfterMs: 1800 },
+          { action: "lookup", value: "name", narration: "Lookup 'name' — hash function goes directly to the bucket. O(1).", delayAfterMs: 2000 },
+          { action: "delete", value: "age", narration: "Delete 'age' — find bucket, remove. O(1).", delayAfterMs: 1800 },
+        ],
+      }
+    },
+    {
+      id: "hm-predict",
+      type: "predict",
+      config: {
+        questions: [
+          {
+            id: "hm-pred-1",
+            question: "What is the average time complexity of a hash map lookup?",
+            answerType: "multiple-choice",
+            options: ["O(n)", "O(log n)", "O(1)", "O(n log n)"],
+            correctAnswer: "O(1)",
+            feedbackCorrect: "The hash function computes the bucket directly — no searching needed.",
+            feedbackWrong: "Hash maps compute the storage location directly. Average case is O(1).",
+            xp: 10,
+          },
+          {
+            id: "hm-pred-2",
+            question: "You need to count how many times each word appears in a list. Best data structure?",
+            answerType: "multiple-choice",
+            options: ["Array", "Stack", "Hash Map", "Binary Search Tree"],
+            correctAnswer: "Hash Map",
+            feedbackCorrect: "Hash map gives O(1) insert and lookup — perfect for frequency counting.",
+            feedbackWrong: "Frequency counting needs fast key-based access. Hash map is the answer.",
+            xp: 10,
+          }
+        ]
+      }
+    },
+    {
+      id: "hm-learn",
+      type: "learn",
+      config: {
+        title: "Hash Maps: O(1) Everywhere",
+        keyRule: {
+          emoji: "🗂️",
+          text: "Hash maps give O(1) average insert, lookup, and delete. The pattern: store what you've seen, look up in O(1).",
+        },
+        content: "A hash map stores key-value pairs. A hash function converts the key into a bucket index. In Python, dict is a hash map. The most common interview pattern: iterate once, store in a dict, check dict for complement or count.",
+        codeSnippet: {
+          language: "python",
+          code: `# Two Sum in O(n) using hash map
+def two_sum(nums, target):
+    seen = {}  # value -> index
+    for i, num in enumerate(nums):
+        complement = target - num
+        if complement in seen:
+            return [seen[complement], i]
+        seen[num] = i
+    return []
+
+# Frequency count
+def count_freq(arr):
+    freq = {}
+    for item in arr:
+        freq[item] = freq.get(item, 0) + 1
+    return freq`,
+          caption: "Two Sum O(n) and frequency counting — the two most common hash map patterns",
+        },
+      }
+    },
+    {
+      id: "hm-guided",
+      type: "guided-build",
+      config: {
+        steps: [
+          {
+            instruction: "Create a dictionary and store three key-value pairs: 'a':1, 'b':2, 'c':3. Print the dictionary.",
+            expectedOutput: "{'a': 1, 'b': 2, 'c': 3}",
+            hint: "d = {'a': 1, 'b': 2, 'c': 3} then print(d)",
+            celebration: false,
+          },
+          {
+            instruction: "Write a function count_chars(s) that counts how many times each character appears in string s. Call it with 'hello' and print the result.",
+            expectedOutput: "{'h': 1, 'e': 1, 'l': 2, 'o': 1}",
+            hint: "Use a dict. For each char in s, do freq[char] = freq.get(char, 0) + 1",
+            celebration: true,
+          }
+        ]
+      }
+    },
+    {
+      id: "hm-reflect",
+      type: "reflect",
+      config: {
+        questions: [
+          {
+            question: "In Two Sum, why do we store num in the hash map instead of the complement?",
+            options: [
+              "To avoid using extra memory",
+              "So we can look up the complement for future numbers in O(1)",
+              "Because complements are always negative",
+              "Python dicts only store integers",
+            ],
+            correctIndex: 1,
+            explanation: "We store what we've seen so far. For each new number, we check if its complement was already seen — one pass, O(n) total.",
+          }
+        ]
+      }
+    },
+    { id: "hm-summary", type: "summary", config: {} }
+  ],
+});
+
+// ============================================================
+// SESSION 7: RECURSION
+// ============================================================
+registerSession({
+  id: "session-recursion",
+  slug: "recursion",
+  title: "Recursion",
+  topic: "recursion",
+  description: "Break problems into smaller versions of themselves. Understand the call stack, base cases, and recursive thinking.",
+  estimatedMinutes: 25,
+  xpTotal: 120,
+  prerequisiteSessionSlug: "hashmaps",
+  nextSessionSlug: "sorting-algorithms",
+  stages: [
+    {
+      id: "rec-hook",
+      type: "hook",
+      config: {
+        headline: "What if a function could call itself?\nThat's not infinite loops — that's the most elegant problem-solving tool in CS.",
+        subtext: "Tree traversal, merge sort, DFS, dynamic programming — they all start here.",
+        backgroundEmoji: "🔄",
+      }
+    },
+    {
+      id: "rec-watch",
+      type: "watch",
+      config: {
+        visualizerType: "array",
+        autoPlaySteps: [
+          { action: "insert", value: 5, narration: "factorial(5) calls factorial(4). Frame pushed onto call stack.", delayAfterMs: 1800 },
+          { action: "insert", value: 4, narration: "factorial(4) calls factorial(3). Stack grows.", delayAfterMs: 1800 },
+          { action: "insert", value: 3, narration: "factorial(3) calls factorial(2). Stack grows.", delayAfterMs: 1800 },
+          { action: "insert", value: 1, narration: "Base case hit: factorial(1) = 1. Stack unwinds.", delayAfterMs: 2000 },
+          { action: "delete", value: 1, narration: "Returns 1. Frame popped.", delayAfterMs: 1600 },
+          { action: "delete", value: 3, narration: "Returns 2. Frame popped.", delayAfterMs: 1600 },
+          { action: "delete", value: 4, narration: "Returns 6. Frame popped.", delayAfterMs: 1600 },
+          { action: "delete", value: 5, narration: "Returns 24. Final answer.", delayAfterMs: 1800 },
+        ],
+      }
+    },
+    {
+      id: "rec-predict",
+      type: "predict",
+      config: {
+        questions: [
+          {
+            id: "rec-pred-1",
+            question: "What happens if a recursive function has no base case?",
+            answerType: "multiple-choice",
+            options: ["It returns None", "It runs once", "Stack overflow — infinite recursion", "It compiles but doesn't run"],
+            correctAnswer: "Stack overflow — infinite recursion",
+            feedbackCorrect: "Without a base case, the function calls itself forever until the call stack runs out of memory.",
+            feedbackWrong: "Every recursive call adds a frame to the call stack. Without a base case it never stops — stack overflow.",
+            xp: 10,
+          }
+        ]
+      }
+    },
+    {
+      id: "rec-learn",
+      type: "learn",
+      config: {
+        title: "Recursion: Base Case + Recursive Case",
+        keyRule: {
+          emoji: "🔄",
+          text: "Every recursive function needs: (1) a base case that stops it, (2) a recursive call that moves toward the base case.",
+        },
+        content: "Recursion works by pushing frames onto the call stack. Each call is a smaller version of the same problem. The base case is where it stops. Without it you get a stack overflow. With it, the stack unwinds and results bubble back up.",
+        codeSnippet: {
+          language: "python",
+          code: `def factorial(n):
+    # Base case — stops recursion
+    if n <= 1:
+        return 1
+    # Recursive case — smaller problem
+    return n * factorial(n - 1)
+
+def fibonacci(n):
+    if n <= 1:
+        return n
+    return fibonacci(n-1) + fibonacci(n-2)
+
+print(factorial(5))   # 120
+print(fibonacci(6))   # 8`,
+          caption: "Factorial and Fibonacci — the two canonical recursion examples",
+        },
+      }
+    },
+    {
+      id: "rec-guided",
+      type: "guided-build",
+      config: {
+        steps: [
+          {
+            instruction: "Write a recursive function sum_list(arr) that returns the sum of all elements. Call sum_list([1,2,3,4,5]) and print the result.",
+            expectedOutput: "15",
+            hint: "Base case: empty list returns 0. Recursive case: arr[0] + sum_list(arr[1:])",
+            celebration: false,
+          },
+          {
+            instruction: "Write a recursive function power(base, exp) that computes base^exp. Print power(2, 8).",
+            expectedOutput: "256",
+            hint: "Base case: exp == 0 returns 1. Recursive case: base * power(base, exp-1)",
+            celebration: true,
+          }
+        ]
+      }
+    },
+    {
+      id: "rec-reflect",
+      type: "reflect",
+      config: {
+        questions: [
+          {
+            question: "What is the space complexity of a recursive function with depth n?",
+            options: ["O(1)", "O(log n)", "O(n) — one stack frame per call", "O(n²)"],
+            correctIndex: 2,
+            explanation: "Each recursive call adds a frame to the call stack. n levels deep means O(n) space.",
+          }
+        ]
+      }
+    },
+    { id: "rec-summary", type: "summary", config: {} }
+  ],
+});
+
+// ============================================================
+// SESSION 8: SORTING ALGORITHMS
+// ============================================================
+registerSession({
+  id: "session-sorting",
+  slug: "sorting-algorithms",
+  title: "Sorting Algorithms",
+  topic: "sorting",
+  description: "Understand bubble, merge, and quick sort. Know which to use and why O(n log n) is the target.",
+  estimatedMinutes: 25,
+  xpTotal: 120,
+  prerequisiteSessionSlug: "recursion",
+  nextSessionSlug: "two-pointers",
+  stages: [
+    {
+      id: "sort-hook",
+      type: "hook",
+      config: {
+        headline: "Sorting is everywhere. But not all sorts are equal.\nOne runs in O(n²). Another in O(n log n). The difference at scale is enormous.",
+        subtext: "By the end you'll know which algorithm Python actually uses and why bubble sort is never the answer.",
+        backgroundEmoji: "🔢",
+      }
+    },
+    {
+      id: "sort-watch",
+      type: "watch",
+      config: {
+        visualizerType: "array",
+        autoPlaySteps: [
+          { action: "insert", value: 64, narration: "Start with unsorted array: [64, 34, 25, 12]", delayAfterMs: 1600 },
+          { action: "insert", value: 34, narration: "Bubble sort: compare adjacent pairs.", delayAfterMs: 1600 },
+          { action: "insert", value: 25, narration: "Swap if left > right. Largest bubbles to end.", delayAfterMs: 1800 },
+          { action: "insert", value: 12, narration: "After n passes, fully sorted. O(n²) — slow.", delayAfterMs: 2000 },
+        ],
+      }
+    },
+    {
+      id: "sort-predict",
+      type: "predict",
+      config: {
+        questions: [
+          {
+            id: "sort-pred-1",
+            question: "What is the time complexity of merge sort?",
+            answerType: "multiple-choice",
+            options: ["O(n)", "O(n log n)", "O(n²)", "O(log n)"],
+            correctAnswer: "O(n log n)",
+            feedbackCorrect: "Merge sort divides in half (log n levels) and merges each level in O(n) — total O(n log n).",
+            feedbackWrong: "Merge sort splits the array log n times and each merge is O(n) — total O(n log n).",
+            xp: 10,
+          },
+          {
+            id: "sort-pred-2",
+            question: "Python's built-in sort uses which algorithm?",
+            answerType: "multiple-choice",
+            options: ["Bubble Sort", "Quick Sort", "Timsort (merge + insertion)", "Heap Sort"],
+            correctAnswer: "Timsort (merge + insertion)",
+            feedbackCorrect: "Timsort is a hybrid of merge sort and insertion sort — O(n log n) worst case.",
+            feedbackWrong: "Python uses Timsort — a hybrid designed for real-world data patterns.",
+            xp: 10,
+          }
+        ]
+      }
+    },
+    {
+      id: "sort-learn",
+      type: "learn",
+      config: {
+        title: "Bubble O(n²) → Merge O(n log n) → Built-in",
+        keyRule: {
+          emoji: "🔢",
+          text: "Never implement bubble sort in interviews. Use merge sort to show recursion understanding. Use Python's sorted() in production.",
+        },
+        content: "Bubble sort compares adjacent pairs repeatedly — O(n²). Merge sort divides the array in half recursively then merges — O(n log n). Quick sort partitions around a pivot — O(n log n) average, O(n²) worst. Python's sorted() is Timsort — always O(n log n).",
+        codeSnippet: {
+          language: "python",
+          code: `def merge_sort(arr):
+    if len(arr) <= 1:
+        return arr
+    mid = len(arr) // 2
+    left = merge_sort(arr[:mid])
+    right = merge_sort(arr[mid:])
+    return merge(left, right)
+
+def merge(left, right):
+    result = []
+    i = j = 0
+    while i < len(left) and j < len(right):
+        if left[i] <= right[j]:
+            result.append(left[i]); i += 1
+        else:
+            result.append(right[j]); j += 1
+    return result + left[i:] + right[j:]
+
+print(merge_sort([64, 34, 25, 12, 22, 11, 90]))`,
+          caption: "Merge sort — the recursive sort you should know for interviews",
+        },
+      }
+    },
+    {
+      id: "sort-guided",
+      type: "guided-build",
+      config: {
+        steps: [
+          {
+            instruction: "Sort this list using Python's built-in sorted(): [5, 2, 8, 1, 9, 3]. Print the result.",
+            expectedOutput: "[1, 2, 3, 5, 8, 9]",
+            hint: "print(sorted([5, 2, 8, 1, 9, 3]))",
+            celebration: false,
+          },
+          {
+            instruction: "Sort the same list in descending order and print it.",
+            expectedOutput: "[9, 8, 5, 3, 2, 1]",
+            hint: "sorted(arr, reverse=True)",
+            celebration: false,
+          },
+          {
+            instruction: "Write bubble_sort(arr) that sorts in-place. Call it on [64, 34, 25, 12] and print.",
+            expectedOutput: "[12, 25, 34, 64]",
+            hint: "Nested loops. Compare arr[j] and arr[j+1], swap if out of order.",
+            celebration: true,
+          }
+        ]
+      }
+    },
+    {
+      id: "sort-reflect",
+      type: "reflect",
+      config: {
+        questions: [
+          {
+            question: "Why is merge sort preferred over quick sort in practice for interview answers?",
+            options: [
+              "Merge sort is faster on average",
+              "Merge sort has guaranteed O(n log n) worst case; quick sort degrades to O(n²)",
+              "Merge sort uses less memory",
+              "Quick sort cannot handle duplicates",
+            ],
+            correctIndex: 1,
+            explanation: "Quick sort's worst case is O(n²) on already-sorted or all-duplicate arrays. Merge sort is always O(n log n).",
+          }
+        ]
+      }
+    },
+    { id: "sort-summary", type: "summary", config: {} }
+  ],
+});
+
+// ============================================================
+// SESSION 9: TWO POINTERS
+// ============================================================
+registerSession({
+  id: "session-two-pointers",
+  slug: "two-pointers",
+  title: "Two Pointers",
+  topic: "two-pointers",
+  description: "Eliminate brute force O(n²) solutions with a simple left-right pointer technique.",
+  estimatedMinutes: 20,
+  xpTotal: 100,
+  prerequisiteSessionSlug: "sorting-algorithms",
+  nextSessionSlug: "sliding-window",
+  stages: [
+    {
+      id: "tp-hook",
+      type: "hook",
+      config: {
+        headline: "Two Sum on a sorted array. Palindrome check. Container with most water.\nOne pattern solves all three and cuts O(n²) to O(n).",
+        subtext: "Two pointers is the first pattern interviewers look for when they see an array problem.",
+        backgroundEmoji: "👆",
+      }
+    },
+    {
+      id: "tp-watch",
+      type: "watch",
+      config: {
+        visualizerType: "array",
+        autoPlaySteps: [
+          { action: "insert", value: 1, narration: "Sorted array. Left pointer starts at index 0.", delayAfterMs: 1600 },
+          { action: "insert", value: 3, narration: "Right pointer starts at the last index.", delayAfterMs: 1600 },
+          { action: "insert", value: 5, narration: "Sum < target? Move left pointer right.", delayAfterMs: 1800 },
+          { action: "insert", value: 7, narration: "Sum > target? Move right pointer left.", delayAfterMs: 1800 },
+          { action: "insert", value: 9, narration: "Sum == target? Found it. O(n) — one pass.", delayAfterMs: 2000 },
+        ],
+      }
+    },
+    {
+      id: "tp-predict",
+      type: "predict",
+      config: {
+        questions: [
+          {
+            id: "tp-pred-1",
+            question: "Two pointers requires the array to be _____ for the sum pattern to work.",
+            answerType: "multiple-choice",
+            options: ["Random", "Sorted", "Unique elements only", "Even length"],
+            correctAnswer: "Sorted",
+            feedbackCorrect: "Sorting lets us make decisions: too small means move left pointer right, too large means move right pointer left.",
+            feedbackWrong: "Without sorting, we can't decide which pointer to move. The array must be sorted.",
+            xp: 10,
+          }
+        ]
+      }
+    },
+    {
+      id: "tp-learn",
+      type: "learn",
+      config: {
+        title: "Two Pointers: Start Opposite Ends, Move Inward",
+        keyRule: {
+          emoji: "👆",
+          text: "Left pointer starts at 0, right at n-1. Move them based on a condition. They meet in the middle — O(n).",
+        },
+        content: "Two pointers works on sorted arrays or problems with a shrinkable search space. The key insight: you never need to go backwards. Each pointer only moves in one direction, so total moves are at most n — making the whole algorithm O(n).",
+        codeSnippet: {
+          language: "python",
+          code: `def two_sum_sorted(nums, target):
+    left, right = 0, len(nums) - 1
+    while left < right:
+        s = nums[left] + nums[right]
+        if s == target:
+            return [left, right]
+        elif s < target:
+            left += 1
+        else:
+            right -= 1
+    return []
+
+def is_palindrome(s):
+    left, right = 0, len(s) - 1
+    while left < right:
+        if s[left] != s[right]:
+            return False
+        left += 1
+        right -= 1
+    return True`,
+          caption: "Two Sum (sorted) and palindrome check — both O(n) with two pointers",
+        },
+      }
+    },
+    {
+      id: "tp-guided",
+      type: "guided-build",
+      config: {
+        steps: [
+          {
+            instruction: "Write is_palindrome(s) using two pointers. Test with 'racecar' and print True.",
+            expectedOutput: "True",
+            hint: "left=0, right=len(s)-1. While left<right: compare s[left] and s[right].",
+            celebration: true,
+          },
+          {
+            instruction: "Now test is_palindrome('hello') and print the result.",
+            expectedOutput: "False",
+            hint: "Same function. Just call it with 'hello'.",
+            celebration: false,
+          }
+        ]
+      }
+    },
+    {
+      id: "tp-reflect",
+      type: "reflect",
+      config: {
+        questions: [
+          {
+            question: "Why does two pointers reduce O(n²) brute force to O(n)?",
+            options: [
+              "It uses binary search internally",
+              "Each pointer only moves in one direction — total moves bounded by n",
+              "It skips duplicate elements",
+              "It uses extra memory to cache results",
+            ],
+            correctIndex: 1,
+            explanation: "Each pointer moves at most n times total. No nested loops. The whole scan is O(n).",
+          }
+        ]
+      }
+    },
+    { id: "tp-summary", type: "summary", config: {} }
+  ],
+});
+
+// ============================================================
+// SESSION 10: SLIDING WINDOW
+// ============================================================
+registerSession({
+  id: "session-sliding-window",
+  slug: "sliding-window",
+  title: "Sliding Window",
+  topic: "sliding-window",
+  description: "Find subarrays and substrings in O(n) by maintaining a moving window instead of recomputing.",
+  estimatedMinutes: 20,
+  xpTotal: 100,
+  prerequisiteSessionSlug: "two-pointers",
+  nextSessionSlug: "binary-search",
+  stages: [
+    {
+      id: "sw-hook",
+      type: "hook",
+      config: {
+        headline: "Maximum sum subarray. Longest substring without repeating chars.\nBoth solved in O(n) with one elegant trick.",
+        subtext: "Sliding window is the pattern that separates candidates who passed from those who didn't.",
+        backgroundEmoji: "🪟",
+      }
+    },
+    {
+      id: "sw-watch",
+      type: "watch",
+      config: {
+        visualizerType: "array",
+        autoPlaySteps: [
+          { action: "insert", value: 2, narration: "Window starts at index 0-2. Sum = 2+1+5 = 8.", delayAfterMs: 1800 },
+          { action: "insert", value: 1, narration: "Slide right: subtract left element, add new right element.", delayAfterMs: 1800 },
+          { action: "insert", value: 5, narration: "No recomputation — just add and subtract. O(1) per slide.", delayAfterMs: 1800 },
+          { action: "insert", value: 3, narration: "Track the maximum sum seen. One pass — O(n).", delayAfterMs: 2000 },
+        ],
+      }
+    },
+    {
+      id: "sw-predict",
+      type: "predict",
+      config: {
+        questions: [
+          {
+            id: "sw-pred-1",
+            question: "What makes sliding window O(n) instead of O(n²)?",
+            answerType: "multiple-choice",
+            options: [
+              "It sorts the array first",
+              "It reuses the previous window's computation instead of starting over",
+              "It uses binary search to find boundaries",
+              "It only works on sorted arrays",
+            ],
+            correctAnswer: "It reuses the previous window's computation instead of starting over",
+            feedbackCorrect: "Each slide adds one element and removes one — O(1) per step, O(n) total.",
+            feedbackWrong: "The key is reuse: add the new element, subtract the old one. No inner loop needed.",
+            xp: 10,
+          }
+        ]
+      }
+    },
+    {
+      id: "sw-learn",
+      type: "learn",
+      config: {
+        title: "Sliding Window: Add Right, Remove Left",
+        keyRule: {
+          emoji: "🪟",
+          text: "Fixed window: move both pointers together. Variable window: expand right, shrink left when condition breaks.",
+        },
+        content: "Fixed window: you know the size k. Slide by adding arr[right] and subtracting arr[left]. Variable window: expand until a condition breaks, then shrink from the left until it's satisfied again. Both are O(n).",
+        codeSnippet: {
+          language: "python",
+          code: `# Fixed window — max sum of k consecutive elements
+def max_sum_window(arr, k):
+    window_sum = sum(arr[:k])
+    max_sum = window_sum
+    for i in range(k, len(arr)):
+        window_sum += arr[i] - arr[i-k]
+        max_sum = max(max_sum, window_sum)
+    return max_sum
+
+# Variable window — longest substring without repeating chars
+def length_of_longest_substring(s):
+    seen = set()
+    left = max_len = 0
+    for right in range(len(s)):
+        while s[right] in seen:
+            seen.remove(s[left]); left += 1
+        seen.add(s[right])
+        max_len = max(max_len, right - left + 1)
+    return max_len`,
+          caption: "Fixed and variable sliding window — both O(n)",
+        },
+      }
+    },
+    {
+      id: "sw-guided",
+      type: "guided-build",
+      config: {
+        steps: [
+          {
+            instruction: "Find the maximum sum of any 3 consecutive elements in [2,1,5,1,3,2]. Print the result.",
+            expectedOutput: "9",
+            hint: "Start with sum of first 3. Slide: add arr[i], subtract arr[i-3]. Track max.",
+            celebration: true,
+          }
+        ]
+      }
+    },
+    {
+      id: "sw-reflect",
+      type: "reflect",
+      config: {
+        questions: [
+          {
+            question: "When do you use a variable-size sliding window instead of fixed?",
+            options: [
+              "When the array is unsorted",
+              "When you're looking for a subarray satisfying a condition, not a fixed length",
+              "When k is larger than n",
+              "When elements are negative",
+            ],
+            correctIndex: 1,
+            explanation: "Variable window expands and contracts based on a condition. Fixed window has a known size k.",
+          }
+        ]
+      }
+    },
+    { id: "sw-summary", type: "summary", config: {} }
+  ],
+});
+
+// ============================================================
+// SESSION 11: BINARY SEARCH
+// ============================================================
+registerSession({
+  id: "session-binary-search",
+  slug: "binary-search",
+  title: "Binary Search",
+  topic: "binary-search",
+  description: "Cut your search space in half every step. Understand why O(log n) dominates O(n) at scale.",
+  estimatedMinutes: 20,
+  xpTotal: 100,
+  prerequisiteSessionSlug: "sliding-window",
+  nextSessionSlug: "binary-search-trees",
+  stages: [
+    {
+      id: "bs-hook",
+      type: "hook",
+      config: {
+        headline: "1 billion elements. Linear search: 1 billion steps.\nBinary search: 30 steps. That's the power of O(log n).",
+        subtext: "Binary search is the foundation of every efficient lookup system ever built.",
+        backgroundEmoji: "🎯",
+      }
+    },
+    {
+      id: "bs-watch",
+      type: "watch",
+      config: {
+        visualizerType: "array",
+        autoPlaySteps: [
+          { action: "insert", value: 1, narration: "Sorted array. Target = 7. Left=0, Right=8.", delayAfterMs: 1600 },
+          { action: "insert", value: 3, narration: "Mid = 4. arr[mid]=5 < 7. Move left to mid+1.", delayAfterMs: 1800 },
+          { action: "insert", value: 5, narration: "Mid = 6. arr[mid]=8 > 7. Move right to mid-1.", delayAfterMs: 1800 },
+          { action: "insert", value: 7, narration: "Mid = 5. arr[mid]=7 == target. Found! O(log n).", delayAfterMs: 2000 },
+        ],
+      }
+    },
+    {
+      id: "bs-predict",
+      type: "predict",
+      config: {
+        questions: [
+          {
+            id: "bs-pred-1",
+            question: "How many steps does binary search take on an array of 1,024 elements?",
+            answerType: "multiple-choice",
+            options: ["1024", "512", "10", "1"],
+            correctAnswer: "10",
+            feedbackCorrect: "log₂(1024) = 10. Binary search halves the search space each step.",
+            feedbackWrong: "Binary search halves the space each step. log₂(1024) = 10 steps maximum.",
+            xp: 10,
+          }
+        ]
+      }
+    },
+    {
+      id: "bs-learn",
+      type: "learn",
+      config: {
+        title: "Binary Search: Eliminate Half Each Step",
+        keyRule: {
+          emoji: "🎯",
+          text: "Requires sorted input. Each step eliminates half the remaining elements. O(log n) time, O(1) space.",
+        },
+        content: "Binary search maintains a left and right boundary. Each step checks the midpoint. If too small, move left boundary up. If too large, move right boundary down. The boundaries converge — at most log₂(n) steps.",
+        codeSnippet: {
+          language: "python",
+          code: `def binary_search(arr, target):
+    left, right = 0, len(arr) - 1
+    while left <= right:
+        mid = left + (right - left) // 2  # avoids overflow
+        if arr[mid] == target:
+            return mid
+        elif arr[mid] < target:
+            left = mid + 1
+        else:
+            right = mid - 1
+    return -1  # not found
+
+arr = [1, 3, 5, 7, 9, 11, 13]
+print(binary_search(arr, 7))   # 3
+print(binary_search(arr, 6))   # -1`,
+          caption: "Classic binary search — memorize this template",
+        },
+      }
+    },
+    {
+      id: "bs-guided",
+      type: "guided-build",
+      config: {
+        steps: [
+          {
+            instruction: "Implement binary_search(arr, target) and find 11 in [1,3,5,7,9,11,13]. Print the index.",
+            expectedOutput: "5",
+            hint: "left=0, right=len-1. mid = (left+right)//2. Compare arr[mid] to target.",
+            celebration: true,
+          }
+        ]
+      }
+    },
+    {
+      id: "bs-reflect",
+      type: "reflect",
+      config: {
+        questions: [
+          {
+            question: "Why do we use mid = left + (right - left) // 2 instead of (left + right) // 2?",
+            options: [
+              "It's faster",
+              "It prevents integer overflow when left + right exceeds max int",
+              "It gives a different result",
+              "It handles negative numbers better",
+            ],
+            correctIndex: 1,
+            explanation: "In languages with fixed integer size, left + right can overflow. The subtraction form is safe. Good habit even in Python.",
+          }
+        ]
+      }
+    },
+    { id: "bs-summary", type: "summary", config: {} }
   ],
 });

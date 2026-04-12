@@ -183,6 +183,7 @@ export default function PostSolveReflection({
             isComplete={!!isComplete}
             submitting={submitting}
             onSubmit={handleSubmit}
+            onSkip={handleSkip}
           />
         ) : (
           <FeedbackPhase
@@ -216,6 +217,7 @@ function InputPhase({
   isComplete,
   submitting,
   onSubmit,
+  onSkip,
 }: {
   selectedPattern: string;
   setSelectedPattern: (v: string) => void;
@@ -230,6 +232,7 @@ function InputPhase({
   isComplete: boolean;
   submitting: boolean;
   onSubmit: () => void;
+  onSkip: () => void;
 }) {
   return (
     <motion.div
@@ -351,20 +354,28 @@ function InputPhase({
         )}
       </div>
 
-      {/* Submit */}
-      <motion.button
-        whileHover={isComplete ? { scale: 1.02 } : {}}
-        whileTap={isComplete ? { scale: 0.98 } : {}}
-        onClick={onSubmit}
-        disabled={!isComplete || submitting}
-        className={`w-full py-2.5 rounded-lg text-sm font-semibold transition-all duration-300 ${
-          isComplete
-            ? "bg-primary text-background hover:brightness-110 cursor-pointer"
-            : "bg-[var(--gray-light)]/10 text-muted-foreground/60 cursor-not-allowed"
-        }`}
-      >
-        {submitting ? "Analyzing..." : "Submit Reflection"}
-      </motion.button>
+      {/* Submit or Skip */}
+      <div className="flex gap-3">
+        <button
+          onClick={onSkip}
+          className="flex-1 py-2.5 rounded-lg text-sm font-semibold bg-[var(--gray-light)]/10 text-muted-foreground/80 hover:bg-[var(--gray-light)]/20 hover:text-foreground transition-all duration-200"
+        >
+          Skip & Continue
+        </button>
+        <motion.button
+          whileHover={isComplete ? { scale: 1.02 } : {}}
+          whileTap={isComplete ? { scale: 0.98 } : {}}
+          onClick={onSubmit}
+          disabled={!isComplete || submitting}
+          className={`flex-1 py-2.5 rounded-lg text-sm font-semibold transition-all duration-300 ${
+            isComplete
+              ? "bg-primary text-background hover:brightness-110 cursor-pointer"
+              : "bg-[var(--gray-light)]/10 text-muted-foreground/60 cursor-not-allowed"
+          }`}
+        >
+          {submitting ? "Analyzing..." : "Submit Reflection"}
+        </motion.button>
+      </div>
     </motion.div>
   );
 }

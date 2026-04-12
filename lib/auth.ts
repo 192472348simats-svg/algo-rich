@@ -3,6 +3,9 @@ import Credentials from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import prisma from "@/lib/prisma";
 
+// Simple in-memory rate limiter for login
+const rateLimitMap = new Map<string, { count: number; expires: number }>();
+
 export const { handlers, auth, signIn, signOut } = NextAuth({
   pages: {
     signIn: "/signin",
@@ -24,6 +27,19 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
         const email = credentials.email as string;
         const password = credentials.password as string;
+
+        // Rate Limiting Logic: Max 5 attempts per 5 minutes
+        const now = Date.now();
+        const rl = rateLimitMap.get(email);
+        if (rl && rl.expires > now) {
+          if (rl.count >= 5) {
+            console.warn(`[AUTH] Rate limit exceeded for email: ${email}`);
+            throw new Error("Too many login attempts. Please try again later.");
+          }
+          rl.count++;
+        } else {
+          rateLimitMap.set(email, { count: 1, expires: now + 5 * 60 * 1000 });
+        }
 
         const user = await prisma.user.findUnique({
           where: { email },

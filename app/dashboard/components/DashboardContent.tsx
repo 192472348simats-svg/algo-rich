@@ -26,6 +26,8 @@ import ProgressRing from "@/app/components/ui/ProgressRing";
 import BeginnerOnboardingFlow from "@/app/components/onboarding/BeginnerOnboardingFlow";
 import { celebrate } from "@/lib/celebrationEngine";
 import { getCountdownData } from "@/lib/interviewCountdown";
+import DailyCardsPreview from "./DailyCardsPreview";
+import AchievementsPreview from "./AchievementsPreview";
 
 // ─── Types ─────────────────────────────────────────────────
 
@@ -59,6 +61,13 @@ interface DashboardContentProps {
     totalCourses: number;
     reviewsDue: number;
     daysSinceLastActivity: number;
+    // ── Achievement data (real server values) ──
+    mediumSolved: number;
+    hardSolved: number;
+    topicsCovered: number;
+    cardsReviewed: number;
+    reviewsCompleted: number;
+    coursesCompleted: number;
   };
   courses: CourseCard[];
   onboardingCompleted?: boolean;
@@ -493,203 +502,7 @@ function ReviewQueueWidget() {
   );
 }
 
-// ─── Daily Cards Preview ───────────────────────────────────
 
-interface CardPreview {
-  front: string;
-  topic?: string;
-}
-
-function DailyCardsPreview() {
-  const router = useRouter();
-  const [previewCards, setPreviewCards] = useState<CardPreview[]>([]);
-  const [cardsDueToday, setCardsDueToday] = useState(0);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    async function fetchCards() {
-      try {
-        const res = await fetch("/api/cards/daily");
-        if (res.ok) {
-          const data = await res.json();
-          const cards = data.cards ?? [];
-          setCardsDueToday(cards.length);
-          setPreviewCards(
-            cards.slice(0, 3).map((c: { question?: string; front?: string; topic?: string; type?: string }) => ({
-              front: c.question || c.front || "Review card",
-              topic: c.topic || c.type || "",
-            }))
-          );
-        }
-      } catch {
-        // silently fail
-      } finally {
-        setLoading(false);
-      }
-    }
-    fetchCards();
-  }, []);
-
-  if (loading) return null;
-
-  return (
-    <motion.div variants={itemVariants} className="glass rounded-xl p-5 mt-4">
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2">
-          <span className="text-base">📝</span>
-          <h3 className="text-sm font-semibold text-white">Daily Cards</h3>
-        </div>
-        <div className="flex items-center gap-2">
-          {cardsDueToday > 0 && (
-            <span className="text-xs text-primary/60 bg-primary/10 rounded-full px-2.5 py-0.5">
-              {cardsDueToday} cards today
-            </span>
-          )}
-          <Link
-            href="/dashboard/cards"
-            className="text-xs text-white/20 hover:text-white/40"
-          >
-            View all →
-          </Link>
-        </div>
-      </div>
-
-      {previewCards.length > 0 ? (
-        <>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-            {previewCards.map((card, i) => (
-              <div
-                key={i}
-                className="rounded-lg border border-white/[0.04] bg-white/[0.01] p-3 hover:bg-white/[0.03] transition-colors cursor-pointer"
-                onClick={() => router.push("/dashboard/cards")}
-              >
-                <p className="text-xs text-white/50 line-clamp-2 leading-relaxed">
-                  {card.front}
-                </p>
-                {card.topic && (
-                  <p className="text-[10px] text-white/15 mt-2">{card.topic}</p>
-                )}
-              </div>
-            ))}
-          </div>
-
-          {cardsDueToday > 0 && (
-            <Link href="/dashboard/cards">
-              <div className="mt-3 rounded-lg bg-primary/10 border border-primary/20 py-2 text-center text-xs text-primary/70 hover:bg-primary/20 transition-colors cursor-pointer">
-                Start Card Session →
-              </div>
-            </Link>
-          )}
-        </>
-      ) : (
-        <p className="text-xs text-white/20 text-center py-4">
-          All caught up! New cards tomorrow. 🎉
-        </p>
-      )}
-    </motion.div>
-  );
-}
-
-// ─── Achievements Preview ──────────────────────────────────
-
-function AchievementsPreview({
-  stats,
-}: {
-  stats: DashboardContentProps["stats"];
-}) {
-  const userStats: UserStats = useMemo(
-    () => ({
-      totalSolved: stats.problemsSolved,
-      lessonsCompleted: stats.lessonsCompleted,
-      cardsReviewed: 0, // not tracked server-side in props yet
-      streak: stats.currentStreak,
-      mediumSolved: 0, // we'll estimate from totalSolved
-      hardSolved: 0,
-      topicsCovered: 0,
-      reviewsCompleted: 0,
-      fastestEasy: null,
-      patternsLearned: 0,
-      coursesCompleted: 0,
-    }),
-    [stats]
-  );
-
-  const allAchievements = useMemo(
-    () => evaluateAchievements(userStats),
-    [userStats]
-  );
-
-  // Show 3 most relevant: first unlocked ones, then next to unlock
-  const unlocked = allAchievements.filter((a) => a.unlocked);
-  const locked = allAchievements
-    .filter((a) => !a.unlocked)
-    .sort((a, b) => b.progress / b.target - a.progress / a.target);
-
-  const display = [...unlocked.slice(-2), ...locked.slice(0, 3)].slice(0, 5);
-
-  return (
-    <motion.div variants={itemVariants} className="glass rounded-xl p-5 mt-4">
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2">
-          <span className="text-base">🏆</span>
-          <h3 className="text-sm font-semibold text-white">Achievements</h3>
-        </div>
-        <Link
-          href="/dashboard/achievements"
-          className="text-xs text-white/20 hover:text-white/40"
-        >
-          View all →
-        </Link>
-      </div>
-
-      <div className="space-y-2">
-        {display.map((achievement) => (
-          <div key={achievement.id} className="flex items-center gap-3">
-            <div
-              className={`w-8 h-8 rounded-full flex items-center justify-center text-sm ${
-                achievement.unlocked
-                  ? "bg-yellow-500/20"
-                  : "bg-white/[0.04] grayscale opacity-40"
-              }`}
-            >
-              {achievement.emoji}
-            </div>
-            <div className="flex-1 min-w-0">
-              <p
-                className={`text-xs font-medium ${
-                  achievement.unlocked ? "text-white/70" : "text-white/25"
-                }`}
-              >
-                {achievement.title}
-              </p>
-              <p className="text-[10px] text-white/15">
-                {achievement.description}
-              </p>
-            </div>
-            {!achievement.unlocked && (
-              <div className="flex items-center gap-1.5 flex-shrink-0">
-                <div className="w-16 h-1 rounded-full bg-white/[0.06] overflow-hidden">
-                  <div
-                    className="h-full rounded-full bg-yellow-500/40"
-                    style={{
-                      width: `${Math.min((achievement.progress / achievement.target) * 100, 100)}%`,
-                    }}
-                  />
-                </div>
-                <span className="text-[9px] text-white/15 tabular-nums">
-                  {achievement.progress}/{achievement.target}
-                </span>
-              </div>
-            )}
-            {achievement.unlocked && (
-              <span className="text-[9px] text-yellow-400/50">✓</span>
-            )}
-          </div>
-        ))}
-      </div>
-    </motion.div>
-  );
-}
 
 // ─── Quick Action Cards ────────────────────────────────────
 

@@ -62,7 +62,7 @@ interface ProblemData {
   category: string;
   starterCode: string;
   testCases: Array<{ input: Record<string, unknown> | string; expectedOutput: unknown }>;
-  hiddenTestCases?: Array<{ input: Record<string, unknown> | string; expectedOutput: unknown }>;
+  hasHiddenTests?: boolean;
   hints?: string;
   correctPattern?: string;
   solutionApproach?: string;
@@ -110,6 +110,7 @@ export default function ProblemSolver({ problem, isSolved, userId, relatedLesson
     "output"
   );
   const [submitting, setSubmitting] = useState(false);
+  const [validatingHidden, setValidatingHidden] = useState(false); // Piston server-side validation in progress
   const [solved, setSolved] = useState(isSolved);
   const [showReflection, setShowReflection] = useState(false);
   const [solveTimeSeconds, setSolveTimeSeconds] = useState(0);
@@ -248,16 +249,12 @@ export default function ProblemSolver({ problem, isSolved, userId, relatedLesson
     setActiveOutputTab("tests");
     setFailureAnalysis(null);
 
-    // Include both visible and hidden test cases for server validation
+    // Send only visible tests to Pyodide, hidden tests will be validated server-side
     const visibleTests: TestCase[] = problem.testCases.map((tc) => ({
       input: tc.input,
       expectedOutput: tc.expectedOutput,
     }));
-    const hiddenTests: TestCase[] = (problem.hiddenTestCases ?? []).map((tc: { input: Record<string, unknown> | string; expectedOutput: unknown }) => ({
-      input: tc.input,
-      expectedOutput: tc.expectedOutput,
-    }));
-    const allTestCases = [...visibleTests, ...hiddenTests];
+    const allTestCases = [...visibleTests];
 
     const execResult = await runCode(code, allTestCases, expectedFuncName);
     setResult(execResult);
@@ -270,6 +267,8 @@ export default function ProblemSolver({ problem, isSolved, userId, relatedLesson
 
     // Save submission — send full test results for server-side hidden test validation
     try {
+      // If this problem has hidden tests, show server validation banner
+      if (problem.hasHiddenTests) setValidatingHidden(true);
       const subRes = await fetch("/api/submissions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -354,6 +353,7 @@ export default function ProblemSolver({ problem, isSolved, userId, relatedLesson
       // silent
     }
 
+    setValidatingHidden(false);
     setSubmitting(false);
   }, [code, pyStatus, runCode, problem, submitting, expectedFuncName, onSolved, setSubmitting, setActiveOutputTab, setFailureAnalysis, setResult, setAttemptCount, setSolved, setShowStuckHelper, setXpEarned, setPatternDiscovery, setSolveTimeSeconds, setShowReflection]);
 
@@ -662,7 +662,9 @@ export default function ProblemSolver({ problem, isSolved, userId, relatedLesson
                     : "bg-gradient-to-r from-gold-primary to-gold-light text-navy-dark hover:shadow-lg hover:shadow-gold-primary/30 cursor-pointer"
                 }`}
               >
-                {submitting
+                {validatingHidden
+                  ? "Validating hidden tests..."
+                  : submitting
                   ? "Submitting..."
                   : pyStatus !== "ready"
                   ? "Waiting for Python..."

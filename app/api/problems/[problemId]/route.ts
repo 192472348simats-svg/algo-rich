@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import prisma from "@/lib/prisma";
+import { parseAndNormalizeTestCases } from "@/lib/types/problem";
 
 interface Props {
   params: Promise<{ problemId: string }>;
@@ -39,12 +40,7 @@ export async function GET(_request: Request, { params }: Props) {
       return NextResponse.json({ error: "Problem not found" }, { status: 404 });
     }
 
-    let testCases;
-    try {
-      testCases = JSON.parse(problem.testCases);
-    } catch {
-      testCases = [];
-    }
+    const testCases = parseAndNormalizeTestCases(problem.testCases);
 
     // Get related lessons shaped nicely
     const relatedLessons = problem.lessons.map((lp) => lp.lesson);

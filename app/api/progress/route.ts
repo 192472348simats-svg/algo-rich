@@ -1,6 +1,17 @@
 import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
 import { auth } from "@/lib/auth";
 import prisma from "@/lib/prisma";
+import {
+  getLessonEngagementCookieConfig,
+  getLessonEngagementCookieName,
+  getLessonEngagementProgress,
+  parseLessonEngagement,
+} from "@/lib/lessonEngagement";
+import {
+  MIN_LESSON_SECONDS,
+  MIN_SCROLL_PERCENT,
+} from "@/lib/lessonEngagement.shared";
 
 export async function POST(request: Request) {
   try {
@@ -44,6 +55,41 @@ export async function POST(request: Request) {
       },
     });
 
+    if (!existing?.completed) {
+      const cookieStore = await cookies();
+      const cookieName = getLessonEngagementCookieName(lessonId);
+      const engagementState = parseLessonEngagement(
+        cookieStore.get(cookieName)?.value
+      );
+
+      let engagementProgress = null;
+      if (
+        engagementState &&
+        engagementState.lessonId === lessonId &&
+        engagementState.userId === session.user.id
+      ) {
+        engagementProgress = getLessonEngagementProgress(engagementState);
+      }
+
+      if (!engagementProgress?.canComplete) {
+        return NextResponse.json(
+          {
+            error: "Lesson engagement requirements not met",
+            progress: engagementProgress ?? {
+              elapsedSeconds: 0,
+              maxScrollPct: 0,
+              canComplete: false,
+            },
+            requirements: {
+              minSeconds: MIN_LESSON_SECONDS,
+              minScrollPct: MIN_SCROLL_PERCENT,
+            },
+          },
+          { status: 403 }
+        );
+      }
+    }
+
     const masteryRank: Record<string, number> = {
       none: 0,
       read: 1,
@@ -80,7 +126,17 @@ export async function POST(request: Request) {
       },
     });
 
-    return NextResponse.json(progress);
+    const response = NextResponse.json(progress);
+    response.cookies.set(
+      getLessonEngagementCookieName(lessonId),
+      "",
+      {
+        ...getLessonEngagementCookieConfig(),
+        maxAge: 0,
+      }
+    );
+
+    return response;
   } catch (error) {
     console.error("Error updating progress:", error);
     return NextResponse.json(

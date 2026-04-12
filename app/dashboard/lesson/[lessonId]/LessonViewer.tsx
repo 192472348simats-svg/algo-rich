@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import MarkdownContent from "@/app/components/MarkdownContent";
 import ConceptConnectionCard from "@/app/components/learning/ConceptConnectionCard";
+import { useLessonEngagement } from "@/app/components/learning/useLessonEngagement";
 import { triggerSuccessConfetti } from "@/app/components/feedback/Confetti";
 import { difficultyColor } from "@/lib/utils";
 import { getVisualizerForLesson } from "@/lib/lessonVisualizerMap";
@@ -40,7 +41,6 @@ interface Props {
   masteryLevel?: string;
 }
 
-
 export default function LessonViewer({
   lesson,
   course,
@@ -53,8 +53,24 @@ export default function LessonViewer({
 }: Props) {
   const [completed, setCompleted] = useState(initialCompleted);
   const [marking, setMarking] = useState(false);
+  const [activeId, setActiveId] = useState<string>("");
+  const [completionError, setCompletionError] = useState<string | null>(null);
 
-  // Extract headings for TOC
+  const {
+    timeOnPage,
+    maxScrollPct,
+    minSeconds,
+    minScrollPct,
+    secondsRemaining,
+    scrollRemaining,
+    engagementMet,
+    syncError,
+    syncEngagement,
+  } = useLessonEngagement({
+    lessonId: lesson.id,
+    enabled: !completed,
+  });
+
   const headings = useMemo(() => {
     const matches = lesson.content.match(/^## (.+)$/gm);
     if (!matches) return [];
@@ -68,8 +84,6 @@ export default function LessonViewer({
     });
   }, [lesson.content]);
 
-  // Highlight current heading in view
-  const [activeId, setActiveId] = useState<string>("");
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
@@ -92,19 +106,47 @@ export default function LessonViewer({
 
   async function markComplete() {
     if (completed || marking) return;
+
+    setCompletionError(null);
     setMarking(true);
+
     try {
+      const syncedProgress = await syncEngagement(maxScrollPct);
+      if (!syncedProgress?.canComplete) {
+        setCompletionError(
+          `Finish reading first: ${secondsRemaining}s more and ${scrollRemaining}% more scroll needed.`
+        );
+        return;
+      }
+
       const res = await fetch("/api/progress", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ lessonId: lesson.id }),
       });
+
       if (res.ok) {
         setCompleted(true);
         triggerSuccessConfetti();
+        return;
+      }
+
+      const data = await res.json().catch(() => null);
+      if (res.status === 403) {
+        const requiredSeconds = Number(data?.requirements?.minSeconds ?? minSeconds);
+        const requiredScroll = Number(data?.requirements?.minScrollPct ?? minScrollPct);
+        const elapsedSeconds = Number(data?.progress?.elapsedSeconds ?? timeOnPage);
+        const syncedScroll = Number(data?.progress?.maxScrollPct ?? maxScrollPct);
+        const remainingSeconds = Math.max(0, requiredSeconds - elapsedSeconds);
+        const remainingScroll = Math.max(0, requiredScroll - syncedScroll);
+        setCompletionError(
+          `Finish reading first: ${remainingSeconds}s more and ${remainingScroll}% more scroll needed.`
+        );
+      } else {
+        setCompletionError(data?.error ?? "Failed to mark lesson complete.");
       }
     } catch {
-      // silently fail
+      setCompletionError("Failed to mark lesson complete. Please try again.");
     } finally {
       setMarking(false);
     }
@@ -117,7 +159,6 @@ export default function LessonViewer({
       transition={{ duration: 0.4, ease: "easeOut" as const }}
       className="max-w-7xl mx-auto pt-8 lg:pt-0"
     >
-      {/* Breadcrumb */}
       <nav className="flex items-center gap-2 text-sm text-gray-light/50 mb-6 flex-wrap">
         <Link href="/dashboard" className="hover:text-gold-primary transition-colors">
           Dashboard
@@ -133,11 +174,8 @@ export default function LessonViewer({
         <span className="text-gold-light/70">Lesson {lesson.order}</span>
       </nav>
 
-      {/* Main layout */}
       <div className="flex flex-col lg:flex-row gap-8">
-        {/* Main content - left column */}
         <div className="flex-1 min-w-0">
-          {/* Lesson header */}
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
@@ -152,28 +190,21 @@ export default function LessonViewer({
               >
                 {lesson.difficulty}
               </span>
+              <span className="text-xs text-gray-light/40">{lesson.estimatedTime} min</span>
               <span className="text-xs text-gray-light/40">
-                ⏱️ {lesson.estimatedTime} min
-              </span>
-              <span className="text-xs text-gray-light/40">
-                📖 Lesson {lesson.order} of {totalLessons}
+                Lesson {lesson.order} of {totalLessons}
               </span>
               {completed && (
                 <span className="text-xs text-gold-primary flex items-center gap-1">
-                  ✓ Completed
+                  Completed
                 </span>
               )}
             </div>
             <h1 className="text-3xl lg:text-4xl font-bold text-white">{lesson.title}</h1>
           </motion.div>
 
-          {/* Why This Matters — Concept Connection */}
-          <ConceptConnectionCard
-            courseTitle={course.title}
-            lessonTitle={lesson.title}
-          />
+          <ConceptConnectionCard courseTitle={course.title} lessonTitle={lesson.title} />
 
-          {/* Markdown content */}
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
@@ -183,7 +214,6 @@ export default function LessonViewer({
             <MarkdownContent content={lesson.content} />
           </motion.div>
 
-          {/* Code example (if separate) */}
           {lesson.codeExample && (
             <motion.div
               initial={{ opacity: 0, y: 10 }}
@@ -191,14 +221,11 @@ export default function LessonViewer({
               transition={{ delay: 0.3, duration: 0.4, ease: "easeOut" as const }}
               className="mt-6 bg-navy-light/10 border border-gold-primary/20 rounded-xl p-6"
             >
-              <h3 className="text-lg font-bold text-gold-primary mb-4 flex items-center gap-2">
-                💻 Code Example
-              </h3>
+              <h3 className="text-lg font-bold text-gold-primary mb-4">Code Example</h3>
               <MarkdownContent content={`\`\`\`python\n${lesson.codeExample}\n\`\`\``} />
             </motion.div>
           )}
 
-          {/* Practice This — Connected Problems */}
           {connectedProblems.length > 0 && (
             <motion.div
               initial={{ opacity: 0, y: 10 }}
@@ -207,9 +234,7 @@ export default function LessonViewer({
               className="mt-6 bg-navy-light/10 border border-gold-primary/20 rounded-xl p-6"
             >
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-bold text-gold-primary flex items-center gap-2">
-                  🎯 Practice This
-                </h3>
+                <h3 className="text-lg font-bold text-gold-primary">Practice This</h3>
                 {masteryLevel !== "none" && (
                   <span
                     className={`text-xs px-2.5 py-1 rounded-full border ${
@@ -221,10 +246,10 @@ export default function LessonViewer({
                     }`}
                   >
                     {masteryLevel === "mastered"
-                      ? "⭐ Mastered"
+                      ? "Mastered"
                       : masteryLevel === "practiced"
-                      ? "✓ Practiced"
-                      : "📖 Read"}
+                      ? "Practiced"
+                      : "Read"}
                   </span>
                 )}
               </div>
@@ -238,7 +263,6 @@ export default function LessonViewer({
                     href={`/dashboard/practice/${problem.id}`}
                     className="flex items-center gap-3 p-3 rounded-lg border border-navy-light/20 hover:border-gold-primary/30 hover:bg-navy-light/10 transition-all group"
                   >
-                    {/* Status icon */}
                     <div
                       className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
                         problem.solved
@@ -249,7 +273,6 @@ export default function LessonViewer({
                       {problem.solved ? "✓" : "→"}
                     </div>
 
-                    {/* Problem info */}
                     <div className="flex-1 min-w-0">
                       <p
                         className={`text-sm font-medium truncate ${
@@ -276,7 +299,6 @@ export default function LessonViewer({
                       </div>
                     </div>
 
-                    {/* Arrow */}
                     <svg
                       className="w-4 h-4 text-gray-light/30 group-hover:text-gold-primary transition-colors flex-shrink-0"
                       fill="none"
@@ -293,58 +315,115 @@ export default function LessonViewer({
                   </Link>
                 ))}
               </div>
-              {/* Mastery progress */}
-              {connectedProblems.length > 0 && (
-                <div className="mt-4 pt-4 border-t border-navy-light/20">
-                  <div className="flex justify-between text-xs text-gray-light/50 mb-1.5">
-                    <span>Problems solved</span>
-                    <span>
-                      {connectedProblems.filter((p) => p.solved).length} /{" "}
-                      {connectedProblems.length}
-                    </span>
-                  </div>
-                  <div className="w-full h-1.5 bg-navy-dark/40 rounded-full overflow-hidden">
-                    <motion.div
-                      initial={{ width: 0 }}
-                      animate={{
-                        width: `${
-                          (connectedProblems.filter((p) => p.solved).length /
-                            connectedProblems.length) *
-                          100
-                        }%`,
-                      }}
-                      transition={{ duration: 0.6, ease: "easeOut" }}
-                      className="h-full bg-gradient-to-r from-gold-primary to-gold-light rounded-full"
-                    />
-                  </div>
+              <div className="mt-4 pt-4 border-t border-navy-light/20">
+                <div className="flex justify-between text-xs text-gray-light/50 mb-1.5">
+                  <span>Problems solved</span>
+                  <span>
+                    {connectedProblems.filter((p) => p.solved).length} / {connectedProblems.length}
+                  </span>
                 </div>
+                <div className="w-full h-1.5 bg-navy-dark/40 rounded-full overflow-hidden">
+                  <motion.div
+                    initial={{ width: 0 }}
+                    animate={{
+                      width: `${
+                        (connectedProblems.filter((p) => p.solved).length /
+                          connectedProblems.length) *
+                        100
+                      }%`,
+                    }}
+                    transition={{ duration: 0.6, ease: "easeOut" }}
+                    className="h-full bg-gradient-to-r from-gold-primary to-gold-light rounded-full"
+                  />
+                </div>
+              </div>
+            </motion.div>
+          )}
+
+          {!completed && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.38, duration: 0.4, ease: "easeOut" as const }}
+              className="mt-6 rounded-xl border border-gold-primary/20 bg-navy-light/10 p-5"
+            >
+              <div className="flex items-center justify-between gap-3 flex-wrap">
+                <div>
+                  <h3 className="text-sm font-bold text-gold-primary">Completion Guard</h3>
+                  <p className="text-sm text-gray-light/60 mt-1">
+                    Spend at least {minSeconds}s on this lesson and read {minScrollPct}% before
+                    marking complete.
+                  </p>
+                </div>
+                <span
+                  className={`text-xs px-2.5 py-1 rounded-full border ${
+                    engagementMet
+                      ? "border-emerald-500/30 bg-emerald-500/15 text-emerald-400"
+                      : "border-gold-primary/30 bg-gold-primary/10 text-gold-light"
+                  }`}
+                >
+                  {engagementMet ? "Ready to complete" : "Keep reading"}
+                </span>
+              </div>
+
+              <div className="mt-4 grid sm:grid-cols-2 gap-3">
+                <div className="rounded-lg border border-white/10 bg-white/[0.02] p-3">
+                  <p className="text-xs uppercase tracking-wide text-gray-light/40">Time on page</p>
+                  <p className="mt-1 text-lg font-semibold text-white">
+                    {timeOnPage}s / {minSeconds}s
+                  </p>
+                </div>
+                <div className="rounded-lg border border-white/10 bg-white/[0.02] p-3">
+                  <p className="text-xs uppercase tracking-wide text-gray-light/40">Scroll depth</p>
+                  <p className="mt-1 text-lg font-semibold text-white">
+                    {maxScrollPct}% / {minScrollPct}%
+                  </p>
+                </div>
+              </div>
+
+              {!engagementMet && (
+                <p className="mt-3 text-sm text-gray-light/60">
+                  {secondsRemaining > 0
+                    ? `Read for ${secondsRemaining}s more.`
+                    : "Time requirement met."}{" "}
+                  {scrollRemaining > 0
+                    ? `Scroll ${scrollRemaining}% further to unlock completion.`
+                    : "Scroll requirement met."}
+                </p>
+              )}
+
+              {(completionError || syncError) && (
+                <p className="mt-3 text-sm text-red-300">{completionError || syncError}</p>
               )}
             </motion.div>
           )}
 
-          {/* Bottom navigation */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.4, duration: 0.4, ease: "easeOut" as const }}
             className="mt-8 flex flex-col sm:flex-row items-center justify-between gap-4"
           >
-            {/* Mark complete button */}
             <button
               onClick={markComplete}
-              disabled={completed || marking}
+              disabled={completed || marking || !engagementMet || Boolean(syncError)}
               className={`px-6 py-3 rounded-lg font-semibold text-sm transition-all duration-300 ${
                 completed
                   ? "bg-gold-primary/20 text-gold-primary cursor-default border border-gold-primary/30"
-                  : marking
-                  ? "bg-navy-light/40 text-gray-light/50 cursor-wait"
+                  : marking || !engagementMet || syncError
+                  ? "bg-navy-light/40 text-gray-light/50 cursor-not-allowed"
                   : "bg-gold-primary text-navy-dark hover:bg-gold-light cursor-pointer"
               }`}
             >
-              {completed ? "✓ Lesson Complete" : marking ? "Marking..." : "Mark as Complete"}
+              {completed
+                ? "✓ Lesson Complete"
+                : marking
+                ? "Marking..."
+                : !engagementMet
+                ? (secondsRemaining > 0 ? `Read for ${secondsRemaining}s to unlock` : `Scroll further to unlock`)
+                : "Mark as Complete"}
             </button>
 
-            {/* Prev / Next */}
             <div className="flex items-center gap-3">
               {prevLesson && (
                 <Link
@@ -352,7 +431,12 @@ export default function LessonViewer({
                   className="flex items-center gap-2 px-4 py-2.5 border border-navy-light/30 rounded-lg text-gray-light/70 hover:text-white hover:border-gold-primary/40 transition-all text-sm"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M15 19l-7-7 7-7"
+                    />
                   </svg>
                   <span className="hidden sm:inline">Prev</span>
                 </Link>
@@ -364,7 +448,12 @@ export default function LessonViewer({
                 >
                   <span className="hidden sm:inline">Next</span>
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M9 5l7 7-7 7"
+                    />
                   </svg>
                 </Link>
               )}
@@ -372,7 +461,6 @@ export default function LessonViewer({
           </motion.div>
         </div>
 
-        {/* Sidebar - right column */}
         <motion.aside
           initial={{ opacity: 0, x: 20 }}
           animate={{ opacity: 1, x: 0 }}
@@ -380,7 +468,6 @@ export default function LessonViewer({
           className="lg:w-72 flex-shrink-0 order-first lg:order-last"
         >
           <div className="lg:sticky lg:top-8 space-y-5">
-            {/* Lesson info card */}
             <div className="bg-navy-light/20 border border-navy-light/30 rounded-xl p-5">
               <h3 className="text-sm font-bold text-gold-primary mb-3">Lesson Info</h3>
               <div className="space-y-2.5 text-sm">
@@ -413,7 +500,6 @@ export default function LessonViewer({
               </div>
             </div>
 
-            {/* Table of Contents */}
             {headings.length > 0 && (
               <div className="bg-navy-light/20 border border-navy-light/30 rounded-xl p-5">
                 <h3 className="text-sm font-bold text-gold-primary mb-3">On This Page</h3>
@@ -435,7 +521,6 @@ export default function LessonViewer({
               </div>
             )}
 
-            {/* Quick actions */}
             <div className="bg-navy-light/20 border border-navy-light/30 rounded-xl p-5">
               <h3 className="text-sm font-bold text-gold-primary mb-3">Quick Actions</h3>
               <div className="space-y-2">
@@ -443,20 +528,23 @@ export default function LessonViewer({
                   href={`/dashboard/courses/${course.id}`}
                   className="flex items-center gap-2 text-sm text-gray-light/60 hover:text-gold-light transition-colors"
                 >
-                  📚 All Lessons
+                  All Lessons
                 </Link>
                 <Link
                   href="/dashboard"
                   className="flex items-center gap-2 text-sm text-gray-light/60 hover:text-gold-light transition-colors"
                 >
-                  🏠 Dashboard
+                  Dashboard
                 </Link>
                 {getVisualizerForLesson(lesson.title, course.title) && (
                   <Link
-                    href={`/dashboard/visualize?type=${getVisualizerForLesson(lesson.title, course.title)}`}
+                    href={`/dashboard/visualize?type=${getVisualizerForLesson(
+                      lesson.title,
+                      course.title
+                    )}`}
                     className="flex items-center gap-2 text-sm text-purple-400/70 hover:text-purple-300 transition-colors"
                   >
-                    🎬 Visualize This
+                    Visualize This
                   </Link>
                 )}
               </div>

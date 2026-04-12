@@ -137,6 +137,9 @@ export default function TreePlayground() {
   const [traversalOutput, setTraversalOutput] = useState<number[]>([]);
   const [opCount, setOpCount] = useState(0);
 
+  const [pendingRoot, setPendingRoot] = useState<TreeNode | null>(null);
+  const [opType, setOpType] = useState<"insert" | "delete" | "search" | "traverse" | null>(null);
+
   const playTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const svgRef = useRef<SVGSVGElement>(null);
 
@@ -147,18 +150,16 @@ export default function TreePlayground() {
     }
   }, [state.root]);
 
-  // Apply current step highlighting
+  // When delete animation completes, smoothly swap to the target tree missing the deleted node
   useEffect(() => {
-    if (!state.root) return;
-    clearHighlights(state.root);
-    // Apply all steps up to current
-    for (let i = 0; i <= state.currentStep; i++) {
-      const step = state.animationQueue[i];
-      if (step && step.nodeId && step.highlightType) {
-        setHighlight(state.root, step.nodeId, step.highlightType);
+    if (opType === "delete" && pendingRoot !== null && state.animationQueue.length > 0) {
+      if (state.currentStep >= state.animationQueue.length - 1) {
+        dispatch({ type: "SET_TREE", root: pendingRoot });
+        setPendingRoot(null);
+        setOpType(null); // finish op
       }
     }
-  }, [state.currentStep, state.root, state.animationQueue]);
+  }, [state.currentStep, state.animationQueue.length, opType, pendingRoot]);
 
   // Auto-play logic
   useEffect(() => {
@@ -192,6 +193,7 @@ export default function TreePlayground() {
     const root = cloneTree(state.root);
     const { newRoot, steps } = insertWithAnimation(root, val);
     computeLayout(newRoot, CANVAS_W);
+    setOpType("insert");
     dispatch({ type: "SET_TREE", root: newRoot });
     runSteps(steps);
     setInsertVal("");
@@ -202,7 +204,10 @@ export default function TreePlayground() {
     if (isNaN(val)) return;
     const { newRoot, steps } = deleteWithAnimation(state.root, val);
     if (newRoot) computeLayout(newRoot, CANVAS_W);
-    dispatch({ type: "SET_TREE", root: newRoot });
+    
+    // Hold the new tree in pending until animation completes so nodes don't vanish instantly!
+    setOpType("delete");
+    setPendingRoot(newRoot);
     runSteps(steps);
     setDeleteVal("");
   }, [deleteVal, state.root, runSteps]);
@@ -211,6 +216,7 @@ export default function TreePlayground() {
     const val = parseInt(searchVal, 10);
     if (isNaN(val)) return;
     const { steps } = searchWithAnimation(state.root, val);
+    setOpType("search");
     runSteps(steps);
     setSearchVal("");
   }, [searchVal, state.root, runSteps]);
@@ -218,6 +224,7 @@ export default function TreePlayground() {
   const handleTraverse = useCallback(
     (order: "inorder" | "preorder" | "postorder" | "bfs") => {
       const { result, steps } = traverseWithAnimation(state.root, order);
+      setOpType("traverse");
       runSteps(steps);
       setTraversalOutput(result);
     },
@@ -230,6 +237,7 @@ export default function TreePlayground() {
     while (values.size < count) values.add(Math.floor(Math.random() * 99) + 1);
     const root = buildTree(Array.from(values));
     if (root) computeLayout(root, CANVAS_W);
+    setOpType(null);
     dispatch({ type: "SET_TREE", root });
     dispatch({ type: "RESET_STEP" });
     setTraversalOutput([]);
@@ -237,6 +245,7 @@ export default function TreePlayground() {
   }, []);
 
   const handleClear = useCallback(() => {
+    setOpType(null);
     dispatch({ type: "CLEAR" });
     setTraversalOutput([]);
     setOpCount(0);
@@ -245,6 +254,31 @@ export default function TreePlayground() {
   /* ── Render helpers ── */
 
   const nodes = state.root ? collectNodes(state.root) : [];
+  
+  // Reactively derive highlights from history instead of mutating tree nodes
+  const activeHighlights = new Map<string, HighlightType>();
+  if (state.currentStep >= 0) {
+    for (let i = 0; i <= state.currentStep; i++) {
+      const step = state.animationQueue[i];
+      if (step?.nodeId && step.highlightType) {
+        if (step.highlightType === "none" || (step.type as string) === "clear") {
+          activeHighlights.delete(step.nodeId);
+        } else {
+          activeHighlights.set(step.nodeId, step.highlightType);
+        }
+      }
+    }
+  }
+
+  // Prevent newly inserted nodes from spoiling the animation by appearing early
+  const hiddenNodeIds = new Set<string>();
+  if (opType === "insert" && state.animationQueue.length > 0) {
+    const insertStepIndex = state.animationQueue.findIndex(s => s.type === "insert");
+    if (insertStepIndex > -1 && state.currentStep < insertStepIndex) {
+      hiddenNodeIds.add(state.animationQueue[insertStepIndex].nodeId);
+    }
+  }
+
   const currentStepInfo =
     state.currentStep >= 0 && state.currentStep < state.animationQueue.length
       ? state.animationQueue[state.currentStep]
@@ -365,7 +399,7 @@ export default function TreePlayground() {
           {/* Edges */}
           {nodes.map((node) => {
             const parent = parentMap.get(node.id);
-            if (!parent) return null;
+            if (!parent || hiddenNodeIds.has(node.id) || hiddenNodeIds.has(parent.id)) return null;
             return (
               <motion.line
                 key={`edge-${node.id}`}
@@ -384,7 +418,10 @@ export default function TreePlayground() {
 
           {/* Nodes */}
           <AnimatePresence>
-            {nodes.map((node) => (
+            {nodes.map((node) => {
+              if (hiddenNodeIds.has(node.id)) return null;
+              const hl = activeHighlights.get(node.id) || "none";
+              return (
               <motion.g
                 key={node.id}
                 initial={{ opacity: 0, scale: 0 }}
@@ -401,8 +438,8 @@ export default function TreePlayground() {
                   cx={node.x}
                   cy={node.y}
                   r={NODE_R}
-                  fill={highlightColor(node.highlight)}
-                  stroke={highlightBorder(node.highlight)}
+                  fill={highlightColor(hl)}
+                  stroke={highlightBorder(hl)}
                   strokeWidth={2}
                   animate={{ cx: node.x, cy: node.y }}
                   transition={{ type: "spring", stiffness: 200, damping: 25 }}
@@ -425,7 +462,7 @@ export default function TreePlayground() {
                   {node.value}
                 </motion.text>
               </motion.g>
-            ))}
+            )})}
           </AnimatePresence>
 
           {/* Empty state */}

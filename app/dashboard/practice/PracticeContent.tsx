@@ -46,14 +46,23 @@ const itemVariants = {
 export default function PracticeContent({ problems }: Props) {
   const searchParams = useSearchParams();
   const initialPhase = searchParams.get("phase");
+  const topicFilter = searchParams.get("topic");
+
   const [activeFilter, setActiveFilter] = useState("All");
   const [phaseFilter, setPhaseFilter] = useState<number | null>(
     initialPhase ? parseInt(initialPhase) : null
   );
-  const [viewMode, setViewMode] = useState<"grid" | "topic">("grid");
+  const [viewMode, setViewMode] = useState<"grid" | "topic">(
+    topicFilter ? "topic" : "grid"
+  );
   const [companies, setCompanies] = useState<{ name: string; count: number }[]>([]);
   const [selectedCompany, setSelectedCompany] = useState<string | null>(null);
   const [companyProblemIds, setCompanyProblemIds] = useState<Set<string> | null>(null);
+
+  // If topic changes, ensure we are in topic view
+  useEffect(() => {
+    if (topicFilter) setViewMode("topic");
+  }, [topicFilter]);
 
   // Fetch available companies on mount
   useEffect(() => {
@@ -91,20 +100,33 @@ export default function PracticeContent({ problems }: Props) {
   );
 
   const filtered = useMemo(() => {
-    let result =
-      activeFilter === "All"
-        ? problems
-        : problems.filter(
-            (p) => p.difficulty.toLowerCase() === activeFilter.toLowerCase()
-          );
-    if (phaseFilter) {
-      result = result.filter((p) => p.phase === phaseFilter);
+    let result = problems;
+
+    // Apply topic filter (from query param)
+    if (topicFilter) {
+      const slug = topicFilter.toLowerCase();
+      result = result.filter(
+        (p) =>
+          p.pattern?.toLowerCase() === slug ||
+          p.topics?.toLowerCase().includes(slug)
+      );
+    } else {
+      // Only apply these filters if NO topic is specified, to avoid clashing
+      if (activeFilter !== "All") {
+        result = result.filter(
+          (p) => p.difficulty.toLowerCase() === activeFilter.toLowerCase()
+        );
+      }
+      if (phaseFilter) {
+        result = result.filter((p) => p.phase === phaseFilter);
+      }
+      if (companyProblemIds) {
+        result = result.filter((p) => companyProblemIds.has(p.id));
+      }
     }
-    if (companyProblemIds) {
-      result = result.filter((p) => companyProblemIds.has(p.id));
-    }
+
     return result;
-  }, [problems, activeFilter, phaseFilter, companyProblemIds]);
+  }, [problems, activeFilter, phaseFilter, companyProblemIds, topicFilter]);
 
   const solvedCount = problems.filter((p) => p.isSolved).length;
 

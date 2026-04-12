@@ -43,9 +43,9 @@
   --gold-400: #f4d03f;
   --gold-300: #fde68a;
 
-  --cyan-500: #E5A829;
-  --cyan-400: #E5A829;
-  --cyan-glow: rgba(229, 168, 41, 0.5);
+  /* NOTE: --cyan-* are intentionally removed (were incorrectly mapped to gold).
+     Use --gold-primary for gold glows, and --emerald-* for green. */
+  --gold-glow: rgba(229, 168, 41, 0.5);
 
   --purple-500: #8b5cf6;
   --purple-400: #a78bfa;
@@ -189,12 +189,12 @@ html {
 /* ═══ NEW DESIGN SYSTEM UTILITY CLASSES ═══ */
 
 .glow-green {
-  box-shadow: 0 0 20px hsl(43 96% 56% / 0.3),
-              0 0 60px hsl(43 96% 56% / 0.1);
+  box-shadow: 0 0 20px rgba(16, 185, 129, 0.4),
+              0 0 60px rgba(16, 185, 129, 0.15);
 }
 .glow-green-strong {
-  box-shadow: 0 0 30px hsl(43 96% 56% / 0.4),
-              0 0 80px hsl(43 96% 56% / 0.15);
+  box-shadow: 0 0 30px rgba(16, 185, 129, 0.5),
+              0 0 80px rgba(16, 185, 129, 0.2);
 }
 .glass {
   background: hsl(228 40% 12% / 0.6);

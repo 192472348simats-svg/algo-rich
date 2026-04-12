@@ -11,27 +11,84 @@ import {
   resetIdCounter,
   type TreeNode,
 } from "@/lib/treeEngine";
+import { usePyodide } from "@/app/components/CodeExecutor";
 
 interface Props {
   config: GuidedBuildConfig;
   onComplete: (result: StageResult) => void;
 }
 
-// ─── Phase 1: Simple Steps Wizard ─────────────────────────────────────────────
+// ─── Phase 1: Simple Steps Wizard (with REAL code verification) ───────────────
 function SimpleStepsWizard({ config, onComplete }: Props) {
   const steps = config.steps!;
   const [stepIndex, setStepIndex] = useState(0);
   const [code, setCode] = useState("");
   const [output, setOutput] = useState<string | null>(null);
+  const [outputType, setOutputType] = useState<"success" | "error">("success");
   const [showCelebration, setShowCelebration] = useState(false);
+  const [isRunning, setIsRunning] = useState(false);
   const step = steps[stepIndex];
 
-  function handleRun() {
-    // Simulate running — show the expected output
-    const simulated = step.expectedOutput ?? "Done!";
-    setOutput(simulated);
-    if (step.celebration) {
-      setShowCelebration(true);
+  const { status: pyStatus, runCode } = usePyodide();
+
+  async function handleRun() {
+    if (isRunning) return;
+
+    const trimmedCode = code.trim();
+    if (!trimmedCode) {
+      setOutput("⚠ Write some code first!");
+      setOutputType("error");
+      return;
+    }
+
+    setIsRunning(true);
+    setOutput(null);
+    setOutputType("success");
+
+    try {
+      // Actually execute the user's code through Pyodide
+      const result = await runCode(trimmedCode);
+      const actualOutput = (result.output || "").trim();
+
+      if (result.error) {
+        // Code had a runtime/syntax error
+        setOutput(`Error: ${result.error}`);
+        setOutputType("error");
+        return;
+      }
+
+      // If no expectedOutput (null) — accept any valid output (e.g., "print your name")
+      if (step.expectedOutput === null || step.expectedOutput === undefined) {
+        if (actualOutput.length > 0) {
+          setOutput(actualOutput);
+          setOutputType("success");
+          if (step.celebration) setShowCelebration(true);
+        } else {
+          setOutput("Your code ran but produced no output. Make sure to use print().");
+          setOutputType("error");
+        }
+        return;
+      }
+
+      // Compare actual output to expected output
+      const expected = step.expectedOutput.trim();
+      if (actualOutput === expected) {
+        // ✅ Correct!
+        setOutput(actualOutput);
+        setOutputType("success");
+        if (step.celebration) setShowCelebration(true);
+      } else {
+        // ❌ Output doesn't match
+        setOutput(
+          `Your output: ${actualOutput || "(nothing)"}\nExpected:    ${expected}\n\nTry again!`
+        );
+        setOutputType("error");
+      }
+    } catch {
+      setOutput("Failed to run code. Please try again.");
+      setOutputType("error");
+    } finally {
+      setIsRunning(false);
     }
   }
 
@@ -40,11 +97,15 @@ function SimpleStepsWizard({ config, onComplete }: Props) {
       setStepIndex(stepIndex + 1);
       setCode("");
       setOutput(null);
+      setOutputType("success");
       setShowCelebration(false);
     } else {
       onComplete({ score: 10, timeSpent: 0 });
     }
   }
+
+  const canProceed = output !== null && outputType === "success";
+  const pyLoading = pyStatus === "loading";
 
   return (
     <div className="max-w-xl mx-auto space-y-5">
@@ -53,6 +114,18 @@ function SimpleStepsWizard({ config, onComplete }: Props) {
         <p className="text-xs uppercase tracking-widest text-white/20 mb-1">Practice</p>
         <p className="text-sm text-white/40">{config.instructions || "Follow the steps below"}</p>
       </div>
+
+      {/* Pyodide loading indicator */}
+      {pyLoading && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="flex items-center justify-center gap-2 text-xs text-yellow-400/60"
+        >
+          <div className="w-3 h-3 border border-yellow-400/40 border-t-yellow-400 rounded-full animate-spin" />
+          Loading Python runtime...
+        </motion.div>
+      )}
 
       {/* Step indicator */}
       <div className="flex justify-center gap-1.5">
@@ -74,7 +147,7 @@ function SimpleStepsWizard({ config, onComplete }: Props) {
         className="rounded-2xl border border-primary/20 bg-primary/5 p-5 space-y-2"
       >
         <p className="text-sm font-medium text-white/90 leading-relaxed">{step.instruction}</p>
-        {step.hint && !output && (
+        {step.hint && !canProceed && (
           <p className="text-xs text-white/40 italic">💡 {step.hint}</p>
         )}
       </motion.div>
@@ -87,7 +160,14 @@ function SimpleStepsWizard({ config, onComplete }: Props) {
         </div>
         <textarea
           value={code}
-          onChange={(e) => setCode(e.target.value)}
+          onChange={(e) => {
+            setCode(e.target.value);
+            if (output !== null) {
+              setOutput(null);
+              setOutputType("success");
+              setShowCelebration(false);
+            }
+          }}
           className="w-full bg-transparent p-4 text-sm font-mono text-white/80
                      resize-none focus:outline-none placeholder-white/20 min-h-[100px]"
           placeholder="Type your code here..."
@@ -101,12 +181,22 @@ function SimpleStepsWizard({ config, onComplete }: Props) {
           <motion.div
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
-            className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 overflow-hidden"
+            className={`rounded-xl border overflow-hidden ${
+              outputType === "success"
+                ? "border-emerald-500/20 bg-emerald-500/5"
+                : "border-red-500/20 bg-red-500/5"
+            }`}
           >
             <div className="px-4 py-2 border-b border-white/[0.04]">
-              <span className="text-[11px] text-emerald-400/60 uppercase">Output</span>
+              <span className={`text-[11px] uppercase ${
+                outputType === "success" ? "text-emerald-400/60" : "text-red-400/60"
+              }`}>
+                {outputType === "success" ? "✓ Output" : "✗ Try Again"}
+              </span>
             </div>
-            <pre className="p-4 text-sm font-mono text-emerald-300">{output}</pre>
+            <pre className={`p-4 text-sm font-mono whitespace-pre-wrap ${
+              outputType === "success" ? "text-emerald-300" : "text-red-300"
+            }`}>{output}</pre>
           </motion.div>
         )}
       </AnimatePresence>
@@ -126,13 +216,17 @@ function SimpleStepsWizard({ config, onComplete }: Props) {
 
       {/* Buttons */}
       <div className="flex gap-3 justify-center">
-        {!output ? (
+        {!canProceed ? (
           <button
             onClick={handleRun}
-            className="px-6 py-2.5 rounded-xl bg-emerald-500/20 border border-emerald-500/30
-                       text-sm text-emerald-400 hover:bg-emerald-500/30 transition-colors cursor-pointer font-medium"
+            disabled={pyLoading || isRunning}
+            className={`px-6 py-2.5 rounded-xl border text-sm font-medium transition-colors ${
+              pyLoading || isRunning
+                ? "bg-white/5 border-white/10 text-white/20 cursor-not-allowed"
+                : "bg-emerald-500/20 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/30 cursor-pointer"
+            }`}
           >
-            ▶ Run Code
+            {isRunning ? "Running..." : pyLoading ? "Loading Python..." : "▶ Run Code"}
           </button>
         ) : (
           <button

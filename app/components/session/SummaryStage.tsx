@@ -20,7 +20,10 @@ export default function SummaryStage({
   definition,
   sessionStartTime,
 }: Props) {
+  const router = useRouter();
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [sessionEndTime] = useState(() => Date.now());
+
   const stats = useMemo(() => {
     const totalTimeMinutes = Math.round(
       (sessionEndTime - sessionStartTime) / 60000
@@ -67,6 +70,22 @@ export default function SummaryStage({
       codeTimeMinutes: Math.round(codeTimeSpent / 60),
     };
   }, [stageResults, definition, sessionStartTime, sessionEndTime]);
+
+  const handleMarkComplete = async () => {
+    setIsSubmitting(true);
+    // Persist completion state
+    await onComplete({
+      score: stats.totalXP,
+      timeSpent: stats.totalTimeMinutes * 60,
+    });
+
+    // Smart navigation
+    if (definition.nextSessionSlug) {
+      router.push(`/dashboard/session/${definition.nextSessionSlug}`);
+    } else {
+      router.push("/dashboard/sessions");
+    }
+  };
 
   const statItems = [
     {
@@ -144,9 +163,7 @@ export default function SummaryStage({
             </div>
             <span
               className={`text-sm font-semibold ${
-                item.highlight
-                  ? "text-primary"
-                  : "text-white/70"
+                item.highlight ? "text-[#E5A829]" : "text-white/70"
               }`}
             >
               {item.value}
@@ -155,43 +172,63 @@ export default function SummaryStage({
         ))}
       </motion.div>
 
-      {/* Next session teaser */}
-      {definition.nextSessionSlug && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.8 }}
-          className="rounded-xl border border-white/[0.04] bg-white/[0.01] p-4 text-center"
-        >
-          <p className="text-xs text-white/25 mb-1">Up next</p>
-          <p className="text-sm text-white/50">
-            {definition.nextSessionSlug
-              .replace(/-/g, " ")
-              .replace(/\b\w/g, (c) => c.toUpperCase())}
-          </p>
-        </motion.div>
-      )}
-
-      {/* Actions */}
+      {/* Action CTA Section */}
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        transition={{ delay: 1 }}
-        className="flex flex-col items-center gap-3"
+        transition={{ delay: 0.8 }}
+        className="flex flex-col gap-3"
+      >
+        {definition.nextSessionSlug ? (
+          <button
+            onClick={() =>
+              router.push(`/dashboard/session/${definition.nextSessionSlug}`)
+            }
+            className="w-full py-4 bg-[#E5A829] text-[#0a0f24] font-bold rounded-xl hover:opacity-90 transition-all flex items-center justify-center gap-2"
+          >
+            Start Next Session:{" "}
+            {definition.nextSessionSlug
+              .replace(/-/g, " ")
+              .replace(/\b\w/g, (c) => c.toUpperCase())}
+            <span>→</span>
+          </button>
+        ) : (
+          <button
+            onClick={() => router.push("/dashboard/sessions")}
+            className="w-full py-4 bg-emerald-500 text-white font-bold rounded-xl hover:opacity-90 transition-all flex items-center justify-center gap-2"
+          >
+            Browse All Sessions <span>→</span>
+          </button>
+        )}
+
+        {definition.topic && (
+          <button
+            onClick={() =>
+              router.push(`/dashboard/practice?topic=${definition.topic}`)
+            }
+            className="w-full py-3 bg-transparent border border-[#E5A829]/40 text-[#E5A829] font-medium rounded-xl hover:bg-[#E5A829]/5 transition-all flex items-center justify-center gap-2 text-sm"
+          >
+            Practice {definition.topic.replace(/-/g, " ")} Problems →
+          </button>
+        )}
+      </motion.div>
+
+      {/* Final Mark Complete Action */}
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 1.2 }}
+        className="pt-4"
       >
         <button
-          onClick={() => onComplete({ score: 0, timeSpent: 0 })}
-          className="rounded-xl px-8 py-3 text-sm font-semibold transition-all hover:opacity-90 cursor-pointer"
-          style={{ background: '#E5A829', color: '#0a0f24' }}
+          onClick={handleMarkComplete}
+          disabled={isSubmitting}
+          className="w-full py-3 bg-white/5 border border-white/10 text-white/50 font-medium rounded-xl hover:bg-white/10 transition-all text-xs"
         >
-          Mark Complete
+          {isSubmitting
+            ? "Saving progress..."
+            : "Mark Complete & Finish Session"}
         </button>
-        <Link
-          href="/dashboard"
-          className="text-xs text-white/25 hover:text-white/40 transition-colors"
-        >
-          Return to Dashboard
-        </Link>
       </motion.div>
     </div>
   );

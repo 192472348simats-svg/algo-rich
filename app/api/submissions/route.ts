@@ -69,35 +69,56 @@ export async function POST(request: NextRequest) {
       })
       .length;
 
-    // Server-validate hidden test results
     let hiddenPassed = 0;
-    for (let h = 0; h < hiddenTests; h++) {
-      const clientIdx = visibleTests + h;
-      const clientResult = testResults[clientIdx];
-      const hiddenCase = problem.hiddenTestCases[h];
+    
+    // Server Validate Hidden Tests securely using Piston API
+    if (hiddenTests > 0) {
+      try {
+        // Extract function name from starter code
+        const match = problem.starterCode.match(/def\s+(\w+)\s*\(/);
+        const funcName = match ? match[1] : "";
 
-      if (clientResult && hiddenCase) {
-        // Validate: compare client's actualOutput against our expected
-        try {
-          const actualParsed = typeof clientResult.actualOutput === "string"
-            ? JSON.parse(clientResult.actualOutput)
-            : clientResult.actualOutput;
-          const expectedParsed = typeof hiddenCase.expectedOutput === "string"
-            ? JSON.parse(hiddenCase.expectedOutput as string)
-            : hiddenCase.expectedOutput;
-          if (JSON.stringify(actualParsed) === JSON.stringify(expectedParsed)) {
-            hiddenPassed++;
-          }
-        } catch {
-          // Fallback string comparison
-          const actualStr = String(clientResult.actualOutput ?? "").trim();
-          const expectedStr = typeof hiddenCase.expectedOutput === "string"
-            ? hiddenCase.expectedOutput.trim()
-            : JSON.stringify(hiddenCase.expectedOutput);
-          if (actualStr === expectedStr) {
-            hiddenPassed++;
+        if (funcName) {
+          let testHarness = `import json\n\n${code}\n\n`;
+          testHarness += `tests = ${JSON.stringify(problem.hiddenTestCases)}\n`;
+          testHarness += `passed = 0\n`;
+          testHarness += `for t in tests:\n`;
+          testHarness += `    try:\n`;
+          testHarness += `        inp = t['input']\n`;
+          testHarness += `        exp = t['expectedOutput']\n`;
+          testHarness += `        if isinstance(inp, dict):\n`;
+          testHarness += `            res = ${funcName}(**inp)\n`;
+          testHarness += `        elif isinstance(inp, list) or isinstance(inp, tuple):\n`;
+          testHarness += `            res = ${funcName}(*inp)\n`;
+          testHarness += `        else:\n`;
+          testHarness += `            res = ${funcName}(inp)\n`;
+          testHarness += `        if json.dumps(res) == json.dumps(exp) or res == exp:\n`;
+          testHarness += `            passed += 1\n`;
+          testHarness += `    except Exception as e:\n`;
+          testHarness += `        pass\n`;
+          testHarness += `print(f"HIDDEN_PASS:{passed}")\n`;
+
+          const pistonRes = await fetch("https://emkc.org/api/v2/piston/execute", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              language: "python",
+              version: "3.10.0",
+              files: [{ name: "main.py", content: testHarness }]
+            })
+          });
+
+          if (pistonRes.ok) {
+            const data = await pistonRes.json();
+            const output = data.run?.output || "";
+            const match = output.match(/HIDDEN_PASS:(\d+)/);
+            if (match) {
+              hiddenPassed = parseInt(match[1], 10);
+            }
           }
         }
+      } catch (error) {
+        console.error("Piston API execution failed:", error);
       }
     }
 

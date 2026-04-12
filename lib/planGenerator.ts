@@ -258,6 +258,22 @@ async function getReviewProblems(userId: string) {
     },
   });
 
+  if (oldSolves.length === 0) return [];
+
+  // FIXED: Single batched query instead of N+1 loop
+  const problemIds = oldSolves.map((s) => s.problemId);
+  const recentReSolves = await prisma.submission.findMany({
+    where: {
+      userId,
+      status: "accepted",
+      problemId: { in: problemIds },
+      createdAt: { gt: oneDayAgo },
+    },
+    select: { problemId: true },
+    distinct: ["problemId"],
+  });
+  const recentlySolvedSet = new Set(recentReSolves.map((r) => r.problemId));
+
   const reviewList: {
     problemId: string;
     slug: string;
@@ -268,30 +284,18 @@ async function getReviewProblems(userId: string) {
   }[] = [];
 
   for (const solve of oldSolves) {
-    // Skip if user re-solved within the last day
-    const recentReSolve = await prisma.submission.findFirst({
-      where: {
-        userId,
-        problemId: solve.problemId,
-        status: "accepted",
-        createdAt: { gt: oneDayAgo },
-      },
+    if (recentlySolvedSet.has(solve.problemId)) continue;
+    const daysSinceSolved = Math.floor(
+      (Date.now() - solve.createdAt.getTime()) / (1000 * 60 * 60 * 24)
+    );
+    reviewList.push({
+      problemId: solve.problem.id,
+      slug: solve.problem.slug,
+      title: solve.problem.title,
+      difficulty: solve.problem.difficulty,
+      solvedAt: solve.createdAt.toISOString(),
+      daysSinceSolved,
     });
-
-    if (!recentReSolve) {
-      const daysSinceSolved = Math.floor(
-        (Date.now() - solve.createdAt.getTime()) / (1000 * 60 * 60 * 24)
-      );
-
-      reviewList.push({
-        problemId: solve.problem.id,
-        slug: solve.problem.slug,
-        title: solve.problem.title,
-        difficulty: solve.problem.difficulty,
-        solvedAt: solve.createdAt.toISOString(),
-        daysSinceSolved,
-      });
-    }
   }
 
   // Prioritize by spaced repetition intervals

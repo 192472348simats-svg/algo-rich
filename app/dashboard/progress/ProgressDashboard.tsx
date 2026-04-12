@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import ReadinessOverview from "@/app/dashboard/components/ReadinessOverview";
 import { getStatusColor, type TimelineEvent } from "@/lib/masteryTimeline";
 import type { FailureSummary } from "@/lib/failurePatternAnalysis";
+import { getLevelForXP } from "@/lib/xpSystem";
 
 interface StatsData {
   lessonsCompleted: number;
@@ -13,6 +14,7 @@ interface StatsData {
   totalProblems: number;
   currentStreak: number;
   estimatedHours: number;
+  totalXP: number;
   progressOverTime: Array<{ date: string; count: number }>;
 }
 
@@ -129,6 +131,7 @@ export default function ProgressDashboard({ userName }: { userName: string }) {
     ? Math.round((stats.problemsSolved / stats.totalProblems) * 100)
     : 0;
   const maxActivity = Math.max(...stats.progressOverTime.map((d) => d.count), 1);
+  const levelInfo = getLevelForXP(stats.totalXP);
 
   const statCards = [
     {
@@ -157,13 +160,13 @@ export default function ProgressDashboard({ userName }: { userName: string }) {
       suffix: stats.currentStreak === 1 ? "day" : "days",
     },
     {
-      label: "Study Time",
-      value: stats.estimatedHours,
-      total: null,
-      percent: null,
-      icon: "⏱️",
-      color: "#56d49e",
-      suffix: "hours",
+      label: `Level ${levelInfo.current.level} — ${levelInfo.current.title}`,
+      value: stats.totalXP,
+      total: levelInfo.next ? levelInfo.next.xpRequired : null,
+      percent: levelInfo.next ? Math.round(levelInfo.progress * 100) : 100,
+      icon: levelInfo.current.icon || "⚡",
+      color: "#a855f7",
+      suffix: "XP",
     },
   ];
 

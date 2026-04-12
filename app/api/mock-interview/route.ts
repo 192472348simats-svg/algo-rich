@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import prisma from "@/lib/prisma";
+import { parseAndNormalizeTestCases } from "@/lib/types/problem";
 
 // GET: return a random unsolved hard/medium problem for this session
 export async function GET() {
@@ -37,6 +38,8 @@ export async function GET() {
         constraints: true,
         pattern: true,
         slug: true,
+        starterCode: true,
+        testCases: true,
       },
       orderBy: { createdAt: "asc" },
     });
@@ -54,12 +57,20 @@ export async function GET() {
           constraints: true,
           pattern: true,
           slug: true,
+          starterCode: true,
+          testCases: true,
         },
       });
-      return NextResponse.json({ problem: fallback });
+      return NextResponse.json({
+        problem: fallback
+          ? { ...fallback, testCases: parseAndNormalizeTestCases(fallback.testCases) }
+          : null,
+      });
     }
 
-    return NextResponse.json({ problem });
+    return NextResponse.json({
+      problem: { ...problem, testCases: parseAndNormalizeTestCases(problem.testCases) },
+    });
   } catch (error) {
     console.error("[mock-interview GET]", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });

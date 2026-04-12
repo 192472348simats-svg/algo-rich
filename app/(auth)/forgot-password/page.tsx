@@ -1,32 +1,34 @@
-// REDESIGNED: Navy+gold theme, clean minimal signin
 "use client";
 
 import { useState } from "react";
-import { signIn } from "next-auth/react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 
-export default function SignInPage() {
-  const router = useRouter();
+export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+    setMessage("");
     setLoading(true);
+
     try {
-      const result = await signIn("credentials", { email, password, redirect: false });
-      if (result?.error) {
-        setError(result.error.includes("EMAIL_NOT_VERIFIED")
-          ? "Please verify your email before signing in."
-          : "Invalid email or password");
+      const res = await fetch("/api/auth/forgot-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+      const data = await res.json();
+      
+      if (!res.ok) {
+        setError(data.error || "An error occurred");
       } else {
-        router.push("/dashboard");
-        router.refresh();
+        setMessage(data.message || "A password reset link has been sent to your email.");
+        setEmail("");
       }
     } catch {
       setError("Something went wrong. Please try again.");
@@ -45,10 +47,9 @@ export default function SignInPage() {
         </Link>
         <div className="space-y-6">
           {[
-            { emoji: "🎯", text: "150+ DSA problems with guided walkthroughs" },
-            { emoji: "🐍", text: "Run Python in your browser — zero setup" },
-            { emoji: "📈", text: "Track your progress from basics to interviews" },
-            { emoji: "⭐", text: "XP, streaks, and spaced repetition built in" },
+            { emoji: "🔐", text: "Securely recover access to your account" },
+            { emoji: "⚡", text: "Fast and easy password reset process" },
+            { emoji: "🚀", text: "Get back to solving algorithms quickly" },
           ].map((item, i) => (
             <div key={i} className="flex items-start gap-3">
               <span className="text-lg flex-shrink-0">{item.emoji}</span>
@@ -72,18 +73,27 @@ export default function SignInPage() {
               Algo Rich
             </Link>
             <h2 className="text-2xl font-bold text-white mb-1" style={{ letterSpacing: "-0.02em" }}>
-              Welcome back
+              Reset Password
             </h2>
-            <p className="text-sm" style={{ color: "#6b7a99" }}>Sign in to continue learning</p>
+            <p className="text-sm" style={{ color: "#6b7a99" }}>Enter your email to receive a reset link</p>
           </div>
 
-          {error && (
-            <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}
-              className="rounded-lg px-4 py-3 text-sm mb-5"
-              style={{ background: "#1a0505", border: "1px solid #ef444440", color: "#ef4444" }}>
-              {error}
-            </motion.div>
-          )}
+          <AnimatePresence mode="wait">
+            {error && (
+              <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+                className="rounded-lg px-4 py-3 text-sm mb-5"
+                style={{ background: "#1a0505", border: "1px solid #ef444440", color: "#ef4444" }}>
+                {error}
+              </motion.div>
+            )}
+            {message && (
+              <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+                className="rounded-lg px-4 py-3 text-sm mb-5"
+                style={{ background: "rgba(16, 185, 129, 0.1)", border: "1px solid rgba(16, 185, 129, 0.2)", color: "#34d399" }}>
+                {message}
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
@@ -97,35 +107,20 @@ export default function SignInPage() {
                 onBlur={e => (e.currentTarget.style.borderColor = "#1E3A5F")}
               />
             </div>
-            <div>
-              <div className="flex justify-between items-center mb-1.5">
-                <label className="block text-sm font-medium text-white">Password</label>
-                <Link href="/forgot-password" className="text-xs transition-colors hover:text-white" style={{ color: "#E5A829" }}>
-                  Forgot password?
-                </Link>
-              </div>
-              <input
-                type="password" value={password} onChange={(e) => setPassword(e.target.value)}
-                required placeholder="••••••••"
-                className="w-full px-4 py-3 rounded-xl text-white placeholder-[#6b7a99] focus:outline-none transition-colors"
-                style={{ background: "#0f1629", border: "1px solid #1E3A5F" }}
-                onFocus={e => (e.currentTarget.style.borderColor = "#E5A829")}
-                onBlur={e => (e.currentTarget.style.borderColor = "#1E3A5F")}
-              />
-            </div>
+            
             <button
               type="submit" disabled={loading}
               className="w-full py-3 rounded-xl font-semibold text-sm transition-all hover:opacity-90 disabled:opacity-50 mt-2"
               style={{ background: "#E5A829", color: "#0a0f24" }}
             >
-              {loading ? "Signing in..." : "Sign in →"}
+              {loading ? "Sending..." : "Send Reset Link"}
             </button>
           </form>
 
           <p className="text-center text-sm mt-6" style={{ color: "#6b7a99" }}>
-            No account?{" "}
-            <Link href="/signup" className="font-medium transition-colors hover:text-white" style={{ color: "#E5A829" }}>
-              Create one free
+            Remembered your password?{" "}
+            <Link href="/signin" className="font-medium transition-colors hover:text-white" style={{ color: "#E5A829" }}>
+              Sign in
             </Link>
           </p>
         </motion.div>

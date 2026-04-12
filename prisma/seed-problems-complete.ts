@@ -1195,9 +1195,9 @@ import json
 nums = json.loads(input())
 print(json.dumps(three_sum(nums)))`,
     testCases: JSON.stringify([
-      { input: "[-1,0,1,2,-1,-4]", expected: "[[-1, -1, 2], [-1, 0, 1]]" },
-      { input: "[0,1,1]", expected: "[]" },
-      { input: "[0,0,0]", expected: "[[0, 0, 0]]" },
+      { input: "[-1,0,1,2,-1,-4]", expectedOutput: "[[-1, -1, 2], [-1, 0, 1]]" },
+      { input: "[0,1,1]", expectedOutput: "[]" },
+      { input: "[0,0,0]", expectedOutput: "[[0, 0, 0]]" },
     ]),
     hiddenTestCases: JSON.stringify([
       { input: "[-2,0,1,1,2]", expected: "[[-2, 0, 2], [-2, 1, 1]]" },

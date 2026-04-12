@@ -39,6 +39,8 @@ model User {
   emailVerified         Boolean           @default(true)
   verificationToken     String?
   verificationExpiry    DateTime?
+  resetToken            String?
+  resetTokenExpiry      DateTime?
 
   progress        Progress[]
   submissions     Submission[]

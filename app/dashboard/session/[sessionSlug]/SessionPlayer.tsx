@@ -93,11 +93,18 @@ export default function SessionPlayer({ sessionSlug }: SessionPlayerProps) {
         const res = await fetch(`/api/sessions/${sessionSlug}`);
         if (!res.ok) throw new Error("Failed to load session");
         const data = await res.json();
-        setDefinition(data.definition);
+        const definition: SessionDefinition = data.definition;
+        setDefinition(definition);
 
-        // Resume from where user left off
+        // Resume from where user left off, but clamp to valid range
         if (data.progress && !data.progress.completed) {
-          setCurrentStageIndex(data.progress.currentStageIndex || 0);
+          const persistedIndex = data.progress.currentStageIndex ?? 0;
+          const clampedIndex = Math.min(
+            Math.max(persistedIndex, 0),
+            Math.max(definition.stages.length - 1, 0)
+          );
+          setCurrentStageIndex(clampedIndex);
+
           if (
             data.progress.stageResults &&
             data.progress.stageResults !== "{}"
@@ -204,7 +211,31 @@ export default function SessionPlayer({ sessionSlug }: SessionPlayerProps) {
 
   const currentStage = definition.stages[currentStageIndex];
   const totalStages = definition.stages.length;
-  const progressPercent = (currentStageIndex / totalStages) * 100;
+  const progressPercent = totalStages
+    ? (currentStageIndex / totalStages) * 100
+    : 0;
+
+  // Fallback if progress pointed past the last stage
+  if (!currentStage) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen bg-[#0a0a0f] text-center">
+        <p className="text-white/70 mb-3">
+          Session progress was out of sync. Restarting this session.
+        </p>
+        <button
+          className="px-4 py-2 rounded-lg text-sm font-semibold transition-all"
+          style={{ background: "#E5A829", color: "#0a0f24" }}
+          onClick={() => {
+            setCurrentStageIndex(0);
+            setStageResults({});
+            setStageStartTime(Date.now());
+          }}
+        >
+          Restart Session
+        </button>
+      </div>
+    );
+  }
 
   function renderStage(stage: SessionStage) {
     switch (stage.type) {

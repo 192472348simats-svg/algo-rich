@@ -123,6 +123,9 @@ export interface PatternDefinition {
 
 // Helper to parse JSON fields from Prisma (stored as strings in SQLite)
 export function parseProblem(raw: Record<string, unknown>): Problem {
+  const parsedTestCases = parseJsonField<unknown[]>(raw.testCases, []);
+  const parsedHiddenTestCases = parseJsonField<unknown[]>(raw.hiddenTestCases, []);
+
   return {
     ...raw,
     examples: parseJsonField<Example[]>(raw.examples, []),
@@ -130,8 +133,8 @@ export function parseProblem(raw: Record<string, unknown>): Problem {
     hints: parseJsonField<string[]>(raw.hints, []),
     topics: parseJsonField<string[]>(raw.topics, []),
     companies: parseJsonField<string[] | undefined>(raw.companies, undefined),
-    testCases: parseJsonField<TestCase[]>(raw.testCases, []),
-    hiddenTestCases: parseJsonField<TestCase[]>(raw.hiddenTestCases, []),
+    testCases: normalizeTestCases(parsedTestCases),
+    hiddenTestCases: normalizeTestCases(parsedHiddenTestCases),
   } as unknown as Problem;
 }
 
@@ -152,4 +155,55 @@ function parseJsonField<T>(value: unknown, fallback: T): T {
     }
   }
   return value as T;
+}
+
+export function parseAndNormalizeTestCases(value: unknown): TestCase[] {
+  const parsed = parseJsonField<unknown[]>(value, []);
+  return normalizeTestCases(parsed);
+}
+
+export function normalizeTestCases(rawCases: unknown[]): TestCase[] {
+  if (!Array.isArray(rawCases)) return [];
+
+  return rawCases
+    .map((rawCase, index) => normalizeSingleTestCase(rawCase, index))
+    .filter((testCase): testCase is TestCase => testCase !== null);
+}
+
+function normalizeSingleTestCase(rawCase: unknown, index: number): TestCase | null {
+  if (!rawCase || typeof rawCase !== "object") return null;
+
+  const candidate = rawCase as Record<string, unknown>;
+  const input = candidate.input;
+
+  const hasExpectedOutput = Object.prototype.hasOwnProperty.call(
+    candidate,
+    "expectedOutput"
+  );
+  const hasExpected = Object.prototype.hasOwnProperty.call(candidate, "expected");
+  const hasOutput = Object.prototype.hasOwnProperty.call(candidate, "output");
+
+  const expectedOutput = hasExpectedOutput
+    ? candidate.expectedOutput
+    : hasExpected
+    ? candidate.expected
+    : hasOutput
+    ? candidate.output
+    : undefined;
+
+  if (input === undefined || expectedOutput === undefined) {
+    return null;
+  }
+
+  return {
+    id: typeof candidate.id === "string" ? candidate.id : `tc-${index + 1}`,
+    input: input as Record<string, unknown>,
+    expectedOutput,
+    description:
+      typeof candidate.description === "string"
+        ? candidate.description
+        : undefined,
+    isHidden:
+      typeof candidate.isHidden === "boolean" ? candidate.isHidden : undefined,
+  };
 }
