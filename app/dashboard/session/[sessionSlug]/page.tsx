@@ -2,6 +2,8 @@ import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import SessionPlayer from "./SessionPlayer";
 
+export const dynamic = 'force-dynamic'
+
 interface Props {
   params: Promise<{ sessionSlug: string }>;
 }

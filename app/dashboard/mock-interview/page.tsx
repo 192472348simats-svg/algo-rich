@@ -1,6 +1,9 @@
 import Link from "next/link";
 import { motion } from "framer-motion";
 
+export const dynamic = 'force-dynamic'
+
+
 export default function MockInterviewPage() {
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">

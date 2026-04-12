@@ -3,6 +3,9 @@ import { auth } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import PatternsPageContent from "./PatternsPageContent";
 
+export const dynamic = 'force-dynamic'
+
+
 export default async function PatternsPage() {
   const session = await auth();
   if (!session?.user?.id) redirect("/signin");

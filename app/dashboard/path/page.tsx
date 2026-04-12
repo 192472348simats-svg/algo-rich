@@ -3,6 +3,9 @@ import { redirect } from "next/navigation";
 import prisma from "@/lib/prisma";
 import PathContent from "./PathContent";
 
+export const dynamic = 'force-dynamic'
+
+
 interface UserData {
   currentPhase: number;
   currentWeek: number;

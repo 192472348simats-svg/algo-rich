@@ -4,6 +4,8 @@ import prisma from "@/lib/prisma";
 import { getPattern } from "@/lib/patterns/patternDefinitions";
 import PatternDetailContent from "./PatternDetailContent";
 
+export const dynamic = 'force-dynamic'
+
 interface PatternDetailPageProps {
   params: Promise<{ patternId: string }>;
 }

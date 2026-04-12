@@ -1,40 +1,42 @@
 "use client";
 
+export const dynamic = 'force-dynamic'
+
 import { use, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
-import dynamic from "next/dynamic";
+import nextDynamic from "next/dynamic";
 
-const GuidedMode = dynamic(
+const GuidedMode = nextDynamic(
   () => import("@/app/components/visualizations/GuidedMode"),
   { ssr: false }
 );
 
 /* Dynamic imports to avoid SSR issues with SVG / canvas code */
-const TreePlayground = dynamic(
+const TreePlayground = nextDynamic(
   () => import("@/app/components/visualizations/interactive/TreePlayground"),
   { ssr: false, loading: () => <Skeleton /> }
 );
-const ArrayPlayground = dynamic(
+const ArrayPlayground = nextDynamic(
   () => import("@/app/components/visualizations/interactive/ArrayPlayground"),
   { ssr: false, loading: () => <Skeleton /> }
 );
-const LinkedListPlayground = dynamic(
+const LinkedListPlayground = nextDynamic(
   () =>
     import(
       "@/app/components/visualizations/interactive/LinkedListPlayground"
     ),
   { ssr: false, loading: () => <Skeleton /> }
 );
-const StackQueuePlayground = dynamic(
+const StackQueuePlayground = nextDynamic(
   () =>
     import(
       "@/app/components/visualizations/interactive/StackQueuePlayground"
     ),
   { ssr: false, loading: () => <Skeleton /> }
 );
-const TreePredictionChallenge = dynamic(
+const TreePredictionChallenge = nextDynamic(
   () => import("@/app/components/learning/TreePredictionChallenge"),
   { ssr: false, loading: () => <Skeleton /> }
 );

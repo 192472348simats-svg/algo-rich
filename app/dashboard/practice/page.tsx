@@ -3,6 +3,9 @@ import { redirect } from "next/navigation";
 import prisma from "@/lib/prisma";
 import PracticeContent from "./PracticeContent";
 
+export const dynamic = 'force-dynamic'
+
+
 export default async function PracticePage() {
   const session = await auth();
   if (!session?.user?.id) redirect("/signin");

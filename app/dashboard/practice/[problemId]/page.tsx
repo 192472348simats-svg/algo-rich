@@ -4,6 +4,8 @@ import prisma from "@/lib/prisma";
 import { parseAndNormalizeTestCases } from "@/lib/types/problem";
 import ProblemSolver from "./ProblemSolver";
 
+export const dynamic = 'force-dynamic'
+
 interface Props {
   params: Promise<{ problemId: string }>;
 }
@@ -70,7 +72,6 @@ export default async function ProblemPage({ params }: Props) {
 
   const testCases = parseAndNormalizeTestCases(problem.testCases);
 
-  const hasHiddenTests = problem.hiddenTestCases && problem.hiddenTestCases.length > 2; // Check if parsing is needed or just check string isn't "[]"
   const hasHidden = problem.hiddenTestCases !== null && problem.hiddenTestCases !== "[]" && problem.hiddenTestCases !== "";
 
   const relatedLessons = problem.lessons.map((lp) => lp.lesson);

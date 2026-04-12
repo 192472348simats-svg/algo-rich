@@ -5,6 +5,9 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import { getAllWalkthroughs } from "@/lib/guidedWalkthroughs";
 
+export const dynamic = 'force-dynamic'
+
+
 const visualizers = [
   {
     type: "tree",

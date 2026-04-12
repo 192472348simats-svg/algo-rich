@@ -3,6 +3,9 @@ import { auth } from "@/lib/auth";
 import { getSessionDefinition } from "@/lib/sessionDefinitions";
 import { isAdminRequest } from "@/lib/isAdmin";
 
+export const dynamic = 'force-dynamic'
+
+
 async function getStats() {
   // In a real server component, we fetch from the internal API or directly query the DB.
   // We'll fetch from the API to reuse the logic.

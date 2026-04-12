@@ -4,6 +4,9 @@ import prisma from "@/lib/prisma";
 import DashboardContent from "./components/DashboardContent";
 import { categoryIcon } from "@/lib/utils";
 
+export const dynamic = 'force-dynamic'
+
+
 export default async function DashboardPage() {
   const session = await auth();
 

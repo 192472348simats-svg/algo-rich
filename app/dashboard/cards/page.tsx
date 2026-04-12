@@ -5,6 +5,9 @@ import { motion, AnimatePresence } from "framer-motion";
 import CardDeck, { type DeckCard, type DeckStats } from "@/app/components/learning/CardDeck";
 import { getLevelForXP, type Level } from "@/lib/xpSystem";
 
+export const dynamic = 'force-dynamic'
+
+
 /* ── Types ─────────────────────────────────── */
 interface CardStats {
   totalReviews: number;

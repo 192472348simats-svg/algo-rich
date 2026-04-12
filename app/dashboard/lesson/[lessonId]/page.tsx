@@ -3,6 +3,8 @@ import { redirect } from "next/navigation";
 import prisma from "@/lib/prisma";
 import LessonViewer from "./LessonViewer";
 
+export const dynamic = 'force-dynamic'
+
 interface Props {
   params: Promise<{ lessonId: string }>;
 }
