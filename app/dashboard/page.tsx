@@ -18,7 +18,7 @@ export default async function DashboardPage() {
   let problemsSolved = 0;
   let totalProblems = 0;
   let totalCourses = 0;
-  let dbCourses: Awaited<ReturnType<typeof prisma.course.findMany>> = [];
+  let dbCourses: (Awaited<ReturnType<typeof prisma.course.findMany>>[number] & { lessons: { id: string }[] })[] = [];
   let user: {
     onboardingCompleted: boolean;
     totalXP: number;
@@ -98,7 +98,7 @@ export default async function DashboardPage() {
         },
       }),
       // Cards reviewed count
-      prisma.flashCard.count({ where: { userId, easeFactor: { not: 2.5 } } }).catch(() => 0),
+      prisma.flashCard.count({ where: { userId, ease: { not: 2.5 } } }).catch(() => 0),
       // Reviews completed
       prisma.problemReview.count({ where: { userId, lastReviewedAt: { not: null } } }).catch(() => 0),
     ]);
@@ -122,11 +122,11 @@ export default async function DashboardPage() {
   }
   const sortedDays = Array.from(activityDates).sort().reverse();
   
+  const today = new Date();
+  today.setUTCHours(0, 0, 0, 0);
+
   let currentStreak = 0;
   if (activityDates.size > 0) {
-    const today = new Date();
-    today.setUTCHours(0, 0, 0, 0);
-    
     let currentDate = new Date(today);
     let todayStr = currentDate.toISOString().slice(0, 10);
     
@@ -172,14 +172,14 @@ export default async function DashboardPage() {
   const coursesCompleted = dbCourses.filter((c) => {
     const total = c.lessons.length;
     if (total === 0) return false;
-    const completed = c.lessons.filter((l) => completedLessonIds.has(l.id)).length;
+    const completed = c.lessons.filter((l: { id: string }) => completedLessonIds.has(l.id)).length;
     return completed >= total;
   }).length;
 
   // ── Build course cards ─────────────────────────────────────
   const courses = dbCourses.map((course) => {
     const totalLessons = course.lessons.length;
-    const completedLessons = course.lessons.filter((l) =>
+    const completedLessons = course.lessons.filter((l: { id: string }) =>
       completedLessonIds.has(l.id)
     ).length;
     return {

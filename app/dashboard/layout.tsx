@@ -19,6 +19,8 @@ export default async function DashboardLayout({
     redirect("/signin");
   }
 
+  const isAdmin = process.env.ADMIN_EMAIL?.split(",").includes(session.user.email || "");
+
   // Fetch current phase and streak data for sidebar + banner
   // Wrapped in try/catch so the dashboard still renders if DB is unreachable
   let user: { currentPhase: number } | null = null;
@@ -67,6 +69,7 @@ export default async function DashboardLayout({
         userName={session.user.name || "User"}
         userEmail={session.user.email || ""}
         currentPhase={user?.currentPhase ?? 1}
+        isAdmin={isAdmin}
       />
 
       {/* Main Content */}

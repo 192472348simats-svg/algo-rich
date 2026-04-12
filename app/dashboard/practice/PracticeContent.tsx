@@ -16,6 +16,7 @@ interface Problem {
   phase?: number;
   isSolved: boolean;
   topics?: string[];
+  pattern?: string;
   topicOrder?: number;
   connectedLessons?: { id: string; slug: string; title: string }[];
 }
@@ -108,7 +109,7 @@ export default function PracticeContent({ problems }: Props) {
       result = result.filter(
         (p) =>
           p.pattern?.toLowerCase() === slug ||
-          p.topics?.toLowerCase().includes(slug)
+          p.topics?.some(t => t.toLowerCase().includes(slug))
       );
     } else {
       // Only apply these filters if NO topic is specified, to avoid clashing

@@ -20,6 +20,7 @@ import {
   X,
   Brain,
   Map,
+  Shield,
 } from "lucide-react";
 
 interface NavItem {
@@ -39,6 +40,7 @@ interface SidebarProps {
   userName: string;
   userEmail: string;
   currentPhase?: number;
+  isAdmin?: boolean;
 }
 
 const navGroups: NavGroup[] = [
@@ -106,7 +108,12 @@ function useBadgeCounts() {
   return counts;
 }
 
-export default function Sidebar({ userName, userEmail, currentPhase = 1 }: SidebarProps) {
+export default function Sidebar({ 
+  userName, 
+  userEmail, 
+  currentPhase = 1,
+  isAdmin = false 
+}: SidebarProps) {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
   const badgeCounts = useBadgeCounts();
@@ -269,6 +276,28 @@ export default function Sidebar({ userName, userEmail, currentPhase = 1 }: Sideb
               </motion.div>
             </Link>
           </div>
+
+          {/* Admin — Visible to founder only */}
+          {isAdmin && (
+            <div className="mt-2">
+              <Link
+                href="/admin"
+                onClick={() => setMobileOpen(false)}
+              >
+                <motion.div
+                  whileHover={{ x: 3 }}
+                  className={`relative flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${
+                    pathname === "/admin"
+                      ? "bg-[#E5A829]/10 text-[#E5A829]"
+                      : "text-[#E5A829]/60 hover:text-[#E5A829] hover:bg-[#E5A829]/5"
+                  }`}
+                >
+                  <span className="w-[18px] flex-shrink-0"><Shield size={18} /></span>
+                  <span className="font-bold">Admin Panel</span>
+                </motion.div>
+              </Link>
+            </div>
+          )}
         </nav>
 
         {/* User section */}

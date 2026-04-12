@@ -73,7 +73,7 @@ export default function AchievementsPreview({
             }`}
           >
             <div className={`text-2xl ${ach.unlocked ? "" : "grayscale opacity-40"} flex-shrink-0`}>
-              {ach.icon}
+              {ach.emoji}
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex justify-between items-center mb-0.5">

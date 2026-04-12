@@ -99,7 +99,7 @@ function TreeVisualizer({
 }) {
   const [stepIdx, setStepIdx] = useState(0);
   const [treeRoot, setTreeRoot] = useState<TreeNode | null>(null);
-  const [latestValue, setLatestValue] = useState<number | null>(null);
+  const [latestValue, setLatestValue] = useState<number | string | null>(null);
   const steps = config.autoPlaySteps ?? [];
 
   useEffect(() => {
@@ -110,13 +110,13 @@ function TreeVisualizer({
       resetIdCounter();
       const values = steps
         .slice(0, stepIdx + 1)
-        .filter((s) => s.action === "insert" && s.value !== undefined)
+        .filter((s) => s.action === "insert" && s.value !== undefined && typeof s.value === "number")
         .map((s) => s.value as number);
       let root: TreeNode | null = null;
       for (const v of values) root = insertBST(root, v);
       if (root) computeLayout(root, CANVAS_WIDTH);
       setTreeRoot(root ? { ...root } : null);
-      setLatestValue(step.value);
+      setLatestValue(step.value ?? null);
     }
   }, [stepIdx]);
 
@@ -444,7 +444,7 @@ function ArrayVisualizer({
 }) {
   const [stepIdx, setStepIdx] = useState(0);
   const steps = config.autoPlaySteps ?? [];
-  const [items, setItems] = useState<{ value: number; highlight: boolean }[]>([]);
+  const [items, setItems] = useState<{ value: number | string; highlight: boolean }[]>([]);
 
   useEffect(() => {
     const step = steps[stepIdx];
@@ -453,7 +453,7 @@ function ArrayVisualizer({
       setItems((prev) => [
         ...prev.map((x) => ({ ...x, highlight: false })),
         { value: step.value!, highlight: true },
-      ]);
+      ] as { value: number | string; highlight: boolean }[]);
     } else if (step.action === "delete" && step.value !== undefined) {
       setItems((prev) =>
         prev.filter((x) => x.value !== step.value).map((x) => ({ ...x, highlight: false }))
