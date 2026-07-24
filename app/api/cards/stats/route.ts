@@ -15,18 +15,20 @@ export async function GET() {
 
     const userId = session.user.id;
 
-    const [totalReviews, correctReviews, uniqueCards, dueCount] =
-      await Promise.all([
-        prisma.cardReview.count({ where: { userId } }),
-        prisma.cardReview.count({ where: { userId, correct: true } }),
-        prisma.cardReview.groupBy({
-          by: ["cardId"],
-          where: { userId },
-        }),
-        prisma.cardReview.count({
-          where: { userId, nextReviewAt: { lte: new Date() } },
-        }),
-      ]);
+    const reviews = await prisma.cardReview.findMany({
+      where: { userId },
+      orderBy: { createdAt: "desc" },
+    });
+    // Older versions wrote an event row for every answer. Treat the newest row
+    // as the current schedule state until historical rows are migrated away.
+    const currentByCard = new Map<string, (typeof reviews)[number]>();
+    for (const review of reviews) {
+      if (!currentByCard.has(review.cardId)) currentByCard.set(review.cardId, review);
+    }
+    const currentReviews = Array.from(currentByCard.values());
+    const totalReviews = currentReviews.length;
+    const correctReviews = currentReviews.filter((review) => review.correct).length;
+    const dueCount = currentReviews.filter((review) => review.nextReviewAt <= new Date()).length;
 
     const totalCards = await prisma.predictionCard.count();
 
@@ -34,7 +36,7 @@ export async function GET() {
       totalReviews,
       correctReviews,
       accuracy: totalReviews > 0 ? Math.round((correctReviews / totalReviews) * 100) : 0,
-      cardsStudied: uniqueCards.length,
+      cardsStudied: totalReviews,
       totalCards,
       dueForReview: dueCount,
     });

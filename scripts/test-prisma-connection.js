@@ -47,7 +47,7 @@ async function testConnection() {
     console.log(`  Result: ${result[0]?.timestamp}`);
   } catch (error) {
     console.log("✗ FAILED");
-    console.log(`  Error: ${error.message.split("\n")[0]}`);
+    printConnectionError(error);
   } finally {
     await prismaDatabaseUrl.$disconnect();
   }
@@ -73,7 +73,7 @@ async function testConnection() {
     console.log(`  Result: ${result[0]?.timestamp}`);
   } catch (error) {
     console.log("✗ FAILED");
-    console.log(`  Error: ${error.message.split("\n")[0]}`);
+    printConnectionError(error);
   } finally {
     await prismaDirect.$disconnect();
   }
@@ -83,16 +83,17 @@ async function testConnection() {
   console.log("TROUBLESHOOTING TIPS:");
   console.log("================================================");
   console.log("If both tests fail:");
-  console.log("  1. Check Neon project status: https://neon.tech");
-  console.log("  2. Verify credentials in .env.local haven't changed");
-  console.log("  3. If on VPN/corporate network:");
+  console.log("  1. Check the Supabase project is active: https://supabase.com/dashboard");
+  console.log("  2. Verify credentials in .env or .env.local haven't changed");
+  console.log("  3. Use the Supabase Transaction Pooler URL for DATABASE_URL (port 6543).");
+  console.log("  4. If on VPN/corporate network:");
   console.log("     - Port 5432 might be blocked");
   console.log("     - Try connecting via different network (phone hotspot)");
-  console.log("  4. Check .env.local has DATABASE_URL and DIRECT_URL");
+  console.log("  5. Check .env or .env.local has DATABASE_URL and DIRECT_URL");
   console.log("");
   console.log("If DATABASE_URL fails but DIRECT_URL succeeds:");
-  console.log("  - Pooler connection is blocked (expected on some networks)");
-  console.log("  - Use DIRECT_URL for local dev (already set in .env.local)");
+  console.log("  - The pooler URL or its password is incorrect");
+  console.log("  - Confirm DATABASE_URL uses the Transaction Pooler host and port 6543");
   console.log("");
   console.log("For Vercel deployment:");
   console.log("  - DATABASE_URL should use pooler (...-pooler...)");;
@@ -115,6 +116,17 @@ function maskUrl(url) {
     );
   }
   return url.substring(0, 60) + "...";
+}
+
+function printConnectionError(error) {
+  const message = error instanceof Error ? error.message : String(error);
+  const code = error && typeof error === "object" && "code" in error ? ` (${error.code})` : "";
+  const details = message.split("\n").map((line) => line.trim()).filter(Boolean);
+  const summary = details.slice(-3).join(" ") || "No error message returned by the Prisma engine";
+  console.log(`  Error${code}: ${summary}`);
+  if (error && typeof error === "object" && "meta" in error && error.meta) {
+    console.log(`  Details: ${JSON.stringify(error.meta)}`);
+  }
 }
 
 // Run tests

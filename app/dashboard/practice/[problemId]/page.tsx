@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import prisma from "@/lib/prisma";
 import { parseAndNormalizeTestCases } from "@/lib/types/problem";
 import ProblemSolver from "./ProblemSolver";
+import { ErrorBoundary } from "@/app/components/ErrorBoundary";
 
 export const dynamic = 'force-dynamic'
 
@@ -77,25 +78,27 @@ export default async function ProblemPage({ params }: Props) {
   const relatedLessons = problem.lessons.map((lp) => lp.lesson);
 
   return (
-    <ProblemSolver
-      problem={{
-        id: problem.id,
-        title: problem.title,
-        description: problem.description,
-        difficulty: problem.difficulty,
-        category: problem.pattern || "DSA",
-        starterCode: problem.starterCode,
-        testCases,
-        hasHiddenTests: hasHidden,
-        hints: problem.hints ?? undefined,
-        correctPattern: problem.correctPattern ?? undefined,
-        solutionApproach: problem.solutionApproach ?? undefined,
-      }}
-      isSolved={!!solved}
-      userId={session.user.id}
-      relatedLessons={relatedLessons}
-      nextProblem={nextProblem}
-      currentPhase={userRecord?.currentPhase ?? 3}
-    />
+    <ErrorBoundary componentName="ProblemSolver">
+      <ProblemSolver
+        problem={{
+          id: problem.id,
+          title: problem.title,
+          description: problem.description,
+          difficulty: problem.difficulty,
+          category: problem.pattern || "DSA",
+          starterCode: problem.starterCode,
+          testCases,
+          hasHiddenTests: hasHidden,
+          hints: problem.hints ?? undefined,
+          correctPattern: problem.correctPattern ?? undefined,
+          solutionApproach: problem.solutionApproach ?? undefined,
+        }}
+        isSolved={!!solved}
+        userId={session.user.id}
+        relatedLessons={relatedLessons}
+        nextProblem={nextProblem}
+        currentPhase={userRecord?.currentPhase ?? 3}
+      />
+    </ErrorBoundary>
   );
 }

@@ -27,15 +27,24 @@ export async function GET() {
     const now = new Date();
 
     // 1. Cards due for review (nextReviewAt <= now)
-    const dueReviews = await prisma.cardReview.findMany({
+    const dueReviewCandidates = await prisma.cardReview.findMany({
       where: {
         userId,
         nextReviewAt: { lte: now },
       },
       include: { card: true },
       orderBy: { nextReviewAt: "asc" },
-      take: 5,
     });
+    // Historical duplicate rows may exist from older versions. Keep only the
+    // latest schedule per card while the data is migrated separately.
+    const dueReviews = Array.from(
+      dueReviewCandidates
+        .reduce((latest, review) => {
+          if (!latest.has(review.cardId)) latest.set(review.cardId, review);
+          return latest;
+        }, new Map<string, (typeof dueReviewCandidates)[number]>())
+        .values()
+    ).slice(0, 5);
 
     if (dueReviews.length >= 5) {
       return NextResponse.json({

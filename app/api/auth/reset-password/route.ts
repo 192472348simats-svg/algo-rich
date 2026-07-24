@@ -2,53 +2,40 @@ import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import crypto from "crypto";
 import bcrypt from "bcryptjs";
-
-interface ResetUserRow {
-  id: string;
-  resetToken: string | null;
-  resetTokenExpiry: Date | null;
-}
+import { isValidPassword, passwordPolicyMessage } from "@/lib/passwordPolicy";
 
 export async function POST(req: NextRequest) {
   try {
     const { email, token, password } = await req.json();
 
-    if (!email || !token || !password) {
+    if (typeof email !== "string" || typeof token !== "string" || !isValidPassword(password)) {
+      if (typeof password === "string" && !isValidPassword(password)) {
+        return NextResponse.json({ error: passwordPolicyMessage }, { status: 400 });
+      }
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
 
-    const users = await prisma.$queryRaw<ResetUserRow[]>`
-      SELECT "id", "resetToken", "resetTokenExpiry"
-      FROM "User"
-      WHERE "email" = ${email}
-      LIMIT 1
-    `;
-    const user = users[0] ?? null;
-
-    if (!user || !user.resetToken || !user.resetTokenExpiry) {
-      return NextResponse.json({ error: "Invalid or expired token" }, { status: 400 });
-    }
-
-    if (new Date() > user.resetTokenExpiry) {
-      return NextResponse.json({ error: "Token has expired" }, { status: 400 });
-    }
-
     const hashedIncomingToken = crypto.createHash("sha256").update(token).digest("hex");
-
-    if (hashedIncomingToken !== user.resetToken) {
-      return NextResponse.json({ error: "Invalid or expired token" }, { status: 400 });
-    }
-
     const newHashedPassword = await bcrypt.hash(password, 12);
 
-    await prisma.$executeRaw`
-      UPDATE "User"
-      SET
-        "password" = ${newHashedPassword},
-        "resetToken" = NULL,
-        "resetTokenExpiry" = NULL
-      WHERE "id" = ${user.id}
-    `;
+    // The token comparison and consumption happen in one database write, so two
+    // concurrent reset requests cannot both succeed with the same token.
+    const updated = await prisma.user.updateMany({
+      where: {
+        email: email.toLowerCase().trim(),
+        resetToken: hashedIncomingToken,
+        resetTokenExpiry: { gte: new Date() },
+      },
+      data: {
+        password: newHashedPassword,
+        resetToken: null,
+        resetTokenExpiry: null,
+      },
+    });
+
+    if (updated.count !== 1) {
+      return NextResponse.json({ error: "Invalid or expired token" }, { status: 400 });
+    }
 
     return NextResponse.json({ success: true });
   } catch (error) {

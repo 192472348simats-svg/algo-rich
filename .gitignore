@@ -39,3 +39,10 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Legacy SQLite artifacts
+*.db
+*.db-journal
+SQLITE_*.md
+test-*-connection.js
+verify-sqlite-*.js

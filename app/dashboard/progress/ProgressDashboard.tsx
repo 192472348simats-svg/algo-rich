@@ -7,6 +7,17 @@ import { getStatusColor, type TimelineEvent } from "@/lib/masteryTimeline";
 import type { FailureSummary } from "@/lib/failurePatternAnalysis";
 import { getLevelForXP } from "@/lib/xpSystem";
 
+interface PatternData {
+  id: string;
+  name: string;
+  difficulty: number;
+  progress: {
+    status: string;
+    recognitionAccuracy: number;
+    problemsSolved: number;
+  } | null;
+}
+
 interface StatsData {
   lessonsCompleted: number;
   totalLessons: number;
@@ -76,17 +87,19 @@ export default function ProgressDashboard({ userName }: { userName: string }) {
   const [reflectionStats, setReflectionStats] = useState<ReflectionStats | null>(null);
   const [timeline, setTimeline] = useState<TimelineEvent[]>([]);
   const [failureSummary, setFailureSummary] = useState<FailureSummary | null>(null);
+  const [patternData, setPatternData] = useState<PatternData[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function fetchData() {
       try {
-        const [statsRes, actRes, reflRes, timelineRes, failureRes] = await Promise.all([
+        const [statsRes, actRes, reflRes, timelineRes, failureRes, patternsRes] = await Promise.all([
           fetch("/api/user/stats"),
           fetch("/api/user/activity"),
           fetch("/api/reflections/stats"),
           fetch("/api/patterns/mastery-timeline"),
           fetch("/api/submissions/failure-stats"),
+          fetch("/api/patterns"),
         ]);
         if (statsRes.ok) setStats(await statsRes.json());
         if (actRes.ok) setActivities(await actRes.json());
@@ -96,6 +109,7 @@ export default function ProgressDashboard({ userName }: { userName: string }) {
           setTimeline(t.timeline ?? []);
         }
         if (failureRes.ok) setFailureSummary(await failureRes.json());
+        if (patternsRes.ok) setPatternData(await patternsRes.json());
       } catch (e) {
         console.error("Failed to fetch progress data:", e);
       } finally {
@@ -311,6 +325,73 @@ export default function ProgressDashboard({ userName }: { userName: string }) {
           <span>Today</span>
         </div>
       </motion.div>
+
+      {/* Weak Categories Heatmap */}
+      {patternData.length > 0 && (
+        <motion.div
+          variants={itemVariants}
+          className="bg-card/60 border border-primary/10 rounded-xl p-6 backdrop-blur-sm"
+        >
+          <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
+            <div>
+              <h2 className="text-xl font-semibold text-white mb-1">🗂️ Pattern Mastery Heatmap</h2>
+              <p className="text-sm text-foreground opacity-60">
+                Recognition accuracy across all 25 algorithm patterns
+              </p>
+            </div>
+            <div className="flex items-center gap-3 text-xs text-white/40">
+              <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-white/10 inline-block" />Not started</span>
+              <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-red-500/70 inline-block" />Weak</span>
+              <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-amber-500/70 inline-block" />Developing</span>
+              <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-emerald-500/70 inline-block" />Strong</span>
+            </div>
+          </div>
+          <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 gap-2 mt-4">
+            {patternData.map((pattern) => {
+              const acc = pattern.progress?.recognitionAccuracy ?? 0;
+              const started = !!pattern.progress && pattern.progress.problemsSolved > 0;
+              let bg = "bg-white/5";
+              let textColor = "text-white/20";
+              let pct = null;
+              if (started) {
+                if (acc >= 80) { bg = "bg-emerald-500/20 border-emerald-500/30"; textColor = "text-emerald-300"; }
+                else if (acc >= 50) { bg = "bg-amber-500/20 border-amber-500/30"; textColor = "text-amber-300"; }
+                else { bg = "bg-red-500/20 border-red-500/30"; textColor = "text-red-300"; }
+                pct = Math.round(acc);
+              }
+              return (
+                <motion.div
+                  key={pattern.id}
+                  whileHover={{ scale: 1.04 }}
+                  className={`group relative rounded-lg border p-3 cursor-default transition-all ${
+                    started ? `${bg} border-current/20` : "bg-white/[0.03] border-white/[0.06]"
+                  }`}
+                  title={`${pattern.name}${pct !== null ? ` — ${pct}% accuracy, ${pattern.progress?.problemsSolved} solved` : " — not started"}`}
+                >
+                  <p className={`text-[11px] font-medium leading-tight ${textColor} ${started ? "" : "text-white/25"}`}>
+                    {pattern.name}
+                  </p>
+                  {pct !== null && (
+                    <p className={`text-xs font-bold mt-1 ${textColor}`}>{pct}%</p>
+                  )}
+                  {started && (
+                    <div className="mt-2 h-1 bg-white/10 rounded-full overflow-hidden">
+                      <motion.div
+                        initial={{ width: 0 }}
+                        animate={{ width: `${pct}%` }}
+                        transition={{ duration: 0.8, delay: 0.2, ease: "easeOut" as const }}
+                        className={`h-full rounded-full ${
+                          acc >= 80 ? "bg-emerald-400" : acc >= 50 ? "bg-amber-400" : "bg-red-400"
+                        }`}
+                      />
+                    </div>
+                  )}
+                </motion.div>
+              );
+            })}
+          </div>
+        </motion.div>
+      )}
 
       {/* Analysis Skills — Reflection Stats */}
       {reflectionStats && reflectionStats.total > 0 && (

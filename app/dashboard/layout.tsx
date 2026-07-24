@@ -19,7 +19,7 @@ export default async function DashboardLayout({
     redirect("/signin");
   }
 
-  const isAdmin = process.env.ADMIN_EMAIL?.split(",").includes(session.user.email || "");
+  const isAdmin = (process.env.ADMIN_EMAILS || process.env.ADMIN_EMAIL || "").split(",").map(e => e.trim()).includes(session.user.email || "");
 
   // Fetch current phase and streak data for sidebar + banner
   // Wrapped in try/catch so the dashboard still renders if DB is unreachable
@@ -60,7 +60,7 @@ export default async function DashboardLayout({
     ({ currentStreak, practicedToday } = computeStreak(activityDates));
   } catch (err) {
     // DB unreachable (e.g. Atlas IP not whitelisted) — render with safe defaults
-    console.error("[DashboardLayout] DB error:", err instanceof Error ? err.message : err);
+    console.warn("[DashboardLayout] DB unavailable; using safe defaults.", err instanceof Error ? err.message : err);
   }
 
   return (

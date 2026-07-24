@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import { ArrowLeft, Clock, Brain, RotateCcw, Zap, Trophy } from "lucide-react";
 import ReviewSession from "@/app/components/review/ReviewSession";
+import { analytics } from "@/lib/analytics";
 
 // ── Types ────────────────────────────────────────────────
 
@@ -66,6 +67,10 @@ export default function ReviewQueue({ userId }: { userId: string }) {
 
   // After session ends, refresh the list
   const handleSessionComplete = () => {
+    analytics.track('review_completed', {
+      problemsCount: reviews.length,
+      userId
+    });
     setSessionActive(false);
     setLoading(true);
     fetchReviews();
@@ -174,7 +179,13 @@ export default function ReviewQueue({ userId }: { userId: string }) {
         <motion.button
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
-          onClick={() => setSessionActive(true)}
+          onClick={() => {
+            setSessionActive(true);
+            analytics.track('review_session_started', {
+              problemsCount: reviews.length,
+              userId
+            });
+          }}
           className="w-full mb-8 py-4 bg-gradient-to-r from-purple-500 to-cyan-500 text-white font-bold rounded-xl text-lg hover:shadow-lg hover:shadow-purple-500/30 transition-all duration-300"
         >
           Start Review Session — {reviews.length} problem

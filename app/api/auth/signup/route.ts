@@ -1,48 +1,61 @@
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import prisma from "@/lib/prisma";
-
-const signupRateLimit = new Map<string, { count: number; resetAt: number }>();
+import { isValidPassword, passwordPolicyMessage } from "@/lib/passwordPolicy";
+import crypto from "crypto";
+import { sendVerificationCodeEmail } from "@/lib/email";
+import { clientAddress, enforceRateLimit } from "@/lib/rateLimit";
 
 export async function POST(request: Request) {
   try {
-    const ip =
-      (request.headers.get("x-forwarded-for") ?? "").split(",")[0].trim() ||
-      request.headers.get("x-real-ip") ||
-      "unknown";
-    const now = Date.now();
-    const window = 15 * 60 * 1000; // 15 minutes
-    const entry = signupRateLimit.get(ip);
-    if (entry && now < entry.resetAt) {
-      if (entry.count >= 5) {
-        return Response.json(
-          { error: "Too many signup attempts. Try again in 15 minutes." },
-          { status: 429 }
-        );
-      }
-      entry.count++;
-    } else {
-      signupRateLimit.set(ip, { count: 1, resetAt: now + window });
+    const limit = await enforceRateLimit({
+      scope: "signup",
+      identifier: clientAddress(request.headers),
+      limit: 5,
+      windowMs: 15 * 60 * 1000,
+    });
+    if (!limit.allowed) {
+      return NextResponse.json(
+        { error: "Too many signup attempts. Try again in 15 minutes." },
+        { status: 429, headers: { "Retry-After": String(limit.retryAfterSeconds) } }
+      );
     }
 
     const { name, email, password } = await request.json();
 
-    if (!name || !email || !password) {
+    if (typeof name !== "string" || typeof email !== "string" || !password) {
       return NextResponse.json(
         { error: "Name, email, and password are required" },
         { status: 400 }
       );
     }
 
-    if (password.length < 6) {
+    // Block temporary email domains
+    const blockedDomains = [
+      "tempmail.com", "throwawaymail.com", "guerrillamail.com", 
+      "mailinator.com", "10minutemail.com", "yopmail.com"
+    ];
+    const normalizedEmail = email.toLowerCase().trim();
+    const domain = normalizedEmail.split("@")[1];
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail) || !domain) {
+      return NextResponse.json({ error: "Enter a valid email address" }, { status: 400 });
+    }
+    if (blockedDomains.includes(domain)) {
       return NextResponse.json(
-        { error: "Password must be at least 6 characters" },
+        { error: "Please use a permanent email address." },
+        { status: 400 }
+      );
+    }
+
+    if (!isValidPassword(password)) {
+      return NextResponse.json(
+        { error: passwordPolicyMessage },
         { status: 400 }
       );
     }
 
     const existingUser = await prisma.user.findUnique({
-      where: { email },
+      where: { email: normalizedEmail },
     });
 
     if (existingUser) {
@@ -53,13 +66,18 @@ export async function POST(request: Request) {
     }
 
     const hashedPassword = await bcrypt.hash(password, 12);
+    const verificationCode = String(crypto.randomInt(100000, 1000000));
+    const verificationToken = await bcrypt.hash(verificationCode, 12);
+    const verificationExpiry = new Date(Date.now() + 60 * 60 * 1000);
 
     const user = await prisma.user.create({
       data: {
-        name,
-        email,
+        name: name.trim(),
+        email: normalizedEmail,
         password: hashedPassword,
-        emailVerified: true,
+        emailVerified: false,
+        verificationToken,
+        verificationExpiry,
       },
     });
 
@@ -74,6 +92,16 @@ export async function POST(request: Request) {
       },
     });
 
+    const verificationEmail = await sendVerificationCodeEmail(normalizedEmail, verificationCode);
+    if (!verificationEmail.sent) {
+      await prisma.user.delete({ where: { id: user.id } });
+      console.error("[signup] Verification email failed", verificationEmail.error);
+      return NextResponse.json(
+        { error: "We could not send a verification email. Please try again shortly." },
+        { status: 503 }
+      );
+    }
+
     return NextResponse.json(
       {
         user: {
@@ -82,6 +110,7 @@ export async function POST(request: Request) {
           email: user.email,
         },
         success: true,
+        verificationRequired: true,
       },
       { status: 201 }
     );

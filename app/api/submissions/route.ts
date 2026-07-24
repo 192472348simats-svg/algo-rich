@@ -2,11 +2,22 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { parseProblem } from "@/lib/types/problem";
+import { invalidateUserCache } from "@/lib/cache";
 import { enrollProblemForReview } from "@/lib/reviewEngine";
 import { checkPatternDiscovery } from "@/lib/patternDiscovery";
 import { checkAhaMoment } from "@/lib/ahaDetector";
 
 const submissionRateLimit = new Map<string, { count: number; resetAt: number }>();
+
+// Circuit breaker state for Piston
+let pistonBreaker = {
+  failures: 0,
+  lastFailureAt: 0,
+  isOpen: false,
+};
+
+const CIRCUIT_BREAKER_THRESHOLD = 3;
+const CIRCUIT_BREAKER_COOLDOWN = 5 * 60 * 1000; // 5 minutes
 
 export async function POST(request: NextRequest) {
   try {
@@ -34,11 +45,21 @@ export async function POST(request: NextRequest) {
   const body = await request.json();
   const { problemId, code, language = "python", testResults } = body;
 
-  if (!problemId || !code) {
+  if (typeof problemId !== "string" || typeof code !== "string" || !code.trim()) {
     return NextResponse.json(
       { error: "Missing required fields: problemId, code" },
       { status: 400 }
     );
+  }
+
+  // The hidden-test harness invokes a Python function. Accepting another language
+  // would misrepresent the result and allows unnecessarily large request bodies.
+  if (language !== "python") {
+    return NextResponse.json({ error: "Only Python submissions are supported." }, { status: 400 });
+  }
+
+  if (code.length > 100_000) {
+    return NextResponse.json({ error: "Code must be 100 KB or smaller." }, { status: 413 });
   }
 
   // Verify problem exists
@@ -62,63 +83,97 @@ export async function POST(request: NextRequest) {
 
   if (testResults && Array.isArray(testResults)) {
     // Only count visible test passes from client
-    const visiblePassed = testResults
-      .filter((r: { passed: boolean; index?: number }, i: number) => {
-        const idx = r.index ?? i + 1;
-        return idx <= visibleTests && r.passed;
-      })
-      .length;
+    const passedVisibleIndexes = new Set<number>();
+    for (let i = 0; i < testResults.length; i++) {
+      const result = testResults[i];
+      if (!result || typeof result !== "object") continue;
+      const candidate = result as { passed?: unknown; index?: unknown };
+      const index = typeof candidate.index === "number" ? candidate.index : i + 1;
+      if (Number.isInteger(index) && index >= 1 && index <= visibleTests && candidate.passed === true) {
+        passedVisibleIndexes.add(index);
+      }
+    }
+    const visiblePassed = passedVisibleIndexes.size;
 
     let hiddenPassed = 0;
     
     // Server Validate Hidden Tests securely using Piston API
     if (hiddenTests > 0) {
-      try {
-        // Extract function name from starter code
-        const match = problem.starterCode.match(/def\s+(\w+)\s*\(/);
-        const funcName = match ? match[1] : "";
+      // Check circuit breaker
+      const now = Date.now();
+      if (pistonBreaker.isOpen && now - pistonBreaker.lastFailureAt < CIRCUIT_BREAKER_COOLDOWN) {
+        console.warn("Piston circuit breaker is OPEN. Skipping hidden tests.");
+      } else {
+        if (pistonBreaker.isOpen) {
+          console.log("Piston circuit breaker resetting to CLOSED.");
+          pistonBreaker.isOpen = false;
+          pistonBreaker.failures = 0;
+        }
 
-        if (funcName) {
-          let testHarness = `import json\n\n${code}\n\n`;
-          testHarness += `tests = ${JSON.stringify(problem.hiddenTestCases)}\n`;
-          testHarness += `passed = 0\n`;
-          testHarness += `for t in tests:\n`;
-          testHarness += `    try:\n`;
-          testHarness += `        inp = t['input']\n`;
-          testHarness += `        exp = t['expectedOutput']\n`;
-          testHarness += `        if isinstance(inp, dict):\n`;
-          testHarness += `            res = ${funcName}(**inp)\n`;
-          testHarness += `        elif isinstance(inp, list) or isinstance(inp, tuple):\n`;
-          testHarness += `            res = ${funcName}(*inp)\n`;
-          testHarness += `        else:\n`;
-          testHarness += `            res = ${funcName}(inp)\n`;
-          testHarness += `        if json.dumps(res) == json.dumps(exp) or res == exp:\n`;
-          testHarness += `            passed += 1\n`;
-          testHarness += `    except Exception as e:\n`;
-          testHarness += `        pass\n`;
-          testHarness += `print(f"HIDDEN_PASS:{passed}")\n`;
+        try {
+          // Extract function name from starter code
+          const match = problem.starterCode.match(/def\s+(\w+)\s*\(/);
+          const funcName = match ? match[1] : "";
 
-          const pistonRes = await fetch("https://emkc.org/api/v2/piston/execute", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              language: "python",
-              version: "3.10.0",
-              files: [{ name: "main.py", content: testHarness }]
-            })
-          });
+          if (funcName) {
+            let testHarness = `import json\n\n${code}\n\n`;
+            testHarness += `tests = ${JSON.stringify(problem.hiddenTestCases)}\n`;
+            testHarness += `passed = 0\n`;
+            testHarness += `for t in tests:\n`;
+            testHarness += `    try:\n`;
+            testHarness += `        inp = t['input']\n`;
+            testHarness += `        exp = t['expectedOutput']\n`;
+            testHarness += `        if isinstance(inp, dict):\n`;
+            testHarness += `            res = ${funcName}(**inp)\n`;
+            testHarness += `        elif isinstance(inp, list) or isinstance(inp, tuple):\n`;
+            testHarness += `            res = ${funcName}(*inp)\n`;
+            testHarness += `        else:\n`;
+            testHarness += `            res = ${funcName}(inp)\n`;
+            testHarness += `        if json.dumps(res) == json.dumps(exp) or res == exp:\n`;
+            testHarness += `            passed += 1\n`;
+            testHarness += `    except Exception as e:\n`;
+            testHarness += `        pass\n`;
+            testHarness += `print(f"HIDDEN_PASS:{passed}")\n`;
 
-          if (pistonRes.ok) {
-            const data = await pistonRes.json();
-            const output = data.run?.output || "";
-            const match = output.match(/HIDDEN_PASS:(\d+)/);
-            if (match) {
-              hiddenPassed = parseInt(match[1], 10);
+            // Timeout after 5 seconds
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 5000);
+
+            const pistonRes = await fetch("https://emkc.org/api/v2/piston/execute", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                language: "python",
+                version: "3.10.0",
+                files: [{ name: "main.py", content: testHarness }]
+              }),
+              signal: controller.signal
+            });
+            
+            clearTimeout(timeoutId);
+
+            if (pistonRes.ok) {
+              const data = await pistonRes.json();
+              const output = data.run?.output || "";
+              const match = output.match(/HIDDEN_PASS:(\d+)/);
+              if (match) {
+                hiddenPassed = parseInt(match[1], 10);
+              }
+              // Reset failures on success
+              pistonBreaker.failures = 0;
+            } else {
+              throw new Error(`Piston responded with ${pistonRes.status}`);
             }
           }
+        } catch (error) {
+          console.error("Piston API execution failed:", error);
+          pistonBreaker.failures++;
+          pistonBreaker.lastFailureAt = Date.now();
+          if (pistonBreaker.failures >= CIRCUIT_BREAKER_THRESHOLD) {
+            pistonBreaker.isOpen = true;
+            console.error("Piston circuit breaker is now OPEN.");
+          }
         }
-      } catch (error) {
-        console.error("Piston API execution failed:", error);
       }
     }
 
@@ -324,20 +379,23 @@ export async function POST(request: NextRequest) {
     };
   }
 
-  return NextResponse.json(
-    {
-      success: passed,
-      submissionId: submission.id,
-      result: {
-        totalTests,
-        passedTests,
-        failedTests: totalTests - passedTests,
-        executionTime: body.executionTime || 0,
+    // Task 3.4: Invalidate caches
+    await invalidateUserCache(session.user.id);
+
+    return NextResponse.json(
+      {
+        success: passed,
+        submissionId: submission.id,
+        result: {
+          totalTests,
+          passedTests,
+          failedTests: totalTests - passedTests,
+          executionTime: body.executionTime || 0,
+        },
+        stats,
       },
-      stats,
-    },
-    { status: 201 }
-  );
+      { status: 201 }
+    );
   } catch (error) {
     console.error("Error creating submission:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });

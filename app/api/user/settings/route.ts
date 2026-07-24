@@ -2,6 +2,16 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import bcrypt from "bcryptjs";
+import { isValidPassword, passwordPolicyMessage } from "@/lib/passwordPolicy";
+
+function isValidTimeZone(value: string): boolean {
+  try {
+    Intl.DateTimeFormat(undefined, { timeZone: value });
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 export async function GET() {
   try {
@@ -12,7 +22,7 @@ export async function GET() {
 
     const user = await prisma.user.findUnique({
       where: { id: session.user.id },
-      select: { id: true, name: true, email: true, createdAt: true },
+      select: { id: true, name: true, email: true, timeZone: true, createdAt: true },
     });
 
     if (!user) {
@@ -34,7 +44,7 @@ export async function PATCH(req: Request) {
     }
 
     const body = await req.json();
-    const { name, currentPassword, newPassword } = body;
+    const { name, currentPassword, newPassword, timeZone } = body;
 
     const user = await prisma.user.findUnique({
       where: { id: session.user.id },
@@ -52,11 +62,18 @@ export async function PATCH(req: Request) {
       updateData.name = name.trim();
     }
 
+    if (timeZone !== undefined) {
+      if (typeof timeZone !== "string" || !isValidTimeZone(timeZone)) {
+        return NextResponse.json({ error: "Invalid timezone" }, { status: 400 });
+      }
+      updateData.timeZone = timeZone;
+    }
+
     // Update password if provided
     if (currentPassword && newPassword) {
-      if (typeof newPassword !== "string" || newPassword.length < 6) {
+      if (!isValidPassword(newPassword)) {
         return NextResponse.json(
-          { error: "New password must be at least 6 characters" },
+          { error: passwordPolicyMessage },
           { status: 400 }
         );
       }
@@ -86,7 +103,7 @@ export async function PATCH(req: Request) {
     const updated = await prisma.user.update({
       where: { id: session.user.id },
       data: updateData,
-      select: { id: true, name: true, email: true },
+      select: { id: true, name: true, email: true, timeZone: true },
     });
 
     return NextResponse.json({ message: "Settings updated", user: updated });

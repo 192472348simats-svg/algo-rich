@@ -9,6 +9,7 @@ import { useLessonEngagement } from "@/app/components/learning/useLessonEngageme
 import { triggerSuccessConfetti } from "@/app/components/feedback/Confetti";
 import { difficultyColor } from "@/lib/utils";
 import { getVisualizerForLesson } from "@/lib/lessonVisualizerMap";
+import { analytics } from "@/lib/analytics";
 
 interface ConnectedProblem {
   id: string;
@@ -85,6 +86,14 @@ export default function LessonViewer({
   }, [lesson.content]);
 
   useEffect(() => {
+    analytics.track("lesson_started", {
+      lessonId: lesson.id,
+      courseId: course.id,
+      title: lesson.title,
+    });
+  }, [lesson.id, course.id, lesson.title]);
+
+  useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
@@ -128,6 +137,11 @@ export default function LessonViewer({
       if (res.ok) {
         setCompleted(true);
         triggerSuccessConfetti();
+        analytics.track("lesson_completed", {
+          lessonId: lesson.id,
+          courseId: course.id,
+          timeSpent: timeOnPage,
+        });
         return;
       }
 

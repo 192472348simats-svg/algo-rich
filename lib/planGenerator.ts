@@ -1,4 +1,5 @@
 import prisma from "@/lib/prisma";
+import { computeStreak } from "@/lib/streakUtils";
 
 // ── Data interfaces for each step type ──────────────────
 export interface ReviewData {
@@ -435,44 +436,9 @@ async function calculateStreak(userId: string): Promise<number> {
     orderBy: { createdAt: "desc" },
   });
 
-  if (submissions.length === 0) return 0;
-
-  const dates = [
-    ...new Set(
-      submissions.map((s) => {
-        const d = new Date(s.createdAt);
-        d.setHours(0, 0, 0, 0);
-        return d.getTime();
-      })
-    ),
-  ].sort((a, b) => b - a); // newest first
-
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const todayMs = today.getTime();
-
-  const mostRecent = dates[0];
-  const daysSinceLastSubmission = Math.floor(
-    (todayMs - mostRecent) / (1000 * 60 * 60 * 24)
-  );
-
-  if (daysSinceLastSubmission > 1) return 0;
-
-  let streak = 0;
-  for (let i = 0; i < dates.length; i++) {
-    const expectedDate = todayMs - i * 24 * 60 * 60 * 1000;
-    const actualDate = dates[i];
-    const diffDays = Math.floor(
-      (expectedDate - actualDate) / (1000 * 60 * 60 * 24)
-    );
-    if (diffDays <= 1) {
-      streak++;
-    } else {
-      break;
-    }
-  }
-
-  return streak;
+  return computeStreak(
+    submissions.map((submission) => submission.createdAt.toISOString().slice(0, 10))
+  ).currentStreak;
 }
 
 async function getWeakTopics(userId: string) {

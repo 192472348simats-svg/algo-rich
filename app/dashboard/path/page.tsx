@@ -118,8 +118,21 @@ export default async function LearningPathPage() {
 
   const userId = session.user.id;
 
-  const [user, phaseProblems, solvedSubmissions, allProblemsRaw] =
-    await Promise.all([
+  let user: UserData | null = null;
+  let phaseProblems: { phase: number; _count: { id: number } }[] = [];
+  let solvedSubmissions: { problemId: string }[] = [];
+  let allProblemsRaw: {
+    id: string;
+    slug: string;
+    title: string;
+    difficulty: string;
+    phase: number;
+    weekNumber: number;
+    order: number;
+  }[] = [];
+
+  try {
+    [user, phaseProblems, solvedSubmissions, allProblemsRaw] = await Promise.all([
       prisma.user.findUnique({
         where: { id: userId },
         select: {
@@ -155,6 +168,9 @@ export default async function LearningPathPage() {
         orderBy: [{ phase: "asc" }, { weekNumber: "asc" }, { order: "asc" }],
       }),
     ]);
+  } catch (error) {
+    console.warn("[LearningPathPage] DB unavailable; using empty path.", error instanceof Error ? error.message : error);
+  }
 
   if (!user) {
     // Default user data if not found — don't redirect, just show phase 1

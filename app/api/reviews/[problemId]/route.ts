@@ -1,13 +1,14 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { recordReview } from "@/lib/reviewEngine";
+import { invalidateUserCache } from "@/lib/cache";
 
 /**
  * POST /api/reviews/[problemId]
  * Record a review result with a self-rating (1-4).
  */
 export async function POST(
-  request: NextRequest,
+  request: Request,
   { params }: { params: Promise<{ problemId: string }> }
 ) {
   try {
@@ -28,6 +29,9 @@ export async function POST(
     }
 
     const schedule = await recordReview(session.user.id, problemId, rating);
+
+    // Task 3.4: Invalidate caches
+    await invalidateUserCache(session.user.id);
 
     return NextResponse.json({
       success: true,

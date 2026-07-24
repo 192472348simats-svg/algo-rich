@@ -58,14 +58,22 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    await prisma.user.update({
-      where: { id: user.id },
+    const updated = await prisma.user.updateMany({
+      where: {
+        id: user.id,
+        verificationToken: user.verificationToken,
+        verificationExpiry: { gte: new Date() },
+      },
       data: {
         emailVerified: true,
         verificationToken: null,
         verificationExpiry: null,
       },
     });
+
+    if (updated.count !== 1) {
+      return NextResponse.json({ error: "Invalid or expired verification code." }, { status: 400 });
+    }
 
     return NextResponse.json({ success: true, message: "Email verified successfully!" });
   } catch (error) {

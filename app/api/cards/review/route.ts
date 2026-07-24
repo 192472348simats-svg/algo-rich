@@ -32,10 +32,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Card not found" }, { status: 404 });
     }
 
-    // Find existing review or create fresh SM-2 defaults
-    const existing = await prisma.cardReview.findFirst({
-      where: { userId, cardId },
-      orderBy: { createdAt: "desc" },
+    // CardReview has one authoritative scheduling row per user/card.
+    const existing = await prisma.cardReview.findUnique({
+      where: { userId_cardId: { userId, cardId } },
     });
 
     const prevEase = existing?.easeFactor ?? 2.5;
@@ -48,19 +47,25 @@ export async function POST(req: NextRequest) {
       : correct ? 4 : 1;
     const sm2 = calculateSM2(quality, prevReps, prevEase, prevInterval);
 
-    const nextReviewAt = new Date();
-    nextReviewAt.setDate(nextReviewAt.getDate() + sm2.interval);
+    const nextReviewAt = sm2.nextReview;
 
-    const review = await prisma.cardReview.create({
-      data: {
+    // CardReview is the scheduling state for a card, not an event log. Updating
+    // the latest record prevents one user/card from being queued multiple times.
+    const reviewData = {
+      correct,
+      responseTimeMs: typeof responseTimeMs === "number" ? Math.max(0, Math.floor(responseTimeMs)) : null,
+      easeFactor: sm2.ease,
+      interval: sm2.interval,
+      repetitions: sm2.repetitions,
+      nextReviewAt,
+    };
+    const review = await prisma.cardReview.upsert({
+      where: { userId_cardId: { userId, cardId } },
+      update: reviewData,
+      create: {
         userId,
         cardId,
-        correct,
-        responseTimeMs: responseTimeMs ?? null,
-        easeFactor: sm2.ease,
-        interval: sm2.interval,
-        repetitions: sm2.repetitions,
-        nextReviewAt,
+        ...reviewData,
       },
     });
 

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import prisma from "@/lib/prisma";
+import { computeStreak } from "@/lib/streakUtils";
 
 export async function GET() {
   try {
@@ -63,21 +64,7 @@ export async function GET() {
     activityDates.add(s.createdAt.toISOString().slice(0, 10));
   }
 
-  const sortedDays = Array.from(activityDates).sort().reverse();
-  let currentStreak = 0;
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-
-  for (let i = 0; i < sortedDays.length; i++) {
-    const expected = new Date(today);
-    expected.setDate(expected.getDate() - i);
-    const expectedStr = expected.toISOString().slice(0, 10);
-    if (sortedDays[i] === expectedStr) {
-      currentStreak++;
-    } else {
-      break;
-    }
-  }
+  const { currentStreak } = computeStreak(Array.from(activityDates));
 
   // Progress over last 30 days
   const thirtyDaysAgo = new Date();

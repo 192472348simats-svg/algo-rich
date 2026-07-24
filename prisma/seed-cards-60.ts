@@ -2,7 +2,7 @@ import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
-async function main() {
+export async function seedCards() {
   console.log("🃏 Seeding 60+ prediction cards...\n");
 
   // Delete existing prediction cards and their reviews to avoid conflicts
@@ -783,6 +783,8 @@ async function main() {
   console.log(`   Total cards in DB: ${await prisma.predictionCard.count()}`);
 }
 
-main()
-  .catch((e) => { console.error("❌ Card seed failed:", e); process.exit(1); })
-  .finally(() => prisma.$disconnect());
+if (require.main === module || process.argv[1]?.includes("seed-cards-60")) {
+  seedCards()
+    .catch((e) => { console.error("❌ Card seed failed:", e); process.exit(1); })
+    .finally(() => prisma.$disconnect());
+}

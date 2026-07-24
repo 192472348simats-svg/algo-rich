@@ -12,6 +12,7 @@ import {
   type TreeNode,
 } from "@/lib/treeEngine";
 import { usePyodide } from "@/app/components/CodeExecutor";
+import { ErrorBoundary } from "@/app/components/ErrorBoundary";
 
 interface Props {
   config: GuidedBuildConfig;
@@ -584,10 +585,16 @@ function BSTBuilderStage({ config, onComplete }: Props) {
     </div>
   );
 }
+
 // ─── Router ───────────────────────────────────────────────────────────────────
 export default function GuidedBuildStage({ config, onComplete }: Props) {
-  if (config.steps && config.steps.length > 0) {
-    return <SimpleStepsWizard config={config} onComplete={onComplete} />;
-  }
-  return <BSTBuilderStage config={config} onComplete={onComplete} />;
+  return (
+    <ErrorBoundary componentName="GuidedBuildStage">
+      {config.steps && config.steps.length > 0 ? (
+        <SimpleStepsWizard config={config} onComplete={onComplete} />
+      ) : (
+        <BSTBuilderStage config={config} onComplete={onComplete} />
+      )}
+    </ErrorBoundary>
+  );
 }

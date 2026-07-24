@@ -7,6 +7,7 @@ import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import nextDynamic from "next/dynamic";
+import { ErrorBoundary } from "@/app/components/ErrorBoundary";
 
 const GuidedMode = nextDynamic(
   () => import("@/app/components/visualizations/GuidedMode"),
@@ -170,37 +171,41 @@ export default function VisualizeTypePage({
       )}
 
       {/* content */}
-      <motion.div
-        key={`${type}-${tab}`}
-        initial={{ opacity: 0, y: 12 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.35 }}
-        className="mt-4"
-      >
-        {type === "tree" && tab === "playground" && <TreePlayground />}
-        {type === "tree" && tab === "challenges" && (
-          <TreePredictionChallenge />
-        )}
-        {type === "array" && <ArrayPlayground />}
-        {type === "linked-list" && <LinkedListPlayground />}
-        {type === "stack-queue" && <StackQueuePlayground />}
-      </motion.div>
+      <ErrorBoundary componentName="Visualizer Playground">
+        <motion.div
+          key={`${type}-${tab}`}
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.35 }}
+          className="mt-4"
+        >
+          {type === "tree" && tab === "playground" && <TreePlayground />}
+          {type === "tree" && tab === "challenges" && (
+            <TreePredictionChallenge />
+          )}
+          {type === "array" && <ArrayPlayground />}
+          {type === "linked-list" && <LinkedListPlayground />}
+          {type === "stack-queue" && <StackQueuePlayground />}
+        </motion.div>
+      </ErrorBoundary>
 
       {/* Guided Mode overlay */}
       <AnimatePresence>
         {guidedOpen && guidedTypeMap[type] && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 20 }}
-            transition={{ duration: 0.3 }}
-            className="mt-6"
-          >
-            <GuidedMode
-              visualizerType={guidedTypeMap[type]}
-              onClose={() => setGuidedOpen(false)}
-            />
-          </motion.div>
+          <ErrorBoundary componentName="GuidedMode">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 20 }}
+              transition={{ duration: 0.3 }}
+              className="mt-6"
+            >
+              <GuidedMode
+                visualizerType={guidedTypeMap[type]}
+                onClose={() => setGuidedOpen(false)}
+              />
+            </motion.div>
+          </ErrorBoundary>
         )}
       </AnimatePresence>
     </div>

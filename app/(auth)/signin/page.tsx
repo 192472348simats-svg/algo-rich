@@ -21,15 +21,21 @@ export default function SignInPage() {
     try {
       const result = await signIn("credentials", { email, password, redirect: false });
       if (result?.error) {
-        setError(result.error.includes("EMAIL_NOT_VERIFIED")
-          ? "Please verify your email before signing in."
-          : "Invalid email or password");
-      } else {
+        if (result.error.includes("EMAIL_NOT_VERIFIED")) {
+          setError("Please verify your email before signing in.");
+        } else if (result.error.includes("Too many login")) {
+          setError("Too many attempts. Please wait 5 minutes and try again.");
+        } else {
+          setError("Invalid email or password. Check your credentials and try again.");
+        }
+      } else if (result?.ok) {
         router.push("/dashboard");
         router.refresh();
+      } else {
+        setError("Sign in failed. Please try again.");
       }
     } catch {
-      setError("Something went wrong. Please try again.");
+      setError("Cannot connect to server. Make sure the app is running.");
     } finally {
       setLoading(false);
     }
@@ -59,8 +65,8 @@ export default function SignInPage() {
         <p className="text-xs" style={{ color: "#6b7a99" }}>© 2026 Algo Rich</p>
       </div>
 
-      {/* Right panel */}
-      <div className="flex-1 flex items-center justify-center p-8">
+      {/* Right panel — scrollable on mobile */}
+      <div className="flex-1 flex items-start lg:items-center justify-center p-8 py-12 overflow-y-auto">
         <motion.div
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}

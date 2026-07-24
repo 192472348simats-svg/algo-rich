@@ -3,9 +3,25 @@ import { redirect } from "next/navigation";
 import prisma from "@/lib/prisma";
 import DashboardContent from "./components/DashboardContent";
 import { categoryIcon } from "@/lib/utils";
+import { unstable_cache } from "next/cache";
+import { computeStreak } from "@/lib/streakUtils";
 
-export const dynamic = 'force-dynamic'
-
+// Cache static/global data for 1 hour
+const getGlobalDashboardData = unstable_cache(
+  async () => {
+    const [totalProblems, totalCourses, dbCourses] = await Promise.all([
+      prisma.problem.count(),
+      prisma.course.count(),
+      prisma.course.findMany({
+        orderBy: { order: "asc" },
+        include: { lessons: { select: { id: true } } },
+      }),
+    ]);
+    return { totalProblems, totalCourses, dbCourses };
+  },
+  ["global-dashboard-data"],
+  { revalidate: 3600, tags: ["global-data"] }
+);
 
 export default async function DashboardPage() {
   const session = await auth();
@@ -19,52 +35,33 @@ export default async function DashboardPage() {
   // ─── Safe defaults when DB is unreachable ──────────────────
   let lessonsCompleted = 0;
   let problemsSolved = 0;
-  let totalProblems = 0;
-  let totalCourses = 0;
-  let dbCourses: (Awaited<ReturnType<typeof prisma.course.findMany>>[number] & { lessons: { id: string }[] })[] = [];
-  let user: {
-    onboardingCompleted: boolean;
-    totalXP: number;
-    createdAt: Date;
-    firstLessonAt: Date | null;
-    firstSolveAt: Date | null;
-    firstVisualizerAt: Date | null;
-    firstPlanAt: Date | null;
-    currentPhase: number;
-    currentWeek: number;
-    targetInterviewDate: Date | null;
-  } | null = null;
   let reviewsDue = 0;
   let completedProgress: { lessonId: string }[] = [];
   let progressRecords: { completedAt: Date | null }[] = [];
-  let submissionRecords: { createdAt: Date; status: string; problem: { difficulty: string; category: string | null } | null }[] = [];
+  let submissionRecords: { problemId: string; createdAt: Date; status: string; problem: { difficulty: string; category: string | null } | null }[] = [];
   let cardsReviewedCount = 0;
   let reviewsCompletedCount = 0;
+  let user: any = null;
+
+  // Global content is also database-backed; render an empty dashboard if local
+  // development cannot reach the database.
+  let globalData: Awaited<ReturnType<typeof getGlobalDashboardData>> = {
+    totalProblems: 0,
+    totalCourses: 0,
+    dbCourses: [],
+  };
+  try {
+    globalData = await getGlobalDashboardData();
+  } catch (error) {
+    console.warn("[DashboardPage] Global data unavailable; using empty state.", error instanceof Error ? error.message : error);
+  }
+  const { totalProblems, totalCourses, dbCourses } = globalData;
 
   try {
-    // ── Single consolidated DB round trip ──────────────────────
-    [
-      lessonsCompleted,
-      problemsSolved,
-      totalProblems,
-      totalCourses,
-      dbCourses,
-      user,
-      reviewsDue,
-      completedProgress,
-      progressRecords,
-      submissionRecords,
-      cardsReviewedCount,
-      reviewsCompletedCount,
-    ] = await Promise.all([
+    // ── User-specific DB round trip ──────────────────────
+    const results = await Promise.all([
       prisma.progress.count({ where: { userId, completed: true } }),
       prisma.submission.count({ where: { userId, status: "accepted" } }),
-      prisma.problem.count(),
-      prisma.course.count(),
-      prisma.course.findMany({
-        orderBy: { order: "asc" },
-        include: { lessons: { select: { id: true } } },
-      }),
       prisma.user.findUnique({
         where: { id: userId },
         select: {
@@ -91,26 +88,32 @@ export default async function DashboardPage() {
         where: { userId, completed: true, completedAt: { not: null } },
         select: { completedAt: true },
       }),
-      // Fetch accepted submissions with difficulty for achievement tracking
       prisma.submission.findMany({
         where: { userId },
         select: {
+          problemId: true,
           createdAt: true,
           status: true,
           problem: { select: { difficulty: true, category: true } },
         },
       }),
-      // Cards reviewed count
       prisma.flashCard.count({ where: { userId, ease: { not: 2.5 } } }).catch(() => 0),
-      // Reviews completed
       prisma.problemReview.count({ where: { userId, lastReviewedAt: { not: null } } }).catch(() => 0),
     ]);
+
+    [
+      lessonsCompleted,
+      problemsSolved,
+      user,
+      reviewsDue,
+      completedProgress,
+      progressRecords,
+      submissionRecords,
+      cardsReviewedCount,
+      reviewsCompletedCount,
+    ] = results;
   } catch (err) {
-    // DB unreachable — render dashboard with safe defaults
-    console.error(
-      "[DashboardPage] DB unreachable:",
-      err instanceof Error ? err.message.slice(0, 120) : err
-    );
+    console.warn("[DashboardPage] User data unavailable; using empty state.", err instanceof Error ? err.message : err);
   }
 
   const completedLessonIds = new Set(completedProgress.map((p) => p.lessonId));
@@ -124,31 +127,16 @@ export default async function DashboardPage() {
     activityDates.add(s.createdAt.toISOString().slice(0, 10));
   }
   const sortedDays = Array.from(activityDates).sort().reverse();
+  const acceptedProblemIds = new Set(
+    submissionRecords
+      .filter((submission) => submission.status === "accepted")
+      .map((submission) => submission.problemId)
+  );
+  problemsSolved = acceptedProblemIds.size;
   
   const today = new Date();
   today.setUTCHours(0, 0, 0, 0);
-
-  let currentStreak = 0;
-  if (activityDates.size > 0) {
-    let currentDate = new Date(today);
-    let todayStr = currentDate.toISOString().slice(0, 10);
-    
-    // If no activity today, start counting from yesterday
-    if (!activityDates.has(todayStr)) {
-      currentDate.setUTCDate(currentDate.getUTCDate() - 1);
-    }
-    
-    // Count consecutive days going backwards
-    while (true) {
-      let dateStr = currentDate.toISOString().slice(0, 10);
-      if (activityDates.has(dateStr)) {
-        currentStreak++;
-        currentDate.setUTCDate(currentDate.getUTCDate() - 1);
-      } else {
-        break;
-      }
-    }
-  }
+  const { currentStreak } = computeStreak(Array.from(activityDates));
 
   // ── Days since last activity ───────────────────────────────
   let daysSinceLastActivity = 999;
@@ -163,11 +151,11 @@ export default async function DashboardPage() {
   const acceptedSubs = submissionRecords.filter((s) => s.status === "accepted");
   const mediumSolved = new Set(
     acceptedSubs.filter((s) => s.problem?.difficulty === "medium" || s.problem?.difficulty === "Medium")
-      .map((_, i) => i)
+      .map((submission) => submission.problemId)
   ).size;
   const hardSolved = new Set(
     acceptedSubs.filter((s) => s.problem?.difficulty === "hard" || s.problem?.difficulty === "Hard")
-      .map((_, i) => i)
+      .map((submission) => submission.problemId)
   ).size;
   const topicsCovered = new Set(
     acceptedSubs.map((s) => s.problem?.category).filter(Boolean)

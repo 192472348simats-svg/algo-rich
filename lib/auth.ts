@@ -2,9 +2,7 @@ import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import prisma from "@/lib/prisma";
-
-// Simple in-memory rate limiter for login
-const rateLimitMap = new Map<string, { count: number; expires: number }>();
+import { enforceRateLimit } from "@/lib/rateLimit";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   pages: {
@@ -25,20 +23,17 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           return null;
         }
 
-        const email = credentials.email as string;
+        const email = (credentials.email as string).toLowerCase().trim();
         const password = credentials.password as string;
 
-        // Rate Limiting Logic: Max 5 attempts per 5 minutes
-        const now = Date.now();
-        const rl = rateLimitMap.get(email);
-        if (rl && rl.expires > now) {
-          if (rl.count >= 5) {
-            console.warn(`[AUTH] Rate limit exceeded for email: ${email}`);
-            throw new Error("Too many login attempts. Please try again later.");
-          }
-          rl.count++;
-        } else {
-          rateLimitMap.set(email, { count: 1, expires: now + 5 * 60 * 1000 });
+        const limit = await enforceRateLimit({
+          scope: "login",
+          identifier: email,
+          limit: 5,
+          windowMs: 5 * 60 * 1000,
+        });
+        if (!limit.allowed) {
+          throw new Error("Too many login attempts. Please try again later.");
         }
 
         const user = await prisma.user.findUnique({
@@ -48,6 +43,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             email: true,
             name: true,
             password: true,
+            emailVerified: true,
           },
         });
 
@@ -59,6 +55,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
         if (!isPasswordValid) {
           return null;
+        }
+
+        if (!user.emailVerified) {
+          throw new Error("EMAIL_NOT_VERIFIED");
         }
 
         return {

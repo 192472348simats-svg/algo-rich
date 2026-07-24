@@ -3,6 +3,7 @@
 import { useRef, useCallback } from "react";
 import Editor, { type OnMount, type OnChange } from "@monaco-editor/react";
 import type { editor } from "monaco-editor";
+import { ErrorBoundary } from "@/app/components/ErrorBoundary";
 
 interface CodeEditorProps {
   initialCode: string;
@@ -16,7 +17,7 @@ interface CodeEditorProps {
   pyodideMessage?: string;
 }
 
-export default function CodeEditor({
+function CodeEditorComponent({
   initialCode,
   onChange,
   language = "python",
@@ -158,5 +159,13 @@ export default function CodeEditor({
         </div>
       )}
     </div>
+  );
+}
+
+export default function CodeEditor(props: CodeEditorProps) {
+  return (
+    <ErrorBoundary componentName="CodeEditor">
+      <CodeEditorComponent {...props} />
+    </ErrorBoundary>
   );
 }

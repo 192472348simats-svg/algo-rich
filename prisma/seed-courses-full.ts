@@ -342,6 +342,55 @@ def find_two_sum(nums: list, target: int) -> list:
 
 Two Pointers is one of the most important patterns in DSA. Master this and you can solve dozens of interview problems.
 
+## Why Brute Force Fails First
+
+Before learning Two Pointers, let's **feel** why the obvious approach breaks.
+
+### Try This (Mental Simulation)
+
+You're given 10,000 sorted numbers and a target sum. You need to find if any two numbers add to the target.
+
+**Your instinct:** Check every pair.
+- Number 1 vs Number 2, 3, 4... 10,000
+- Number 2 vs Number 3, 4, 5... 10,000
+- ... repeat 10,000 times
+
+**The math:** ~50 million comparisons.
+
+**On your laptop:** 2-3 seconds.
+**On LeetCode:** "Time Limit Exceeded."
+**In an interview:** You just failed.
+
+### The Moment of Failure
+
+\`\`\`python
+def two_sum_brute(nums, target):
+    for i in range(len(nums)):           # 10,000 iterations
+        for j in range(i + 1, len(nums)): # 9,999 + 9,998 + ... iterations
+            if nums[i] + nums[j] == target:
+                return [i, j]
+    return []
+# Time: O(n²) — for n=10⁴: 10⁸ operations
+\`\`\`
+
+> 💡 **The Pattern Recognition Moment:**  
+> The problem isn't the code. It's that we're **ignoring the sorted property**.  
+> If nums[i] + nums[j] is too small, we need a larger sum.  
+> Since the array is sorted... which number should we increase?
+
+**Stop here. Actually think for 30 seconds.**  
+Then scroll to see how Two Pointers uses this insight.
+
+<details>
+<summary>Click to reveal the insight (only after thinking)</summary>
+
+Since the array is sorted:
+- If sum is too small: move left pointer right (increase sum)
+- If sum is too large: move right pointer left (decrease sum)
+- We eliminate one element per step → O(n) instead of O(n²)
+
+</details>
+
 ## The Core Idea
 
 Instead of using nested loops (O(n²)), use two variables pointing to positions in the array and move them strategically.
@@ -440,7 +489,17 @@ while left < right:   # NOT while left <= right (they'd compare same element)
 # If sum is too small, we need larger numbers → move LEFT forward (not right)
 
 # RIGHT: always ask "what does moving this pointer do to my answer?"
-\`\`\``,
+\`\`\`
+
+> [!NOTE]
+> ### 💡 This Is The Hard Part
+> The syntax of Two Pointers is simple. The intuition is not.
+>
+> Right now, you might be thinking: "How would I ever think to move pointers like this?"
+> **This is completely normal.** Every developer thinks this at first.
+>
+> After solving 3-4 Two Pointer problems, the pattern becomes automatic.
+> You haven't failed if it doesn't click immediately—you're just in the first hour of a 10-hour skill acquisition.`,
       codeExample: `def is_palindrome(s: str) -> bool:
     """Check if string is a palindrome using two pointers."""
     # Clean: lowercase, alphanumeric only
@@ -551,7 +610,21 @@ def sliding_window_template(arr):
 
 > "Fixed window: add one, remove one. Variable window: expand until invalid, then shrink until valid again."
 
-The window size changes, but the pointer only moves **forward** — this guarantees O(n).`,
+The window size changes, but the pointer only moves **forward** — this guarantees O(n).
+
+> [!NOTE]
+> ### 🧠 Pattern Recognition Takes Repetition
+> Sliding Window problems look completely different on the surface:
+> - "Longest substring without repeating characters"
+> - "Max sum of subarray of size k"
+> - "Min window substring"
+>
+> But they share the same skeleton: expand → contract → track state.
+>
+> If you can't see the similarity yet, that's expected. The pattern recognition develops problem-by-problem, not lesson-by-lesson.
+
+> [!TIP]
+> 🔗 **Connection to previous lessons:** Sliding Window often uses a Hash Map (from Lesson 5) to track window state (character counts, sum values). If Hash Maps felt abstract in Lesson 5, this is where they become concrete.`,
       codeExample: `def max_sum_subarray_k(nums: list, k: int) -> int:
     """Maximum sum subarray of exactly size k."""
     window_sum = sum(nums[:k])
@@ -1036,7 +1109,10 @@ def search_rotated(nums, target):
 
 ## Key Takeaway
 
-> If the array is sorted, your first thought should be binary search. O(log n) is extremely fast — it handles billions of elements in ~30 steps.`,
+> If the array is sorted, your first thought should be binary search. O(log n) is extremely fast — it handles billions of elements in ~30 steps.
+
+> [!TIP]
+> 🔗 **Binary Search vs Two Pointers:** Both exploit sorted arrays. Two Pointers scans from both ends for pairs. Binary Search jumps to the middle for single values. Choosing wrong = TLE.`,
       codeExample: `def binary_search(nums: list, target: int) -> int:
     """Classic binary search on sorted array."""
     left, right = 0, len(nums) - 1
@@ -1743,6 +1819,20 @@ def num_islands(grid: list) -> int:
       content: `# Dynamic Programming Introduction
 
 Dynamic Programming (DP) is the most feared interview topic. But it follows a clear pattern once you understand it.
+
+> [!WARNING]
+> ### ⚠️ The 'Wall' Is Real
+> Dynamic Programming is where 60% of self-taught learners quit DSA.
+>
+> Not because it's intellectually impossible, but because it **feels** like magic until it doesn't.
+>
+> You will stare at the Fibonacci memoization solution and think: "I would never think of that."
+> Then you'll solve 5 problems. Then 10. Then suddenly, you see the subproblems everywhere.
+>
+> The wall is at problem 3-5. Push through it.
+
+> [!TIP]
+> 🔗 **Connection to previous lessons:** DP is memoized recursion. If you skipped the Recursion lesson, go back. DP without understanding recursion is like calculus without algebra—technically possible, unnecessarily painful.
 
 ## What is DP?
 

@@ -39,14 +39,7 @@ export default function SignUpPage() {
         setLoading(false);
         return;
       }
-      const result = await signIn("credentials", { email, password, redirect: false });
-      if (result?.error) {
-        setError("Account created! Please sign in.");
-        router.push("/signin");
-      } else {
-        router.push("/dashboard");
-        router.refresh();
-      }
+      router.push(`/verify-email?email=${encodeURIComponent(email.trim().toLowerCase())}`);
     } catch {
       setError("Something went wrong. Please try again.");
     } finally {
@@ -105,8 +98,8 @@ export default function SignUpPage() {
         <p className="text-xs" style={{ color: "#6b7a99" }}>© 2026 Algo Rich</p>
       </div>
 
-      {/* Right panel */}
-      <div className="flex-1 flex items-center justify-center p-8">
+      {/* Right panel — scrollable on mobile */}
+      <div className="flex-1 flex items-start lg:items-center justify-center p-8 py-12 overflow-y-auto">
         <motion.div
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
@@ -160,7 +153,7 @@ export default function SignUpPage() {
               <label className="block text-sm font-medium text-white mb-1.5">Password</label>
               <input
                 type="password" value={password} onChange={e => setPassword(e.target.value)}
-                required minLength={6} placeholder="At least 6 characters"
+                required minLength={8} placeholder="8+ chars, a number & symbol (e.g. Hello1!)"
                 className="w-full px-4 py-3 rounded-xl text-white placeholder-[#6b7a99] focus:outline-none transition-colors"
                 style={{ background: "#0f1629", border: "1px solid #1E3A5F" }}
                 onFocus={e => (e.currentTarget.style.borderColor = "#E5A829")}

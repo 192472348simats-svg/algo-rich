@@ -6,7 +6,7 @@ const prisma = new PrismaClient();
  * Seeds correct answers for reflection validation on all problems.
  * Maps problem slugs to their correct pattern, time/space complexity, and optimality.
  */
-async function main() {
+export async function seedReflections() {
   console.log("🧠 Seeding reflection validation data...\n");
 
   const reflectionData: Record<
@@ -338,9 +338,11 @@ async function main() {
   console.log(`\n✅ Reflection data seeded: ${updated} updated, ${skipped} skipped`);
 }
 
-main()
-  .catch((e) => {
-    console.error(e);
-    process.exit(1);
-  })
-  .finally(() => prisma.$disconnect());
+if (require.main === module || process.argv[1]?.includes("seed-reflections")) {
+  seedReflections()
+    .catch((e) => {
+      console.error(e);
+      process.exit(1);
+    })
+    .finally(() => prisma.$disconnect());
+}

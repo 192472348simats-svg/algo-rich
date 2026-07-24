@@ -117,7 +117,7 @@ export default function DailyCardsPage() {
           {/* Stats pill */}
           {stats && (
             <div className="flex items-center gap-3 text-xs text-white/40">
-              <span title="Cards studied">📋 {stats.cardsStudied}/{stats.totalCards}</span>
+              <span title="Cards studied">📋 {stats.cardsStudied} studied</span>
               <span title="Accuracy">{stats.accuracy}% acc</span>
             </div>
           )}

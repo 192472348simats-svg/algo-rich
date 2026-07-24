@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import type { DailyPlan } from "@/lib/planGenerator";
@@ -27,6 +27,7 @@ export default function PlanFlow({ userId }: Props) {
   const [flowComplete, setFlowComplete] = useState(false);
   const [startTime] = useState(() => Date.now());
   const [completionTime, setCompletionTime] = useState<number | null>(null);
+  const completingStepRef = useRef(false);
 
   useEffect(() => {
     fetch("/api/plan")
@@ -77,28 +78,38 @@ export default function PlanFlow({ userId }: Props) {
   }, []);
 
   const completeStep = useCallback(
-    (result: { score?: number; timeSpent?: number; skipped?: boolean }) => {
+    async (result: { score?: number; timeSpent?: number; skipped?: boolean }) => {
       if (!plan) return;
+      if (completingStepRef.current) return;
+      completingStepRef.current = true;
 
       const step = plan.steps[currentStepIndex];
+
+      try {
+        const response = await fetch("/api/plan/complete-step", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            stepId: step.id,
+            stepType: step.type,
+            timeSpent: result.timeSpent || 0,
+            score: result.score || 0,
+            skipped: result.skipped || false,
+          }),
+        });
+        if (!response.ok) {
+          throw new Error(`Plan progress save failed (${response.status})`);
+        }
+      } catch (err) {
+        console.error("Failed to save plan progress:", err);
+        completingStepRef.current = false;
+        return;
+      }
 
       setStepResults((prev) => ({
         ...prev,
         [step.id]: { ...result, completedAt: new Date().toISOString() },
       }));
-
-      // Notify server (fire and forget)
-      fetch("/api/plan/complete-step", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          stepId: step.id,
-          stepType: step.type,
-          timeSpent: result.timeSpent || 0,
-          score: result.score || 0,
-          skipped: result.skipped || false,
-        }),
-      }).catch(() => {});
 
       // Advance or complete
       if (currentStepIndex + 1 >= plan.steps.length) {
@@ -107,6 +118,7 @@ export default function PlanFlow({ userId }: Props) {
       } else {
         setCurrentStepIndex((prev) => prev + 1);
       }
+      completingStepRef.current = false;
     },
     [plan, currentStepIndex]
   );

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import prisma from "@/lib/prisma";
+import { computeStreak } from "@/lib/streakUtils";
 
 export interface Badge {
   id: string;
@@ -25,7 +26,7 @@ export async function GET() {
   const [
     lessonsCompleted,
     totalLessons,
-    problemsSolved,
+    acceptedProblemIds,
     totalProblems,
     submissionCount,
     progressRecords,
@@ -37,7 +38,11 @@ export async function GET() {
   ] = await Promise.all([
     prisma.progress.count({ where: { userId, completed: true } }),
     prisma.lesson.count(),
-    prisma.submission.count({ where: { userId, status: "accepted" } }),
+    prisma.submission.findMany({
+      where: { userId, status: "accepted" },
+      distinct: ["problemId"],
+      select: { problemId: true },
+    }),
     prisma.problem.count(),
     prisma.submission.count({ where: { userId } }),
     prisma.progress.findMany({
@@ -74,17 +79,8 @@ export async function GET() {
   for (const s of submissionRecords) {
     activityDates.add(s.createdAt.toISOString().slice(0, 10));
   }
-  const sortedDays = Array.from(activityDates).sort().reverse();
-  let currentStreak = 0;
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  for (let i = 0; i < sortedDays.length; i++) {
-    const expected = new Date(today);
-    expected.setDate(expected.getDate() - i);
-    if (sortedDays[i] === expected.toISOString().slice(0, 10)) {
-      currentStreak++;
-    } else break;
-  }
+  const { currentStreak } = computeStreak(Array.from(activityDates));
+  const problemsSolved = acceptedProblemIds.length;
 
   const badges: Badge[] = [
     {

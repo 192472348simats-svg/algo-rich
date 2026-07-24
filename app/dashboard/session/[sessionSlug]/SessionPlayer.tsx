@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import type {
@@ -84,6 +84,7 @@ export default function SessionPlayer({ sessionSlug }: SessionPlayerProps) {
   const [error, setError] = useState<string | null>(null);
   const [sessionStartTime] = useState(Date.now());
   const [showGuideStar, setShowGuideStar] = useState(false);
+  const completingStageRef = useRef(false);
   const router = useRouter();
 
   // Fetch session definition and progress
@@ -129,21 +130,20 @@ export default function SessionPlayer({ sessionSlug }: SessionPlayerProps) {
   const completeStage = useCallback(
     async (result: StageResult) => {
       if (!definition) return;
+      if (completingStageRef.current) return;
+      completingStageRef.current = true;
 
       const stage = definition.stages[currentStageIndex];
       const timeSpent = Math.round((Date.now() - stageStartTime) / 1000);
       const finalResult = { ...result, timeSpent };
 
-      // Save locally
-      const newResults = { ...stageResults, [stage.id]: finalResult };
-      setStageResults(newResults);
-
       const isLastStage =
         currentStageIndex >= definition.stages.length - 1;
 
-      // Save to server
+      // Persist before advancing. The server validates stage order and awards XP, so
+      // moving optimistically here could leave the UI ahead of saved progress.
       try {
-        await fetch(`/api/sessions/${sessionSlug}/progress`, {
+        const response = await fetch(`/api/sessions/${sessionSlug}/progress`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -154,9 +154,17 @@ export default function SessionPlayer({ sessionSlug }: SessionPlayerProps) {
             completed: isLastStage,
           }),
         });
+        if (!response.ok) {
+          throw new Error(`Progress save failed (${response.status})`);
+        }
       } catch (err) {
         console.error("Failed to save progress:", err);
+        completingStageRef.current = false;
+        return;
       }
+
+      const newResults = { ...stageResults, [stage.id]: finalResult };
+      setStageResults(newResults);
 
       // Show guide star if reflect stage score < 70%
       if (stage.type === "reflect" && finalResult.score < 70) {
@@ -173,6 +181,7 @@ export default function SessionPlayer({ sessionSlug }: SessionPlayerProps) {
           router.push("/dashboard/sessions");
         }, 1800);
       }
+      completingStageRef.current = false;
     },
     [definition, currentStageIndex, stageResults, stageStartTime, sessionSlug]
   );

@@ -1,10 +1,10 @@
-﻿# Algo Rich
+# Algo Rich
 
 Algo Rich is a Next.js learning platform for structured Python and DSA practice. 
 
 **Database Strategy:**
 - **Local Development**: PostgreSQL on `localhost` (for fast iteration with no internet dependency)
-- **Production (Vercel)**: Neon Postgres serverless (managed, scalable, perfect for many users)
+- **Production (Vercel)**: Supabase Postgres (managed, scalable, perfect for many users)
 
 ## Stack
 
@@ -14,7 +14,7 @@ Algo Rich is a Next.js learning platform for structured Python and DSA practice.
 - Framer Motion
 - Prisma ORM
 - **Local**: PostgreSQL 15+ on localhost
-- **Production**: Neon Postgres on Vercel
+- **Production**: Supabase Postgres on Vercel
 - NextAuth v5 credentials auth
 
 ---
@@ -106,13 +106,13 @@ docker run --name algo-rich-postgres \
 
 ## Deployment to Vercel
 
-### Step 1: Set Up Neon Database
+### Step 1: Set Up Supabase Database
 
-1. Go to https://neon.tech
-2. Create a PostgreSQL project (choose region closest to your users)
-3. Copy the connection strings from the Neon dashboard:
-   - **Pooler URL** (contains `-pooler` in hostname)
-   - **Direct URL** (no `-pooler` in hostname)
+1. Go to https://supabase.com
+2. Create a PostgreSQL project
+3. Copy the connection strings from Settings -> Database in Supabase:
+   - **Transaction Connection Pooler URL** (uses port 6543)
+   - **Direct Connection URL** (uses port 5432)
 
 ### Step 2: Configure Vercel Environment Variables
 
@@ -122,13 +122,13 @@ Add these THREE variables:
 
 | Name | Value | Source |
 |------|-------|--------|
-| `DATABASE_URL` | `postgresql://...{PROJECT}-pooler...@...neon.tech/neondb?...` | From Neon pooler connection string |
-| `DIRECT_URL` | `postgresql://...{PROJECT}...@...neon.tech/neondb?...` | From Neon direct connection string (no `-pooler`) |
+| `DATABASE_URL` | `postgresql://postgres.[PROJECT]:[PASSWORD]@aws-0-[REGION].pooler.supabase.com:6543/postgres?pgbouncer=true` | From Supabase pooler connection string |
+| `DIRECT_URL` | `postgresql://postgres:[PASSWORD]@db.[PROJECT].supabase.co:5432/postgres` | From Supabase direct connection string |
 | `AUTH_SECRET` | Generate with: `openssl rand -base64 32` | Your secure random string |
 
 **Important:**
-- `DATABASE_URL` MUST contain `-pooler` in hostname (for serverless concurrency)
-- `DIRECT_URL` must NOT contain `-pooler` (for migrations to work)
+- `DATABASE_URL` uses the pooler endpoint (port 6543, with `pgbouncer=true` and `connection_limit`)
+- `DIRECT_URL` uses the direct connection endpoint (port 5432, for migrations to work)
 - Both must be set, or migrations will fail
 
 ### Step 3: Deploy
@@ -219,8 +219,8 @@ NEXTAUTH_URL=http://localhost:3000
 Set these in Vercel → Settings → Environment Variables:
 
 ```
-DATABASE_URL=postgresql://...neon-pooler...@neon.tech/neondb...
-DIRECT_URL=postgresql://...neon-direct...@neon.tech/neondb...
+DATABASE_URL=postgresql://...pooler.supabase.com:6543/postgres...
+DIRECT_URL=postgresql://...db.supabase.co:5432/postgres
 AUTH_SECRET=<random-32-char-string>
 NEXTAUTH_URL=https://your-vercel-app.vercel.app
 ```

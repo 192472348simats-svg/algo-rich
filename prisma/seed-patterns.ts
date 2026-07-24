@@ -12,9 +12,99 @@ interface PatternSeed {
   spaceComplexity: string;
   difficulty: number;
   order: number;
+  whenNotToUse?: string;
+  commonMistakes?: string[];
 }
 
 const patterns: PatternSeed[] = [
+  {
+    slug: "basic-io",
+    name: "Basic I/O",
+    description: "Reading input and printing output.",
+    whenToUse: "Foundational interaction with the user.",
+    template: `name = input("Name: ")\nprint(f"Hello {name}")`,
+    timeComplexity: "O(1)",
+    spaceComplexity: "O(1)",
+    difficulty: 0,
+    order: 0,
+  },
+  {
+    slug: "data-types",
+    name: "Data Types & Variables",
+    description: "Understanding int, float, str, bool and assignment.",
+    whenToUse: "Every program requires data storage.",
+    template: `x = 5\ny = "hello"\nb = True`,
+    timeComplexity: "O(1)",
+    spaceComplexity: "O(1)",
+    difficulty: 0,
+    order: 0,
+  },
+  {
+    slug: "strings",
+    name: "String Manipulation",
+    description: "Slicing, indexing, and string methods.",
+    whenToUse: "Processing text data.",
+    template: `s = "hello"\nprint(s[::-1]) # Reverse`,
+    timeComplexity: "O(n)",
+    spaceComplexity: "O(1)",
+    difficulty: 0,
+    order: 0,
+  },
+  {
+    slug: "conditionals",
+    name: "Conditional Logic",
+    description: "Decision making with if/elif/else.",
+    whenToUse: "Branching code paths.",
+    template: `if x > 0:\n    print("Positive")\nelse:\n    print("Non-positive")`,
+    timeComplexity: "O(1)",
+    spaceComplexity: "O(1)",
+    difficulty: 0,
+    order: 0,
+  },
+  {
+    slug: "loops",
+    name: "Iteration & Loops",
+    description: "Repeating work with while and for loops.",
+    whenToUse: "Processing collections or repeated tasks.",
+    template: `for i in range(5):\n    print(i)`,
+    timeComplexity: "O(n)",
+    spaceComplexity: "O(1)",
+    difficulty: 0,
+    order: 0,
+  },
+  {
+    slug: "arrays",
+    name: "Array Basics",
+    description: "Basic list operations (append, pop, index).",
+    whenToUse: "Storing ordered collections.",
+    template: `lst = [1, 2, 3]\nlst.append(4)`,
+    timeComplexity: "O(1)",
+    spaceComplexity: "O(n)",
+    difficulty: 0,
+    order: 0,
+  },
+  {
+    slug: "error-handling",
+    name: "Error Handling",
+    description: "Graceful failure with try/except.",
+    whenToUse: "Handling unpredictable input or system states.",
+    template: `try:\n    res = 10 / 0\nexcept ZeroDivisionError:\n    print("Safe")`,
+    timeComplexity: "O(1)",
+    spaceComplexity: "O(1)",
+    difficulty: 0,
+    order: 0,
+  },
+  {
+    slug: "foundations",
+    name: "Computational Foundations",
+    description: "Basic logic and problem decomposition.",
+    whenToUse: "Starting a new problem or project.",
+    template: `# Break it down\n# Step 1...`,
+    timeComplexity: "O(1)",
+    spaceComplexity: "O(1)",
+    difficulty: 0,
+    order: 0,
+  },
   {
     slug: "hash-map",
     name: "Hash Map / Dictionary",
@@ -62,6 +152,33 @@ while left < right:
     spaceComplexity: "O(1)",
     difficulty: 2,
     order: 3,
+    whenNotToUse: `
+**DO NOT use Two Pointers when:**
+
+1. **The array is unsorted AND you need the original indices**
+   - Sorting destroys index information
+   - Use: Hash Map (O(n) time, O(n) space)
+
+2. **You need ALL pairs, not just one valid pair**
+   - Two Pointers finds one solution then exits
+   - Use: Nested loops with pruning, or backtracking
+
+3. **The problem requires non-contiguous elements with gaps**
+   - Example: "Pick elements i and j where j - i > k"
+   - Use: Sliding Window or Dynamic Programming
+
+4. **You're comparing across two different arrays**
+   - Two Pointers works on ONE array with two indices
+   - Use: Merge technique (similar but different)
+
+**Common Misapplication:**
+"Sorted array? Use Two Pointers!" ← Wrong if you need original indices.
+  `,
+    commonMistakes: [
+      "Moving both pointers in the same direction",
+      "Not checking if array is sorted first",
+      "Using on linked lists without handling next pointers carefully"
+    ]
   },
   {
     slug: "sliding-window",
@@ -78,6 +195,25 @@ for right in range(len(arr)):
     spaceComplexity: "O(k)",
     difficulty: 2,
     order: 4,
+    whenNotToUse: `
+**DO NOT use Sliding Window when:**
+
+1. **The subarray/substring is NOT contiguous**
+   - If you can pick elements from anywhere, it's not a "window."
+   - Use: Subsets, Hash Map, or Sorting.
+
+2. **The array contains negative numbers (for sum-based windows)**
+   - Negative numbers break the "expand until invalid, shrink until valid" logic because adding an element could decrease the sum.
+   - Use: Prefix Sums or Dynamic Programming.
+
+3. **Ordering within the window doesn't matter**
+   - If you just need a collection of elements, a Hash Map alone is often simpler.
+  `,
+    commonMistakes: [
+      "Forgetting to update the window state when shrinking from the left",
+      "Incorrect while loop condition for shrinking",
+      "Off-by-one errors with window length (right - left + 1)"
+    ]
   },
   {
     slug: "binary-search",
@@ -98,6 +234,24 @@ return -1`,
     spaceComplexity: "O(1)",
     difficulty: 2,
     order: 5,
+    whenNotToUse: `
+**DO NOT use Binary Search when:**
+
+1. **The data is NOT sorted**
+   - Binary Search relies on the transitive property (a < b and b < c).
+   - Use: Linear Search or Sort first.
+
+2. **The search space is too small**
+   - For small arrays (e.g., n < 50), linear search is often faster due to cache locality and lower overhead.
+
+3. **Accessing elements is expensive**
+   - On a linked list, finding the "mid" takes O(n), negating the O(log n) benefit.
+  `,
+    commonMistakes: [
+      "Incorrect mid calculation leading to overflow: (left + right) // 2 vs left + (right - left) // 2",
+      "Using while left < right when you need while left <= right",
+      "Updating pointers incorrectly (e.g., left = mid instead of left = mid + 1)"
+    ]
   },
   {
     slug: "tree",
@@ -438,6 +592,53 @@ for i, num in enumerate(arr):
     difficulty: 3,
     order: 25,
   },
+  {
+    slug: "greedy",
+    name: "Greedy",
+    description: "Make the locally optimal choice at each step, hoping to find the global optimum. Greedy algorithms work when a problem has optimal substructure and the greedy-choice property.",
+    whenToUse: "Scheduling, interval problems, activity selection, coin change (with certain denominations), Huffman coding, Dijkstra's algorithm.",
+    template: `def greedy_approach(items):
+    items.sort(key=lambda x: x[1])  # Sort by end time / weight / etc.
+    result = []
+    for item in items:
+        if is_compatible(item, result):
+            result.append(item)
+    return result`,
+    timeComplexity: "O(n log n)",
+    spaceComplexity: "O(n)",
+    difficulty: 2,
+    order: 26,
+    whenNotToUse: "When the problem requires considering all possibilities (use DP or backtracking instead). Classic trap: 0/1 Knapsack is NOT greedy-solvable.",
+    commonMistakes: [
+      "Assuming greedy works without proving the greedy-choice property",
+      "Not sorting the input correctly before applying greedy logic",
+      "Confusing greedy with dynamic programming problems (e.g. 0/1 knapsack)",
+    ],
+  },
+  {
+    slug: "bit-manipulation",
+    name: "Bit Manipulation",
+    description: "Use bitwise operations (AND, OR, XOR, NOT, shifts) to solve problems efficiently. Particularly useful for toggling, checking, and setting individual bits.",
+    whenToUse: "Finding single/unique numbers, power of two checks, subset generation, flag manipulation, optimization of space usage.",
+    template: `# Common bit tricks
+n & (n - 1)       # Clear lowest set bit
+n & (-n)           # Isolate lowest set bit
+n ^ n == 0         # XOR with self = 0
+n ^ 0 == n         # XOR with 0 = n
+n >> 1             # Divide by 2
+n << 1             # Multiply by 2
+bin(n).count('1')  # Count set bits`,
+    timeComplexity: "O(1) to O(log n)",
+    spaceComplexity: "O(1)",
+    difficulty: 2,
+    order: 27,
+    whenNotToUse: "When the problem involves floating point numbers or when simpler math operations suffice.",
+    commonMistakes: [
+      "Forgetting that Python integers have arbitrary precision (no overflow)",
+      "Confusing arithmetic right shift with logical right shift",
+      "Not handling negative numbers correctly with bitwise operations",
+    ],
+  },
 ];
 
 export async function seedPatterns() {
@@ -456,6 +657,8 @@ export async function seedPatterns() {
           spaceComplexity: p.spaceComplexity,
           difficulty: p.difficulty,
           order: p.order,
+          whenNotToUse: p.whenNotToUse,
+          commonMistakes: p.commonMistakes || [],
         },
         create: {
           slug: p.slug,
@@ -467,6 +670,8 @@ export async function seedPatterns() {
           spaceComplexity: p.spaceComplexity,
           difficulty: p.difficulty,
           order: p.order,
+          whenNotToUse: p.whenNotToUse,
+          commonMistakes: p.commonMistakes || [],
         },
       });
       console.log(`  ✓ Pattern: ${pattern.name}`);

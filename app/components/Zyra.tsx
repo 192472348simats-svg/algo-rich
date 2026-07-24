@@ -1,9 +1,10 @@
-// ZYRA ⭐ — AlgoRich's intelligent guide companion
 "use client";
 
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Send } from "lucide-react";
+import { ErrorBoundary } from "@/app/components/ErrorBoundary";
+import { analytics } from "@/lib/analytics";
 
 // ─── Zyra message types ────────────────────────────────────
 
@@ -241,11 +242,13 @@ function ChatPanel({
   onSend,
   onClose,
   isTyping,
+  isMobile,
 }: {
   messages: ZyraMessage[];
   onSend: (text: string) => void;
   onClose: () => void;
   isTyping: boolean;
+  isMobile: boolean;
 }) {
   const [input, setInput] = useState("");
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -266,7 +269,7 @@ function ChatPanel({
       animate={{ opacity: 1, scale: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.9, y: 20 }}
       transition={{ type: "spring", stiffness: 300, damping: 30 }}
-      className="absolute bottom-20 right-0 w-80 rounded-2xl overflow-hidden shadow-2xl"
+      className={`absolute bottom-20 right-0 ${isMobile ? 'w-[calc(100vw-3rem)]' : 'w-80'} rounded-2xl overflow-hidden shadow-2xl`}
       style={{
         background: "#0f1629",
         border: "1px solid #E5A82960",
@@ -359,14 +362,44 @@ function ChatPanel({
 
 // ─── Main Zyra Component ──────────────────────────────────
 
-export default function Zyra({ context }: { context?: "problem" | "session" | "dashboard" }) {
+function ZyraComponent({
+  context,
+}: {
+  context?: "problem" | "session" | "dashboard";
+}) {
   const [open, setOpen] = useState(false);
   const [mood, setMood] = useState<ZyraMood>("idle");
   const [messages, setMessages] = useState<ZyraMessage[]>([]);
   const [isTyping, setIsTyping] = useState(false);
   const [hasGreeted, setHasGreeted] = useState(false);
   const [bubble, setBubble] = useState<string | null>(null);
-  const idleTimerRef = useRef<NodeJS.Timeout>();
+  const [isMobile, setIsMobile] = useState(false);
+  const idleTimerRef = useRef<NodeJS.Timeout>(undefined);
+
+  // Load persistence
+  useEffect(() => {
+    const saved = localStorage.getItem("zyra_state");
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        setMessages(parsed.messages || []);
+        setHasGreeted(parsed.hasGreeted || false);
+      } catch (e) {
+        console.error("Failed to load Zyra state", e);
+      }
+    }
+
+    // Check mobile
+    const checkMobile = () => setIsMobile(window.innerWidth < 640);
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
+
+  // Save persistence
+  useEffect(() => {
+    localStorage.setItem("zyra_state", JSON.stringify({ messages, hasGreeted }));
+  }, [messages, hasGreeted]);
 
   // Greet after 3 seconds on first load
   useEffect(() => {
@@ -375,11 +408,14 @@ export default function Zyra({ context }: { context?: "problem" | "session" | "d
         setHasGreeted(true);
         setBubble("Hey… I'm Zyra ⭐ Tap me if you need help.");
         setMood("happy");
-        setTimeout(() => { setBubble(null); setMood("idle"); }, 4000);
+        setTimeout(() => {
+          setBubble(null);
+          setMood("idle");
+        }, 4000);
       }
     }, 3000);
     return () => clearTimeout(t);
-  }, []);
+  }, [hasGreeted]);
 
   // Idle nudge — if user hasn't interacted for 3 minutes
   useEffect(() => {
@@ -389,7 +425,10 @@ export default function Zyra({ context }: { context?: "problem" | "session" | "d
         if (!open) {
           setBubble(randomFrom(IDLE_NUDGES));
           setMood("alert");
-          setTimeout(() => { setBubble(null); setMood("idle"); }, 5000);
+          setTimeout(() => {
+            setBubble(null);
+            setMood("idle");
+          }, 5000);
         }
       }, 3 * 60 * 1000);
     };
@@ -404,17 +443,28 @@ export default function Zyra({ context }: { context?: "problem" | "session" | "d
   }, [open]);
 
   const addMessage = (text: string, from: "zyra" | "user") => {
-    setMessages(prev => [...prev, { id: Date.now().toString(), text, from }]);
+    setMessages((prev) => [
+      ...prev,
+      { id: Date.now().toString(), text, from },
+    ]);
   };
 
   const getZyraResponse = (userText: string): string => {
     const lower = userText.toLowerCase();
-    if (lower.includes("hint") || lower.includes("help") || lower.includes("stuck")) {
+    if (
+      lower.includes("hint") ||
+      lower.includes("help") ||
+      lower.includes("stuck")
+    ) {
       setMood("thinking");
       setTimeout(() => setMood("idle"), 2000);
       return randomFrom(HINT_RESPONSES);
     }
-    if (lower.includes("motivat") || lower.includes("tired") || lower.includes("give up")) {
+    if (
+      lower.includes("motivat") ||
+      lower.includes("tired") ||
+      lower.includes("give up")
+    ) {
       setMood("naughty");
       setTimeout(() => setMood("idle"), 2000);
       return "Tired? Good. That means you're actually working.\nPush through this one. The next one gets easier.";
@@ -426,12 +476,20 @@ export default function Zyra({ context }: { context?: "problem" | "session" | "d
         ? "Look at the constraints. Small n? Brute force might work.\nLarge n? You probably need O(n) or O(n log n).\nWhat does the problem want to minimize or maximize?"
         : "Most DSA problems map to 15 patterns. Two pointers, sliding window, BFS, DFS, DP...\nWhich one feels closest to what you're seeing?";
     }
-    if (lower.includes("hello") || lower.includes("hi") || lower.includes("hey")) {
+    if (
+      lower.includes("hello") ||
+      lower.includes("hi") ||
+      lower.includes("hey")
+    ) {
       setMood("happy");
       setTimeout(() => setMood("idle"), 1500);
       return "You called me? Alright… let's fix this.";
     }
-    if (lower.includes("wrong") || lower.includes("fail") || lower.includes("error")) {
+    if (
+      lower.includes("wrong") ||
+      lower.includes("fail") ||
+      lower.includes("error")
+    ) {
       setMood("naughty");
       setTimeout(() => setMood("idle"), 2000);
       return randomFrom(STUCK_RESPONSES);
@@ -470,12 +528,13 @@ export default function Zyra({ context }: { context?: "problem" | "session" | "d
     setTimeout(() => {
       setIsTyping(false);
       const response = getZyraResponse(text);
+      analytics.track('zyra_hint_requested', { text, context });
       addMessage(response, "zyra");
     }, delay);
   };
 
   return (
-    <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end">
+    <div className={`fixed ${isMobile ? 'bottom-4 right-4' : 'bottom-6 right-6'} z-50 flex flex-col items-end`}>
       {/* Speech bubble (auto-triggered) */}
       <AnimatePresence>
         {bubble && !open && (
@@ -492,8 +551,14 @@ export default function Zyra({ context }: { context?: "problem" | "session" | "d
             onClick={handleOpen}
           >
             {bubble}
-            <div className="absolute bottom-[-7px] right-6 w-0 h-0"
-              style={{ borderLeft: "6px solid transparent", borderRight: "6px solid transparent", borderTop: "7px solid #E5A82960" }} />
+            <div
+              className="absolute bottom-[-7px] right-6 w-0 h-0"
+              style={{
+                borderLeft: "6px solid transparent",
+                borderRight: "6px solid transparent",
+                borderTop: "7px solid #E5A82960",
+              }}
+            />
           </motion.div>
         )}
       </AnimatePresence>
@@ -504,8 +569,13 @@ export default function Zyra({ context }: { context?: "problem" | "session" | "d
           <ChatPanel
             messages={messages}
             onSend={handleSend}
-            onClose={() => { setOpen(false); setMood("idle"); }}
+            onClose={() => {
+              setOpen(false);
+              setMood("idle");
+              analytics.track('zyra_dismissed');
+            }}
             isTyping={isTyping}
+            isMobile={isMobile}
           />
         )}
       </AnimatePresence>
@@ -516,5 +586,15 @@ export default function Zyra({ context }: { context?: "problem" | "session" | "d
         onClick={open ? () => setOpen(false) : handleOpen}
       />
     </div>
+  );
+}
+
+export default function Zyra(props: {
+  context?: "problem" | "session" | "dashboard";
+}) {
+  return (
+    <ErrorBoundary componentName="Zyra Mascot">
+      <ZyraComponent {...props} />
+    </ErrorBoundary>
   );
 }

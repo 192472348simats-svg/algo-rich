@@ -25,6 +25,7 @@ import {
   type FailureAnalysis,
   type TestResultInput,
 } from "@/lib/failureAnalysis";
+import { analytics } from "@/lib/analytics";
 
 // Dynamic import Monaco to avoid SSR issues
 const CodeEditor = dynamic(() => import("@/app/components/CodeEditor"), {
@@ -116,7 +117,15 @@ export default function ProblemSolver({ problem, isSolved, userId, relatedLesson
   const [solveTimeSeconds, setSolveTimeSeconds] = useState(0);
   const solveStartTime = useRef<number>(0);
   const problemOpenedAt = useRef<number>(0);
-  useEffect(() => { solveStartTime.current = Date.now(); problemOpenedAt.current = Date.now(); }, []);
+  useEffect(() => { 
+    solveStartTime.current = Date.now(); 
+    problemOpenedAt.current = Date.now(); 
+    analytics.track('problem_started', { 
+        problemId: problem.id, 
+        difficulty: problem.difficulty,
+        category: problem.category
+    });
+  }, [problem.id, problem.difficulty, problem.category]);
   // Failure feedback state
   const [failureAnalysis, setFailureAnalysis] = useState<FailureAnalysis | null>(null);
   const [attemptCount, setAttemptCount] = useState(0);
@@ -284,6 +293,11 @@ export default function ProblemSolver({ problem, isSolved, userId, relatedLesson
         setSolved(true);
         triggerSuccessConfetti();
         celebrate("solve");
+        analytics.track('problem_solved', {
+            problemId: problem.id,
+            attempts: attemptCount + 1,
+            solveTimeSeconds: Math.round((Date.now() - solveStartTime.current) / 1000)
+        });
         setFailureAnalysis(null);
         setShowStuckHelper(false);
         onSolved?.();
@@ -431,7 +445,10 @@ export default function ProblemSolver({ problem, isSolved, userId, relatedLesson
           </span>
           {/* I'm Stuck button */}
           <button
-            onClick={() => setStuckModalOpen(true)}
+            onClick={() => {
+                setStuckModalOpen(true);
+                analytics.track('zyra_hint_requested', { problemId: problem.id, trigger: "stuck_button" });
+            }}
             className={`text-xs px-3 py-1.5 rounded-lg border transition-colors cursor-pointer ${
               isPhase1
                 ? "border-amber-500/40 text-amber-400 bg-amber-500/10 hover:bg-amber-500/20"

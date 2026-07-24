@@ -3,16 +3,45 @@ import prisma from "@/lib/prisma";
 import crypto from "crypto";
 import { sendPasswordResetEmail } from "@/lib/email";
 
+const forgotPasswordRateLimit = new Map<string, { count: number; resetAt: number }>();
+
 export async function POST(req: NextRequest) {
   try {
+    const ip =
+      (req.headers.get("x-forwarded-for") ?? "").split(",")[0].trim() ||
+      req.headers.get("x-real-ip") ||
+      "unknown";
+    const now = Date.now();
     const { email } = await req.json();
 
     if (!email) {
       return NextResponse.json({ error: "Email is required" }, { status: 400 });
     }
 
+    const normalizedEmail = email.toLowerCase().trim();
+
+    // 1. Rate Limiting Check (Internal Memory)
+    const window = 15 * 60 * 1000; // 15 minutes
+    const emailIpKey = `${normalizedEmail}:${ip}`;
+    const entry = forgotPasswordRateLimit.get(emailIpKey);
+    
+    if (entry && now < entry.resetAt) {
+      if (entry.count >= 3) {
+        return Response.json(
+          { error: "Too many requests. Try again in 15 minutes." },
+          { status: 429 }
+        );
+      }
+      entry.count++;
+    } else {
+      forgotPasswordRateLimit.set(emailIpKey, { count: 1, resetAt: now + window });
+    }
+
+    // 2. Artificial Delay (Timing Attack Mitigation)
+    await new Promise(resolve => setTimeout(resolve, 1000));
+
     const user = await prisma.user.findUnique({
-      where: { email },
+      where: { email: normalizedEmail },
       select: { id: true, email: true },
     });
 
@@ -25,24 +54,23 @@ export async function POST(req: NextRequest) {
       const resetTokenExpiry = new Date();
       resetTokenExpiry.setHours(resetTokenExpiry.getHours() + 1);
 
-      await prisma.$executeRaw`
-        UPDATE "User"
-        SET "resetToken" = ${hashedToken}, "resetTokenExpiry" = ${resetTokenExpiry}
-        WHERE "id" = ${user.id}
-      `;
+      await prisma.user.update({
+        where: { id: user.id },
+        data: {
+          resetToken: hashedToken,
+          resetTokenExpiry: resetTokenExpiry,
+        },
+      });
 
       const appBaseUrl =
         process.env.NEXTAUTH_URL || process.env.AUTH_URL || req.nextUrl.origin;
-      const resetUrl = `${appBaseUrl}/reset-password?token=${resetToken}&email=${encodeURIComponent(email)}`;
+      const resetUrl = `${appBaseUrl}/reset-password?token=${resetToken}&email=${encodeURIComponent(normalizedEmail)}`;
 
-      const emailResult = await sendPasswordResetEmail(email, resetUrl);
+      const emailResult = await sendPasswordResetEmail(normalizedEmail, resetUrl);
 
       if (!emailResult.sent) {
         console.warn(
           `[forgot-password] Email not sent via ${emailResult.provider}: ${emailResult.error || "unknown error"}`
-        );
-        console.log(
-          `\n[FORGOT PASSWORD FALLBACK LINK] ${email}\n${resetUrl}\n`
         );
       }
     }

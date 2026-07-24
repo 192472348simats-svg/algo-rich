@@ -1,6 +1,7 @@
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import SessionPlayer from "./SessionPlayer";
+import { ErrorBoundary } from "@/app/components/ErrorBoundary";
 
 export const dynamic = 'force-dynamic'
 
@@ -14,5 +15,9 @@ export default async function SessionPage({ params }: Props) {
 
   const { sessionSlug } = await params;
 
-  return <SessionPlayer sessionSlug={sessionSlug} />;
+  return (
+    <ErrorBoundary componentName="SessionPlayer">
+      <SessionPlayer sessionSlug={sessionSlug} />
+    </ErrorBoundary>
+  );
 }
