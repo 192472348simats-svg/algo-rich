@@ -25,32 +25,56 @@ export interface ExecutionResult {
 
 type PyodideStatus = "idle" | "loading" | "ready" | "running" | "error";
 
-const PISTON_API = "https://emkc.org/api/v2/piston/execute";
+// Judge0 CE — free, no API key, no signup
+// Language ID 71 = Python 3 (CPython 3.11.2)
+const JUDGE0_URL = "https://ce.judge0.com/submissions?base64_encoded=true&wait=true&fields=stdout,stderr,status,compile_output,time";
+const PYTHON_LANG_ID = 71;
 
-async function pistonRun(code: string): Promise<{ stdout: string; stderr: string; code: number }> {
-  const res = await fetch(PISTON_API, {
+function b64encode(str: string): string {
+  return btoa(unescape(encodeURIComponent(str)));
+}
+
+function b64decode(str: string): string {
+  if (!str) return "";
+  return decodeURIComponent(escape(atob(str)));
+}
+
+interface Judge0Result {
+  stdout: string | null;
+  stderr: string | null;
+  compile_output: string | null;
+  status: { id: number; description: string };
+  time: string | null;
+}
+
+async function judge0Run(code: string): Promise<{ stdout: string; stderr: string; exitOk: boolean; ms: number }> {
+  const res = await fetch(JUDGE0_URL, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      language: "python",
-      version: "3.10",
-      files: [{ content: code }],
+      source_code: b64encode(code),
+      language_id: PYTHON_LANG_ID,
+      cpu_time_limit: 5,
+      memory_limit: 128000,
     }),
   });
-  if (!res.ok) throw new Error(`Piston API error: ${res.status}`);
-  const data = await res.json();
-  return {
-    stdout: data.run?.stdout ?? "",
-    stderr: data.run?.stderr ?? "",
-    code: data.run?.code ?? 0,
-  };
+
+  if (!res.ok) throw new Error(`Judge0 error: ${res.status} ${res.statusText}`);
+
+  const data: Judge0Result = await res.json();
+  const stdout = b64decode(data.stdout ?? "");
+  const stderr = b64decode(data.stderr ?? "") || b64decode(data.compile_output ?? "");
+  const ms = Math.round(parseFloat(data.time ?? "0") * 1000);
+  // Status IDs: 3 = Accepted, anything else = error
+  const exitOk = data.status.id === 3;
+  return { stdout, stderr, exitOk, ms };
 }
 
 export function usePyodide() {
   const [status, setStatus] = useState<PyodideStatus>("ready");
-  // Keep these props for API compatibility with existing components
+  // Kept for API compatibility with existing components
   const pyodideProgress = 100;
-  const pyodideMessage = "Python ready (Piston)";
+  const pyodideMessage = "Python ready";
 
   const runCode = useCallback(
     async (
@@ -62,20 +86,18 @@ export function usePyodide() {
       const startTime = performance.now();
 
       try {
-        // ── 1. Run the user's code (plain stdout capture) ──────────────
-        const { stdout, stderr, code: exitCode } = await pistonRun(code);
-        const elapsed = Math.round(performance.now() - startTime);
+        // ── 1. Run user code ──────────────────────────────────────────
+        const { stdout, stderr, exitOk, ms } = await judge0Run(code);
 
         const output = stdout.trimEnd();
-        const error = exitCode !== 0 ? (stderr || "Runtime error").trim() : (stderr.trim() || null);
+        const error = !exitOk ? (stderr || "Runtime error").trim() : (stderr.trim() || null);
 
-        // ── 2. Run test cases if provided ──────────────────────────────
+        // ── 2. Run test cases ─────────────────────────────────────────
         let testResults: TestResult[] | null = null;
 
         if (testCases && testCases.length > 0) {
           testResults = [];
 
-          // Resolve function name from code
           const funcMatch = code.match(/def\s+(\w+)\s*\(/);
           const funcName = functionName ?? (funcMatch ? funcMatch[1] : "solve");
 
@@ -104,7 +126,7 @@ export function usePyodide() {
             }
 
             try {
-              const { stdout: tOut, stderr: tErr, code: tCode } = await pistonRun(testCode);
+              const { stdout: tOut, stderr: tErr, exitOk: tOk } = await judge0Run(testCode);
               const testOutput = tOut.trim();
               const expectedVal = tc.expectedOutput;
 
@@ -126,23 +148,19 @@ export function usePyodide() {
                 index: i + 1,
                 passed,
                 input:
-                  typeof tc.input === "object"
-                    ? JSON.stringify(tc.input)
-                    : (tc.input || ""),
+                  typeof tc.input === "object" ? JSON.stringify(tc.input) : (tc.input || ""),
                 expectedOutput:
                   typeof expectedVal === "object"
                     ? JSON.stringify(expectedVal)
                     : String(expectedVal),
-                actualOutput: tCode !== 0 ? `Error: ${tErr}` : testOutput,
+                actualOutput: !tOk ? `Error: ${tErr}` : testOutput,
               });
             } catch (e) {
               testResults.push({
                 index: i + 1,
                 passed: false,
                 input:
-                  typeof tc.input === "object"
-                    ? JSON.stringify(tc.input)
-                    : (tc.input || ""),
+                  typeof tc.input === "object" ? JSON.stringify(tc.input) : (tc.input || ""),
                 expectedOutput: String(tc.expectedOutput),
                 actualOutput: `Error: ${(e as Error).message}`,
               });
@@ -151,7 +169,7 @@ export function usePyodide() {
         }
 
         setStatus("ready");
-        return { output, error, executionTime: elapsed, testResults };
+        return { output, error, executionTime: ms || Math.round(performance.now() - startTime), testResults };
       } catch (e) {
         setStatus("ready");
         return {
