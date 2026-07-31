@@ -3,9 +3,24 @@ import prisma from "@/lib/prisma";
 import crypto from "crypto";
 import bcrypt from "bcryptjs";
 import { isValidPassword, passwordPolicyMessage } from "@/lib/passwordPolicy";
+import { clientAddress, enforceRateLimit } from "@/lib/rateLimit";
 
 export async function POST(req: NextRequest) {
   try {
+    // Rate limit: 5 attempts per 15 min per IP
+    const limit = await enforceRateLimit({
+      scope: "reset-password",
+      identifier: clientAddress(req.headers),
+      limit: 5,
+      windowMs: 15 * 60 * 1000,
+    });
+    if (!limit.allowed) {
+      return NextResponse.json(
+        { error: "Too many attempts. Please try again later." },
+        { status: 429, headers: { "Retry-After": String(limit.retryAfterSeconds) } }
+      );
+    }
+
     const { email, token, password } = await req.json();
 
     if (typeof email !== "string" || typeof token !== "string" || !isValidPassword(password)) {

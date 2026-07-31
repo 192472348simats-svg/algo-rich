@@ -3,25 +3,30 @@ import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import prisma from "@/lib/prisma";
 import { sendVerificationCodeEmail } from "@/lib/email";
+import { clientAddress, enforceRateLimit } from "@/lib/rateLimit";
 
-const attempts = new Map<string, { count: number; resetAt: number }>();
 const genericResponse = { success: true, message: "If the account needs verification, a new code has been sent." };
 
 export async function POST(request: NextRequest) {
   try {
+    // Rate limit: 3 attempts per 15 min per IP (shared/Upstash when available)
+    const limit = await enforceRateLimit({
+      scope: "resend-verification",
+      identifier: clientAddress(request.headers),
+      limit: 3,
+      windowMs: 15 * 60 * 1000,
+    });
+    if (!limit.allowed) {
+      return NextResponse.json(
+        { error: "Too many requests. Please wait 15 minutes." },
+        { status: 429, headers: { "Retry-After": String(limit.retryAfterSeconds) } }
+      );
+    }
+
     const { email } = await request.json();
     if (typeof email !== "string") return NextResponse.json(genericResponse);
 
     const normalizedEmail = email.toLowerCase().trim();
-    const now = Date.now();
-    const previous = attempts.get(normalizedEmail);
-    if (previous && previous.resetAt > now && previous.count >= 3) {
-      return NextResponse.json({ error: "Too many requests. Please wait 15 minutes." }, { status: 429 });
-    }
-    attempts.set(normalizedEmail, {
-      count: previous && previous.resetAt > now ? previous.count + 1 : 1,
-      resetAt: now + 15 * 60 * 1000,
-    });
 
     const user = await prisma.user.findUnique({
       where: { email: normalizedEmail },
@@ -34,7 +39,7 @@ export async function POST(request: NextRequest) {
       where: { id: user.id },
       data: {
         verificationToken: await bcrypt.hash(code, 12),
-        verificationExpiry: new Date(now + 60 * 60 * 1000),
+        verificationExpiry: new Date(Date.now() + 60 * 60 * 1000),
       },
     });
     const delivery = await sendVerificationCodeEmail(normalizedEmail, code);

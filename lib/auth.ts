@@ -3,6 +3,7 @@ import Credentials from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import prisma from "@/lib/prisma";
 import { enforceRateLimit } from "@/lib/rateLimit";
+import { EmailNotVerifiedError, TooManyAttemptsError } from "@/lib/authErrors";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   pages: {
@@ -10,6 +11,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   },
   session: {
     strategy: "jwt",
+    maxAge: 7 * 24 * 60 * 60, // 7 days (explicit, down from 30-day default)
+  },
+  jwt: {
+    maxAge: 7 * 24 * 60 * 60, // match session maxAge
   },
   providers: [
     Credentials({
@@ -33,7 +38,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           windowMs: 5 * 60 * 1000,
         });
         if (!limit.allowed) {
-          throw new Error("Too many login attempts. Please try again later.");
+          throw new TooManyAttemptsError();
         }
 
         const user = await prisma.user.findUnique({
@@ -58,7 +63,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         }
 
         if (!user.emailVerified) {
-          throw new Error("EMAIL_NOT_VERIFIED");
+          throw new EmailNotVerifiedError();
         }
 
         return {

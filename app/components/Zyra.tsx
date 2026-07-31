@@ -662,7 +662,7 @@ function ZyraComponent({
             }}
             className="bg-[#0f1629] border-2 border-[#E5A829] rounded-3xl p-6 max-w-sm w-full text-center shadow-2xl flex flex-col items-center gap-4 cursor-pointer"
           >
-            <ZyraStar mood="happy" onClick={() => {}} />
+            <ZyraStar mood="happy" onClick={() => { }} />
             <h3 className="text-xl font-bold text-[#E5A829]">Level Up!</h3>
             <p className="text-white text-sm font-medium">{levelUpModal}</p>
             <button className="px-5 py-2 rounded-full bg-[#E5A829] text-[#0a0f24] font-bold text-xs hover:opacity-90">

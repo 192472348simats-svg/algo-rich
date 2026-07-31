@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import prisma from "@/lib/prisma";
+import { clientAddress, enforceRateLimit } from "@/lib/rateLimit";
 
 /**
  * POST /api/auth/verify-email
@@ -9,6 +10,20 @@ import prisma from "@/lib/prisma";
  */
 export async function POST(request: NextRequest) {
   try {
+    // Rate limit: 5 attempts per 15 min per IP
+    const limit = await enforceRateLimit({
+      scope: "verify-email",
+      identifier: clientAddress(request.headers),
+      limit: 5,
+      windowMs: 15 * 60 * 1000,
+    });
+    if (!limit.allowed) {
+      return NextResponse.json(
+        { error: "Too many attempts. Please try again later." },
+        { status: 429, headers: { "Retry-After": String(limit.retryAfterSeconds) } }
+      );
+    }
+
     const { email, otp } = await request.json();
 
     if (!email || !otp || typeof otp !== "string" || otp.length !== 6) {
@@ -18,8 +33,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Normalize email to match signup, reset-password, and resend-verification
+    const normalizedEmail = (email as string).toLowerCase().trim();
+
     const user = await prisma.user.findUnique({
-      where: { email },
+      where: { email: normalizedEmail },
       select: {
         id: true,
         emailVerified: true,

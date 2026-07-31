@@ -3,26 +3,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { motion, useMotionValue, useSpring } from "framer-motion";
 import Link from "next/link";
-import { Activity, Sparkles, Timer } from "lucide-react";
-
-function useCounter(target: number, duration = 1800, start = false) {
-  const [val, setVal] = useState(0);
-  useEffect(() => {
-    if (!start) return;
-    let startTime: number | null = null;
-    const step = (ts: number) => {
-      if (!startTime) startTime = ts;
-      const progress = Math.min((ts - startTime) / duration, 1);
-      const eased = 1 - Math.pow(1 - progress, 3);
-      setVal(Math.round(eased * target));
-      if (progress < 1) requestAnimationFrame(step);
-    };
-    requestAnimationFrame(step);
-  }, [target, duration, start]);
-  return val;
-}
-
-const COMPANIES = ["TCS", "Zoho", "Infosys", "Wipro", "Cognizant", "HCL"];
+import { BookOpen, Code2, TrendingUp } from "lucide-react";
 
 const CODE_STEPS = [
   {
@@ -42,22 +23,12 @@ const CODE_STEPS = [
 ];
 
 export default function HeroSection() {
-  const [statsVisible, setStatsVisible] = useState(false);
   const [codeStep, setCodeStep] = useState(0);
   const cardRef = useRef<HTMLDivElement | null>(null);
   const tiltX = useMotionValue(0);
   const tiltY = useMotionValue(0);
   const springX = useSpring(tiltX, { stiffness: 220, damping: 20, mass: 1 });
   const springY = useSpring(tiltY, { stiffness: 220, damping: 20, mass: 1 });
-
-  const studentsCount = useCounter(2847, 1800, statsVisible);
-  const problemsCount = useCounter(150, 1400, statsVisible);
-  const streakDays = useCounter(34, 1200, statsVisible);
-
-  useEffect(() => {
-    const t = setTimeout(() => setStatsVisible(true), 400);
-    return () => clearTimeout(t);
-  }, []);
 
   useEffect(() => {
     const t = setInterval(() => setCodeStep((v) => (v + 1) % CODE_STEPS.length), 3200);
@@ -108,21 +79,6 @@ export default function HeroSection() {
       <div className="max-w-7xl w-full mx-auto relative z-10">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-20 items-center">
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
-            <div className="flex items-center gap-2 mb-5 flex-wrap">
-              <span className="text-xs" style={{ color: "#6b7a99" }}>
-                Get placed at
-              </span>
-              {COMPANIES.map((c) => (
-                <span
-                  key={c}
-                  className="text-xs px-2.5 py-1 rounded-md font-semibold"
-                  style={{ background: "#0f1629", border: "1px solid #1E3A5F", color: "#c8d0e0" }}
-                >
-                  {c}
-                </span>
-              ))}
-            </div>
-
             <h1
               className="text-5xl sm:text-6xl font-bold text-white mb-5"
               style={{
@@ -133,14 +89,14 @@ export default function HeroSection() {
             >
               From Python basics
               <br />
-              to <span className="text-gradient-gold text-glow">placement-ready</span>
+              to <span className="text-gradient-gold text-glow">interview-ready</span>
               <br />
               in 90 days.
             </h1>
 
             <p className="text-lg mb-8 leading-relaxed max-w-xl" style={{ color: "#c8d0e0" }}>
               Structured DSA learning with immersive sessions, streak-driven XP, and a premium in-browser Python IDE.
-              No guesswork—just the fastest path to a confident placement.
+              No guesswork—just the fastest path to confident problem solving.
             </p>
 
             <div className="flex flex-col sm:flex-row gap-3 mb-10">
@@ -175,9 +131,9 @@ export default function HeroSection() {
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               {[
-                { val: `${studentsCount.toLocaleString()}+`, label: "students", icon: <Sparkles size={16} /> },
-                { val: `${problemsCount}+`, label: "problems", icon: <Activity size={16} /> },
-                { val: `${streakDays} days`, label: "avg streak", icon: <Timer size={16} /> },
+                { label: "Structured courses", desc: "Python → DSA → Patterns", icon: <BookOpen size={16} /> },
+                { label: "Practice problems", desc: "With guided walkthroughs", icon: <Code2 size={16} /> },
+                { label: "Streak-driven learning", desc: "XP, reviews & daily goals", icon: <TrendingUp size={16} /> },
               ].map((s, i) => (
                 <div
                   key={i}
@@ -197,11 +153,11 @@ export default function HeroSection() {
                       {s.icon}
                     </div>
                     <div>
-                      <div className="text-lg font-semibold" style={{ color: "#F5B841" }}>
-                        {s.val}
-                      </div>
-                      <div className="text-xs uppercase tracking-wide" style={{ color: "#7d8ba8" }}>
+                      <div className="text-sm font-semibold" style={{ color: "#F5B841" }}>
                         {s.label}
+                      </div>
+                      <div className="text-xs" style={{ color: "#7d8ba8" }}>
+                        {s.desc}
                       </div>
                     </div>
                   </div>

@@ -207,8 +207,20 @@ export async function POST(request: NextRequest) {
     passedTests = visiblePassed + hiddenPassed;
     passed = passedTests === totalTests;
   } else if (typeof body.passed === "boolean") {
-    // Legacy support: simple passed boolean — DO NOT trust for hidden tests
-    // Only trust if there are no hidden tests
+    // ──────────────────────────────────────────────────────────────────
+    // TRUST BOUNDARY — Legacy client compatibility
+    //
+    // This branch handles older clients that submit a simple { passed: boolean }
+    // instead of the structured testResults[] array. The client-supplied `passed`
+    // flag is trusted ONLY when the problem has zero hidden test cases, because:
+    //   - Visible test cases are inherently client-visible anyway, so a dishonest
+    //     client gains nothing by lying about them.
+    //   - When hidden tests exist, we CANNOT trust the client because the client
+    //     never sees the hidden inputs/outputs.
+    //
+    // TODO: Remove this branch once all clients (PracticeEditor, PlanLessonStep)
+    // have been migrated to send structured testResults[]. Track via issue/ticket.
+    // ──────────────────────────────────────────────────────────────────
     if (hiddenTests === 0) {
       passed = body.passed;
       passedTests = passed ? totalTests : 0;

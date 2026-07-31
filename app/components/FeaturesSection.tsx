@@ -6,7 +6,7 @@ import { BookOpen, TrendingUp, Code2, Repeat2, Map, Brain } from "lucide-react";
 const features = [
   { icon: Map, iconColor: '#E5A829', iconBg: '#1a1400', title: "Structured path", description: "Python → DSA → Patterns. In the right order. Nothing skipped, nothing repeated." },
   { icon: Code2, iconColor: '#61afef', iconBg: '#051628', title: "In-browser Python editor", description: "Write and run real Python in your browser. No setup, no installs, instant feedback." },
-  { icon: Brain, iconColor: '#10b981', iconBg: '#051a12', title: "15 core patterns", description: "Two pointers, sliding window, BFS, DP — once you recognize a pattern, every problem becomes familiar." },
+  { icon: Brain, iconColor: '#10b981', iconBg: '#051a12', title: "16 core patterns", description: "Two pointers, sliding window, BFS, DP — once you recognize a pattern, every problem becomes familiar." },
   { icon: Repeat2, iconColor: '#E5A829', iconBg: '#1a1400', title: "Spaced repetition", description: "Problems resurface at the right time so what you learn actually sticks." },
   { icon: TrendingUp, iconColor: '#10b981', iconBg: '#051a12', title: "XP and streaks", description: "Earn XP every session. Your streak keeps the habit alive day after day." },
   { icon: BookOpen, iconColor: '#61afef', iconBg: '#051628', title: "Guided hints", description: "Stuck? Get a nudge, not the answer. You think it through — Zyra just points the way." },

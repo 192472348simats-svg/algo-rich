@@ -13,17 +13,41 @@ export default function SignInPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [isEmailNotVerified, setIsEmailNotVerified] = useState(false);
+  const [resendStatus, setResendStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
+
+  const handleResendVerification = async () => {
+    setResendStatus("sending");
+    try {
+      const res = await fetch("/api/auth/resend-verification", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+      if (res.ok) {
+        setResendStatus("sent");
+      } else {
+        setResendStatus("error");
+      }
+    } catch {
+      setResendStatus("error");
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+    setIsEmailNotVerified(false);
+    setResendStatus("idle");
     setLoading(true);
     try {
       const result = await signIn("credentials", { email, password, redirect: false });
       if (result?.error) {
-        if (result.error.includes("EMAIL_NOT_VERIFIED")) {
+        // NextAuth v5 beta exposes the CredentialsSignin.code via result.code
+        if (result.code === "EMAIL_NOT_VERIFIED") {
+          setIsEmailNotVerified(true);
           setError("Please verify your email before signing in.");
-        } else if (result.error.includes("Too many login")) {
+        } else if (result.code === "TOO_MANY_ATTEMPTS") {
           setError("Too many attempts. Please wait 5 minutes and try again.");
         } else {
           setError("Invalid email or password. Check your credentials and try again.");
@@ -87,7 +111,28 @@ export default function SignInPage() {
             <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}
               className="rounded-lg px-4 py-3 text-sm mb-5"
               style={{ background: "#1a0505", border: "1px solid #ef444440", color: "#ef4444" }}>
-              {error}
+              <p>{error}</p>
+              {isEmailNotVerified && (
+                <div className="mt-2 flex flex-col gap-1.5">
+                  <Link
+                    href={`/verify-email?email=${encodeURIComponent(email)}`}
+                    className="inline-flex items-center gap-1 text-[#E5A829] hover:text-white transition-colors font-medium"
+                  >
+                    Enter verification code →
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={handleResendVerification}
+                    disabled={resendStatus === "sending" || resendStatus === "sent"}
+                    className="text-left text-xs text-white/50 hover:text-white/70 transition-colors disabled:opacity-40"
+                  >
+                    {resendStatus === "idle" && "Resend verification code"}
+                    {resendStatus === "sending" && "Sending..."}
+                    {resendStatus === "sent" && "✓ Code sent — check your inbox"}
+                    {resendStatus === "error" && "Failed to send — try again"}
+                  </button>
+                </div>
+              )}
             </motion.div>
           )}
 

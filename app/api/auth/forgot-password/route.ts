@@ -2,16 +2,26 @@ import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import crypto from "crypto";
 import { sendPasswordResetEmail } from "@/lib/email";
-
-const forgotPasswordRateLimit = new Map<string, { count: number; resetAt: number }>();
+import { clientAddress, enforceRateLimit } from "@/lib/rateLimit";
 
 export async function POST(req: NextRequest) {
   try {
-    const ip =
-      (req.headers.get("x-forwarded-for") ?? "").split(",")[0].trim() ||
-      req.headers.get("x-real-ip") ||
-      "unknown";
-    const now = Date.now();
+    const ip = clientAddress(req.headers);
+
+    // Rate limit: 3 attempts per 15 min per IP (shared/Upstash when available)
+    const limit = await enforceRateLimit({
+      scope: "forgot-password",
+      identifier: ip,
+      limit: 3,
+      windowMs: 15 * 60 * 1000,
+    });
+    if (!limit.allowed) {
+      return NextResponse.json(
+        { error: "Too many requests. Try again in 15 minutes." },
+        { status: 429, headers: { "Retry-After": String(limit.retryAfterSeconds) } }
+      );
+    }
+
     const { email } = await req.json();
 
     if (!email) {
@@ -20,24 +30,7 @@ export async function POST(req: NextRequest) {
 
     const normalizedEmail = email.toLowerCase().trim();
 
-    // 1. Rate Limiting Check (Internal Memory)
-    const window = 15 * 60 * 1000; // 15 minutes
-    const emailIpKey = `${normalizedEmail}:${ip}`;
-    const entry = forgotPasswordRateLimit.get(emailIpKey);
-    
-    if (entry && now < entry.resetAt) {
-      if (entry.count >= 3) {
-        return Response.json(
-          { error: "Too many requests. Try again in 15 minutes." },
-          { status: 429 }
-        );
-      }
-      entry.count++;
-    } else {
-      forgotPasswordRateLimit.set(emailIpKey, { count: 1, resetAt: now + window });
-    }
-
-    // 2. Artificial Delay (Timing Attack Mitigation)
+    // Artificial Delay (Timing Attack Mitigation)
     await new Promise(resolve => setTimeout(resolve, 1000));
 
     const user = await prisma.user.findUnique({
