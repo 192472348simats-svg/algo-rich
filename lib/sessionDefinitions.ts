@@ -231,6 +231,10 @@ import { sessions as sortingSessions } from "./sessions/sorting";
 import { sessions as twopointersSessions } from "./sessions/two-pointers";
 import { sessions as slidingwindowSessions } from "./sessions/sliding-window";
 import { sessions as binarysearchSessions } from "./sessions/binary-search";
+import { sessions as graphsSessions } from "./sessions/graphs";
+import { sessions as dynamicprogrammingSessions } from "./sessions/dynamic-programming";
+import { sessions as greedySessions } from "./sessions/greedy";
+import { sessions as backtrackingSessions } from "./sessions/backtracking";
 
 // Register all sessions
 const allSessions: SessionDefinition[] = [
@@ -246,6 +250,10 @@ const allSessions: SessionDefinition[] = [
   ...twopointersSessions,
   ...slidingwindowSessions,
   ...binarysearchSessions,
+  ...graphsSessions,
+  ...dynamicprogrammingSessions,
+  ...greedySessions,
+  ...backtrackingSessions,
 ];
 
 allSessions.forEach(registerSession);

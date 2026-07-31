@@ -3,8 +3,8 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
-import { motion, AnimatePresence } from "framer-motion";
-import { useState, useEffect, type ReactNode } from "react";
+import { AnimatePresence, motion } from "framer-motion";
+import { useEffect, useState, type ReactNode } from "react";
 import {
   LayoutDashboard,
   BookOpen,
@@ -118,6 +118,10 @@ export default function Sidebar({
   const [mobileOpen, setMobileOpen] = useState(false);
   const badgeCounts = useBadgeCounts();
 
+  useEffect(() => {
+    setMobileOpen(false);
+  }, [pathname]);
+
   // Filter nav items by minimum phase requirement
   const filteredNavGroups = navGroups
     .map((group) => ({
@@ -139,36 +143,34 @@ export default function Sidebar({
 
   return (
     <>
-      {/* Mobile menu button */}
+      {/* Mobile drawer trigger */}
       <button
-        onClick={() => setMobileOpen(!mobileOpen)}
-        className="lg:hidden fixed top-4 left-4 z-50 p-2 bg-navy-dark border border-gold-primary/30 rounded-lg text-gold-primary"
-        aria-label="Toggle menu"
+        type="button"
+        onClick={() => setMobileOpen((open) => !open)}
+        className="fixed top-4 left-4 z-[70] flex h-10 w-10 items-center justify-center rounded-lg border border-primary/30 bg-navy-dark/95 text-primary shadow-lg backdrop-blur lg:hidden"
+        aria-label={mobileOpen ? "Close navigation menu" : "Open navigation menu"}
+        aria-expanded={mobileOpen}
       >
-        {mobileOpen ? (
-          <X size={24} />
-        ) : (
-          <Menu size={24} />
-        )}
+        {mobileOpen ? <X size={20} /> : <Menu size={20} />}
       </button>
 
-      {/* Overlay */}
       <AnimatePresence>
         {mobileOpen && (
-          <motion.div
+          <motion.button
+            type="button"
+            aria-label="Close navigation menu"
+            className="fixed inset-0 z-[50] bg-black/60 lg:hidden"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            className="lg:hidden fixed inset-0 bg-black/50 z-30"
             onClick={() => setMobileOpen(false)}
           />
         )}
       </AnimatePresence>
 
-      {/* Sidebar */}
+      {/* Desktop sidebar and mobile slide-out drawer */}
       <aside
-        className={`fixed lg:static inset-y-0 left-0 z-40 w-60 glass-strong flex flex-col transition-transform duration-300 lg:translate-x-0 ${
+        className={`fixed lg:static inset-y-0 left-0 z-[60] w-60 glass-strong flex flex-col transition-transform duration-300 lg:translate-x-0 ${
           mobileOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >

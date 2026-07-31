@@ -66,12 +66,10 @@ export async function GET() {
 
   const { currentStreak } = computeStreak(Array.from(activityDates));
 
-  // Progress over last 30 days
-  const thirtyDaysAgo = new Date();
-  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+  // Progress over the last 180 days for the progress heatmap.
 
   const progressOverTime: Array<{ date: string; count: number }> = [];
-  for (let i = 29; i >= 0; i--) {
+  for (let i = 179; i >= 0; i--) {
     const d = new Date();
     d.setDate(d.getDate() - i);
     const dateStr = d.toISOString().slice(0, 10);

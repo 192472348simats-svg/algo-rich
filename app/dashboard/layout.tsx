@@ -73,7 +73,7 @@ export default async function DashboardLayout({
       />
 
       {/* Main Content */}
-      <main className="flex-1 lg:ml-0">
+      <main className="min-w-0 flex-1 lg:ml-0">
         <div className="min-h-screen dashboard-bg grid-bg relative overflow-hidden">
           {/* Ambient depth blobs */}
           <div

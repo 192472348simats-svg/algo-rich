@@ -28,6 +28,7 @@ import { celebrate } from "@/lib/celebrationEngine";
 import { getCountdownData } from "@/lib/interviewCountdown";
 import DailyCardsPreview from "./DailyCardsPreview";
 import AchievementsPreview from "./AchievementsPreview";
+import DailyQuests from "./DailyQuests";
 
 // ─── Types ─────────────────────────────────────────────────
 
@@ -1262,12 +1263,21 @@ export default function DashboardContent({
       {/* ──── Stats Cards (ALWAYS visible, ALL users) ──── */}
       <UnifiedStatsCards stats={stats} />
 
-      {/* Quick Action Cards */}
-      <QuickActions
-        userState={userState}
-        stats={stats}
-        courses={uniqueCourses}
-      />
+      {/* Quick actions + daily gamification */}
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(320px,380px)] items-start">
+        <QuickActions
+          userState={userState}
+          stats={stats}
+          courses={uniqueCourses}
+        />
+        <DailyQuests
+          currentStreak={stats.currentStreak}
+          mediumSolved={stats.mediumSolved}
+        />
+      </div>
+
+      {/* Keep the plan close to the daily goals that feed into it. */}
+      <TodaysPlan />
 
       {/* ────────────────────────────────────────────────── */}
       {/* Widgets section — same for ALL states               */}
@@ -1278,9 +1288,6 @@ export default function DashboardContent({
 
       {/* Achievements Preview */}
       <AchievementsPreview stats={stats} />
-
-      {/* Today's Plan */}
-      <TodaysPlan />
 
       {/* Review Queue */}
       <ReviewQueueWidget />

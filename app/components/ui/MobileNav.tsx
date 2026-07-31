@@ -3,15 +3,15 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion } from "framer-motion";
-import { LayoutDashboard, Code, Layers, Brain, BarChart2 } from "lucide-react";
+import { Compass, Code, RefreshCw, BarChart2, User } from "lucide-react";
 import { useEffect, useState } from "react";
 
 const NAV_ITEMS = [
-  { href: "/dashboard", label: "Home", icon: LayoutDashboard, exact: true, badgeKey: null },
-  { href: "/dashboard/practice", label: "Problems", icon: Code, exact: false, badgeKey: null },
-  { href: "/dashboard/sessions", label: "Sessions", icon: Layers, exact: false, badgeKey: null },
-  { href: "/dashboard/review", label: "Review", icon: Brain, exact: false, badgeKey: "review" as const },
+  { href: "/dashboard/path", label: "Learn", icon: Compass, exact: false, badgeKey: null },
+  { href: "/dashboard/practice", label: "Practice", icon: Code, exact: false, badgeKey: null },
+  { href: "/dashboard/review", label: "Review", icon: RefreshCw, exact: false, badgeKey: "review" as const },
   { href: "/dashboard/progress", label: "Progress", icon: BarChart2, exact: false, badgeKey: null },
+  { href: "/dashboard/settings", label: "Profile", icon: User, exact: false, badgeKey: null },
 ];
 
 function useLiveBadge() {
@@ -58,7 +58,7 @@ export default function MobileNav() {
               className="flex-1 flex flex-col items-center justify-center relative"
             >
               <motion.div
-                whileTap={{ scale: 0.80 }}
+                whileTap={{ scale: 1.05 }}
                 transition={{ type: "spring", stiffness: 400, damping: 20 }}
                 className="flex flex-col items-center justify-center gap-[3px] w-full h-full"
               >
@@ -77,7 +77,7 @@ export default function MobileNav() {
                     size={20}
                     strokeWidth={isActive ? 2.2 : 1.7}
                     className={`transition-colors duration-200 ${
-                      isActive ? "text-primary" : "text-white/35"
+                      isActive ? "text-primary" : "text-slate-400"
                     }`}
                   />
                   {badge > 0 && (
@@ -90,7 +90,7 @@ export default function MobileNav() {
                 {/* Label */}
                 <span
                   className={`text-[10px] font-medium leading-none transition-colors duration-200 ${
-                    isActive ? "text-primary" : "text-white/30"
+                    isActive ? "text-primary" : "text-slate-400"
                   }`}
                 >
                   {item.label}

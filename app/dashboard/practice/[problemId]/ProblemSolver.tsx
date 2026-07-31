@@ -26,6 +26,9 @@ import {
   type TestResultInput,
 } from "@/lib/failureAnalysis";
 import { analytics } from "@/lib/analytics";
+import { recordDailyQuestProgress } from "@/app/dashboard/components/dailyQuestEvents";
+import StreakFlame from "@/app/components/feedback/StreakFlame";
+import { useAudioFeedback } from "@/hooks/useAudioFeedback";
 
 // Dynamic import Monaco to avoid SSR issues
 const CodeEditor = dynamic(() => import("@/app/components/CodeEditor"), {
@@ -79,7 +82,99 @@ interface Props {
   currentPhase?: number;
 }
 
+interface SolveCelebrationData {
+  xp: number;
+  message: string;
+  patternTitle?: string;
+  levelUp?: boolean;
+  newLevel?: number;
+}
+
+const ZYRA_CELEBRATIONS = [
+  "Crushed it! 🔥",
+  "That's the spirit! This pattern is now yours.",
+  "Your brain just leveled up. Literally.",
+  "Zyra is proud! ⭐",
+  "One step closer to that TCS offer!",
+];
+
+function SolveCelebration({ data, onClose }: { data: SolveCelebrationData; onClose: () => void }) {
+  const [typedTitle, setTypedTitle] = useState("");
+  const [count, setCount] = useState(0);
+
+  useEffect(() => {
+    let index = 0;
+    const timer = window.setInterval(() => {
+      index += 1;
+      setTypedTitle("ACCEPTED".slice(0, index));
+      if (index >= 8) window.clearInterval(timer);
+    }, 70);
+    return () => window.clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    const start = performance.now();
+    const duration = 700;
+    let frame = 0;
+    const tick = (now: number) => {
+      const progress = Math.min((now - start) / duration, 1);
+      setCount(Math.round(data.xp * (1 - Math.pow(1 - progress, 3))));
+      if (progress < 1) frame = requestAnimationFrame(tick);
+    };
+    frame = requestAnimationFrame(tick);
+    const dismiss = window.setTimeout(onClose, 4000);
+    return () => {
+      cancelAnimationFrame(frame);
+      window.clearTimeout(dismiss);
+    };
+  }, [data.xp, onClose]);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      onClick={onClose}
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-[#050814]/80 backdrop-blur-sm p-5"
+      role="dialog"
+      aria-label="Solution accepted"
+    >
+      <motion.div
+        initial={{ opacity: 0, scale: 0.82, y: 24 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        transition={{ type: "spring", stiffness: 260, damping: 22 }}
+        onClick={(event) => event.stopPropagation()}
+        className="relative w-full max-w-md overflow-hidden rounded-3xl border border-primary/40 bg-[#0B1120] p-7 text-center shadow-2xl shadow-primary/20"
+      >
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(229,168,41,0.24),transparent_58%)]" />
+        <div className="relative">
+          {data.levelUp && (
+            <motion.div initial={{ y: -12, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="mb-3 text-xs font-black tracking-[0.28em] text-fuchsia-300">
+              LEVEL UP{data.newLevel ? ` · ${data.newLevel}` : ""}
+            </motion.div>
+          )}
+          <motion.div className="text-4xl font-black tracking-[0.2em] text-primary min-h-[3rem]">{typedTitle}</motion.div>
+          <motion.div initial={{ scale: 0.6, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ delay: 0.45 }} className="mt-3 text-2xl font-bold text-white">
+            +{count} XP
+          </motion.div>
+          <div className="mt-5 flex items-center justify-center gap-8">
+            <StreakFlame streakCount={1} isActive={true} />
+          </div>
+          {data.patternTitle && (
+            <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.8 }} className="mt-5 rounded-xl border border-fuchsia-400/30 bg-fuchsia-400/10 px-4 py-3 text-sm text-fuchsia-200">
+              🧩 Pattern unlocked: <span className="font-bold">{data.patternTitle}</span>
+            </motion.div>
+          )}
+          <p className="mt-5 text-sm text-white/70">{data.message}</p>
+          <button onClick={onClose} className="mt-6 rounded-lg border border-white/10 px-4 py-2 text-xs text-white/55 transition hover:border-primary/50 hover:text-primary">Continue</button>
+        </div>
+      </motion.div>
+    </motion.div>
+  );
+}
+
 export default function ProblemSolver({ problem, isSolved, userId, relatedLessons = [], nextProblem, onSolved, currentPhase = 3 }: Props) {
+  const { playSuccess, playError, playLevelUp, triggerHaptic } = useAudioFeedback();
   // Code state
   const storageKey = `algo-rich-code-${problem.id}`;
   const [code, setCode] = useState(() => {
@@ -117,13 +212,13 @@ export default function ProblemSolver({ problem, isSolved, userId, relatedLesson
   const [solveTimeSeconds, setSolveTimeSeconds] = useState(0);
   const solveStartTime = useRef<number>(0);
   const problemOpenedAt = useRef<number>(0);
-  useEffect(() => { 
-    solveStartTime.current = Date.now(); 
-    problemOpenedAt.current = Date.now(); 
-    analytics.track('problem_started', { 
-        problemId: problem.id, 
-        difficulty: problem.difficulty,
-        category: problem.category
+  useEffect(() => {
+    solveStartTime.current = Date.now();
+    problemOpenedAt.current = Date.now();
+    analytics.track('problem_started', {
+      problemId: problem.id,
+      difficulty: problem.difficulty,
+      category: problem.category
     });
   }, [problem.id, problem.difficulty, problem.category]);
   // Failure feedback state
@@ -140,6 +235,7 @@ export default function ProblemSolver({ problem, isSolved, userId, relatedLesson
     title: string;
     description: string;
   } | null>(null);
+  const [solveCelebration, setSolveCelebration] = useState<SolveCelebrationData | null>(null);
   const [ahaMoment, setAhaMoment] = useState<{ pattern: string; message: string } | null>(null);
   const [simplifiedMode, setSimplifiedMode] = useState(false);
   const [showDiff, setShowDiff] = useState(false);
@@ -272,7 +368,15 @@ export default function ProblemSolver({ problem, isSolved, userId, relatedLesson
       execResult.testResults !== null &&
       execResult.testResults.every((t) => t.passed);
 
-    setAttemptCount((prev) => prev + 1);
+    const nextAttempt = attemptCount + 1;
+    setAttemptCount(nextAttempt);
+    if (!allPassed) {
+      playError();
+      triggerHaptic("light");
+      window.dispatchEvent(new CustomEvent("algo-rich:zyra-wrong-answer", {
+        detail: { attempts: nextAttempt, error: execResult.error ?? undefined },
+      }));
+    }
 
     // Save submission — send full test results for server-side hidden test validation
     try {
@@ -290,13 +394,21 @@ export default function ProblemSolver({ problem, isSolved, userId, relatedLesson
       });
       const subData = subRes.ok ? await subRes.json().catch(() => null) : null;
       if (allPassed) {
+        localStorage.setItem("algo-rich:last-solved-date", new Date().toISOString().slice(0, 10));
         setSolved(true);
+        const difficulty = problem.difficulty.toLowerCase();
+        if (difficulty === "easy" || difficulty === "medium") {
+          recordDailyQuestProgress(difficulty);
+        }
         triggerSuccessConfetti();
+        playSuccess();
+        triggerHaptic("celebration");
+        if (subData?.stats?.levelUp) window.setTimeout(() => playLevelUp(), 800);
         celebrate("solve");
         analytics.track('problem_solved', {
-            problemId: problem.id,
-            attempts: attemptCount + 1,
-            solveTimeSeconds: Math.round((Date.now() - solveStartTime.current) / 1000)
+          problemId: problem.id,
+          attempts: attemptCount + 1,
+          solveTimeSeconds: Math.round((Date.now() - solveStartTime.current) / 1000)
         });
         setFailureAnalysis(null);
         setShowStuckHelper(false);
@@ -305,6 +417,16 @@ export default function ProblemSolver({ problem, isSolved, userId, relatedLesson
         if (subData?.stats?.xpEarned) {
           setXpEarned(subData.stats.xpEarned);
         }
+        const discoveredPattern = subData?.stats?.patternDiscovery;
+        const celebrationMessage = ZYRA_CELEBRATIONS[(attemptCount + problem.title.length) % ZYRA_CELEBRATIONS.length];
+        setSolveCelebration({
+          xp: Number(subData?.stats?.xpEarned ?? 0),
+          message: celebrationMessage,
+          patternTitle: discoveredPattern?.patternName ?? discoveredPattern?.title,
+          levelUp: Boolean(subData?.stats?.levelUp),
+          newLevel: typeof subData?.stats?.newLevel === "number" ? subData.stats.newLevel : undefined,
+        });
+        window.dispatchEvent(new CustomEvent("algo-rich:zyra-celebration", { detail: { message: celebrationMessage } }));
         // Show pattern discovery
         if (subData?.stats?.patternDiscovery) {
           setPatternDiscovery(subData.stats.patternDiscovery);
@@ -369,7 +491,7 @@ export default function ProblemSolver({ problem, isSolved, userId, relatedLesson
 
     setValidatingHidden(false);
     setSubmitting(false);
-  }, [code, pyStatus, runCode, problem, submitting, expectedFuncName, onSolved, setSubmitting, setActiveOutputTab, setFailureAnalysis, setResult, setAttemptCount, setSolved, setShowStuckHelper, setXpEarned, setPatternDiscovery, setSolveTimeSeconds, setShowReflection]);
+  }, [code, pyStatus, runCode, problem, submitting, expectedFuncName, onSolved, playError, playSuccess, playLevelUp, triggerHaptic, setSubmitting, setActiveOutputTab, setFailureAnalysis, setResult, setAttemptCount, setSolved, setShowStuckHelper, setXpEarned, setPatternDiscovery, setSolveTimeSeconds, setShowReflection]);
 
   // Reset code
   const handleReset = useCallback(() => {
@@ -381,6 +503,14 @@ export default function ProblemSolver({ problem, isSolved, userId, relatedLesson
 
   return (
     <div className="fixed inset-0 lg:left-60 bg-navy-dark flex flex-col">
+      <AnimatePresence>
+        {solveCelebration && (
+          <SolveCelebration
+            data={solveCelebration}
+            onClose={() => setSolveCelebration(null)}
+          />
+        )}
+      </AnimatePresence>
       {/* Top bar */}
       <div className="flex items-center justify-between px-4 py-2 border-b border-navy-light/30 bg-navy-dark/95 backdrop-blur-sm z-10 flex-shrink-0">
         <div className="flex items-center gap-3 min-w-0">
@@ -421,39 +551,37 @@ export default function ProblemSolver({ problem, isSolved, userId, relatedLesson
         <div className="flex items-center gap-2">
           {/* Pyodide status */}
           <span
-            className={`text-xs px-2 py-1 rounded ${
-              pyStatus === "ready"
+            className={`text-xs px-2 py-1 rounded ${pyStatus === "ready"
                 ? "text-green-400 bg-green-500/10"
                 : pyStatus === "loading"
-                ? "text-yellow-400 bg-yellow-500/10"
-                : pyStatus === "running"
-                ? "text-blue-400 bg-blue-500/10"
-                : pyStatus === "error"
-                ? "text-red-400 bg-red-500/10"
-                : "text-gray-light/40"
-            }`}
+                  ? "text-yellow-400 bg-yellow-500/10"
+                  : pyStatus === "running"
+                    ? "text-blue-400 bg-blue-500/10"
+                    : pyStatus === "error"
+                      ? "text-red-400 bg-red-500/10"
+                      : "text-gray-light/40"
+              }`}
           >
             {pyStatus === "ready"
               ? "Python Ready"
               : pyStatus === "loading"
-              ? "Loading Python..."
-              : pyStatus === "running"
-              ? "Running..."
-              : pyStatus === "error"
-              ? "Error"
-              : "Idle"}
+                ? "Loading Python..."
+                : pyStatus === "running"
+                  ? "Running..."
+                  : pyStatus === "error"
+                    ? "Error"
+                    : "Idle"}
           </span>
           {/* I'm Stuck button */}
           <button
             onClick={() => {
-                setStuckModalOpen(true);
-                analytics.track('zyra_hint_requested', { problemId: problem.id, trigger: "stuck_button" });
+              setStuckModalOpen(true);
+              analytics.track('zyra_hint_requested', { problemId: problem.id, trigger: "stuck_button" });
             }}
-            className={`text-xs px-3 py-1.5 rounded-lg border transition-colors cursor-pointer ${
-              isPhase1
+            className={`text-xs px-3 py-1.5 rounded-lg border transition-colors cursor-pointer ${isPhase1
                 ? "border-amber-500/40 text-amber-400 bg-amber-500/10 hover:bg-amber-500/20"
                 : "border-white/[0.08] text-white/30 hover:text-white/60"
-            }`}
+              }`}
           >
             💡 I&apos;m Stuck
           </button>
@@ -550,9 +678,8 @@ export default function ProblemSolver({ problem, isSolved, userId, relatedLesson
                 className="flex items-center gap-2 text-sm text-gray-light/50 hover:text-gold-primary transition-colors"
               >
                 <svg
-                  className={`w-4 h-4 transition-transform ${
-                    hintsOpen ? "rotate-90" : ""
-                  }`}
+                  className={`w-4 h-4 transition-transform ${hintsOpen ? "rotate-90" : ""
+                    }`}
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -671,21 +798,20 @@ export default function ProblemSolver({ problem, isSolved, userId, relatedLesson
                 disabled={
                   pyStatus !== "ready" || submitting
                 }
-                className={`w-full py-3 rounded-lg font-semibold text-sm transition-all duration-300 ${
-                  submitting
+                className={`w-full py-3 rounded-lg font-semibold text-sm transition-all duration-300 ${submitting
                     ? "bg-navy-light/40 text-gray-light/50 cursor-wait"
                     : pyStatus !== "ready"
-                    ? "bg-navy-light/40 text-gray-light/40 cursor-not-allowed"
-                    : "bg-gradient-to-r from-gold-primary to-gold-light text-navy-dark hover:shadow-lg hover:shadow-gold-primary/30 cursor-pointer"
-                }`}
+                      ? "bg-navy-light/40 text-gray-light/40 cursor-not-allowed"
+                      : "bg-gradient-to-r from-gold-primary to-gold-light text-navy-dark hover:shadow-lg hover:shadow-gold-primary/30 cursor-pointer"
+                  }`}
               >
                 {validatingHidden
                   ? "Validating hidden tests..."
                   : submitting
-                  ? "Submitting..."
-                  : pyStatus !== "ready"
-                  ? "Waiting for Python..."
-                  : "Submit Solution"}
+                    ? "Submitting..."
+                    : pyStatus !== "ready"
+                      ? "Waiting for Python..."
+                      : "Submit Solution"}
               </button>
             </div>
 
@@ -807,13 +933,12 @@ export default function ProblemSolver({ problem, isSolved, userId, relatedLesson
                         {simpleLineDiff(problem.starterCode, code).map((line, i) => (
                           <div
                             key={i}
-                            className={`px-2 py-0.5 rounded ${
-                              line.type === "added"
+                            className={`px-2 py-0.5 rounded ${line.type === "added"
                                 ? "bg-emerald-500/10 text-emerald-300"
                                 : line.type === "removed"
-                                ? "bg-red-500/10 text-red-300"
-                                : "text-white/30"
-                            }`}
+                                  ? "bg-red-500/10 text-red-300"
+                                  : "text-white/30"
+                              }`}
                           >
                             <span className="select-none mr-2 text-white/20">{line.type === "added" ? "+" : line.type === "removed" ? "−" : " "}</span>
                             {line.content || " "}
@@ -924,22 +1049,20 @@ export default function ProblemSolver({ problem, isSolved, userId, relatedLesson
               <button
                 onClick={handleRun}
                 disabled={pyStatus !== "ready"}
-                className={`px-4 py-1.5 text-xs font-medium rounded transition-all duration-200 ${
-                  pyStatus !== "ready"
+                className={`px-4 py-1.5 text-xs font-medium rounded transition-all duration-200 ${pyStatus !== "ready"
                     ? "bg-navy-light/30 text-gray-light/40 cursor-not-allowed"
                     : "bg-gold-primary/15 text-gold-primary border border-gold-primary/30 hover:bg-gold-primary/25"
-                }`}
+                  }`}
               >
                 ▶ Run
               </button>
               <button
                 onClick={handleRunTests}
                 disabled={pyStatus !== "ready"}
-                className={`px-4 py-1.5 text-xs font-semibold rounded transition-all duration-200 ${
-                  pyStatus !== "ready"
+                className={`px-4 py-1.5 text-xs font-semibold rounded transition-all duration-200 ${pyStatus !== "ready"
                     ? "bg-navy-light/30 text-gray-light/40 cursor-not-allowed"
                     : "bg-gradient-to-r from-gold-primary to-gold-light text-navy-dark hover:shadow-md hover:shadow-gold-primary/20"
-                }`}
+                  }`}
               >
                 ▶ Run Tests
               </button>
@@ -962,16 +1085,16 @@ export default function ProblemSolver({ problem, isSolved, userId, relatedLesson
                 />
               </div>
             ) : (
-            <CodeEditor
-              initialCode={code}
-              onChange={setCode}
-              fontSize={fontSize}
-              language="python"
-              showMinimap={!isPhase1}
-              pyodideReady={pyStatus === "ready" || pyStatus === "running"}
-              pyodideProgress={pyodideProgress}
-              pyodideMessage={pyodideMessage}
-            />
+              <CodeEditor
+                initialCode={code}
+                onChange={setCode}
+                fontSize={fontSize}
+                language="python"
+                showMinimap={!isPhase1}
+                pyodideReady={pyStatus === "ready" || pyStatus === "running"}
+                pyodideProgress={pyodideProgress}
+                pyodideMessage={pyodideMessage}
+              />
             )}
           </div>
         </div>
@@ -993,21 +1116,19 @@ export default function ProblemSolver({ problem, isSolved, userId, relatedLesson
           <div className="flex border-b border-navy-light/30 flex-shrink-0">
             <button
               onClick={() => setActiveOutputTab("output")}
-              className={`flex-1 py-2.5 text-xs font-medium transition-colors ${
-                activeOutputTab === "output"
+              className={`flex-1 py-2.5 text-xs font-medium transition-colors ${activeOutputTab === "output"
                   ? "text-gold-primary border-b-2 border-gold-primary"
                   : "text-gray-light/50 hover:text-gray-light/80"
-              }`}
+                }`}
             >
               Output
             </button>
             <button
               onClick={() => setActiveOutputTab("tests")}
-              className={`flex-1 py-2.5 text-xs font-medium transition-colors ${
-                activeOutputTab === "tests"
+              className={`flex-1 py-2.5 text-xs font-medium transition-colors ${activeOutputTab === "tests"
                   ? "text-gold-primary border-b-2 border-gold-primary"
                   : "text-gray-light/50 hover:text-gray-light/80"
-              }`}
+                }`}
             >
               Test Results
               {result?.testResults && (
@@ -1032,9 +1153,9 @@ export default function ProblemSolver({ problem, isSolved, userId, relatedLesson
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-xs font-medium text-white">
                       {pyodideProgress < 25 ? "Starting Python environment..." :
-                       pyodideProgress < 60 ? "Loading standard library..." :
-                       pyodideProgress < 90 ? "Compiling modules..." :
-                       "Almost ready..."}
+                        pyodideProgress < 60 ? "Loading standard library..." :
+                          pyodideProgress < 90 ? "Compiling modules..." :
+                            "Almost ready..."}
                     </span>
                     <span className="text-xs" style={{ color: "#E5A829" }}>{pyodideProgress}%</span>
                   </div>
@@ -1352,11 +1473,10 @@ function TestResultsPanel({
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
-        className={`p-3 rounded-lg border text-sm font-medium ${
-          allPassed
+        className={`p-3 rounded-lg border text-sm font-medium ${allPassed
             ? "bg-green-500/10 border-green-500/30 text-green-400"
             : "bg-red-500/10 border-red-500/30 text-red-400"
-        }`}
+          }`}
       >
         {allPassed ? "✓ All tests passed!" : `✗ ${passed}/${total} tests passed`}
       </motion.div>
@@ -1396,11 +1516,10 @@ function TestResultsPanel({
                 delay: tr.index * 0.08,
                 ease: "easeOut" as const,
               }}
-              className={`p-3 rounded-lg border text-xs ${
-                tr.passed
+              className={`p-3 rounded-lg border text-xs ${tr.passed
                   ? "bg-green-500/5 border-green-500/20"
                   : "bg-red-500/5 border-red-500/20"
-              }`}
+                }`}
             >
               <div className="flex items-center gap-2 mb-1.5">
                 <span

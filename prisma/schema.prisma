@@ -9,36 +9,36 @@ datasource db {
 }
 
 model User {
-  id                    String            @id @default(uuid())
-  name                  String
-  email                 String            @unique
-  password              String
-  createdAt             DateTime          @default(now())
-  experienceLevel       String?
-  learningGoal          String?
-  onboardingCompleted   Boolean           @default(false)
-  dailyGoalMinutes      Int               @default(20)
-  totalXP               Int               @default(0)
-  firstLessonAt         DateTime?
-  firstSolveAt          DateTime?
-  firstVisualizerAt     DateTime?
-  firstPlanAt           DateTime?
-  currentPhase          Int               @default(1)
-  currentWeek           Int               @default(1)
-  phaseStartedAt        DateTime?
-  phase1CompletedAt     DateTime?
-  phase2CompletedAt     DateTime?
-  phase3CompletedAt     DateTime?
-  phase4CompletedAt     DateTime?
-  targetInterviewDate   DateTime?
-  lastBossCompletedAt   DateTime?
-  bossProblemsWon       Int               @default(0)
-  emailVerified         Boolean           @default(false)
-  verificationToken     String?
-  verificationExpiry    DateTime?
-  resetToken            String?
-  resetTokenExpiry      DateTime?
-  timeZone              String            @default("UTC")
+  id                  String    @id @default(uuid())
+  name                String
+  email               String    @unique
+  password            String
+  createdAt           DateTime  @default(now())
+  experienceLevel     String?
+  learningGoal        String?
+  onboardingCompleted Boolean   @default(false)
+  dailyGoalMinutes    Int       @default(20)
+  totalXP             Int       @default(0)
+  firstLessonAt       DateTime?
+  firstSolveAt        DateTime?
+  firstVisualizerAt   DateTime?
+  firstPlanAt         DateTime?
+  currentPhase        Int       @default(1)
+  currentWeek         Int       @default(1)
+  phaseStartedAt      DateTime?
+  phase1CompletedAt   DateTime?
+  phase2CompletedAt   DateTime?
+  phase3CompletedAt   DateTime?
+  phase4CompletedAt   DateTime?
+  targetInterviewDate DateTime?
+  lastBossCompletedAt DateTime?
+  bossProblemsWon     Int       @default(0)
+  emailVerified       Boolean   @default(false)
+  verificationToken   String?
+  verificationExpiry  DateTime?
+  resetToken          String?
+  resetTokenExpiry    DateTime?
+  timeZone            String    @default("UTC")
 
   // Stripe Subscriptions
   stripeCustomerId       String?   @unique
@@ -46,18 +46,37 @@ model User {
   stripePriceId          String?
   stripeCurrentPeriodEnd DateTime?
 
-  progress        Progress[]
-  submissions     Submission[]
-  preferences     UserPreferences?
-  patternProgress PatternProgress[]
-  flashCards      FlashCard[]
-  quizResults     QuizResult[]
-  cardReviews     CardReview[]
-  feedbacks       Feedback[]
-  sessionProgress SessionProgress[]
-  problemReviews  ProblemReview[]
-  reflections     Reflection[]
+  progress            Progress[]
+  submissions         Submission[]
+  preferences         UserPreferences?
+  patternProgress     PatternProgress[]
+  flashCards          FlashCard[]
+  quizResults         QuizResult[]
+  cardReviews         CardReview[]
+  feedbacks           Feedback[]
+  sessionProgress     SessionProgress[]
+  problemReviews      ProblemReview[]
+  reflections         Reflection[]
   walkthroughProgress WalkthroughProgress[]
+  dailyQuests         DailyQuest[]
+}
+
+model DailyQuest {
+  id        String   @id @default(cuid())
+  userId    String
+  date      DateTime @db.Date
+  questType String
+  title     String
+  target    Int
+  xpReward  Int
+  progress  Int      @default(0)
+  claimed   Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, date, questType])
+  @@index([userId, date])
 }
 
 model StripeWebhookEvent {
@@ -68,15 +87,15 @@ model StripeWebhookEvent {
 }
 
 model Problem {
-  id                     String          @id @default(uuid())
-  slug                   String          @unique
+  id                     String   @id @default(uuid())
+  slug                   String   @unique
   title                  String
   difficulty             String
   pattern                String?
   topics                 String?
   companies              String?
   companyTags            String?
-  company                String?         @default("")  // JSON array stored as string, e.g: "[\"Google\",\"Meta\"]"
+  company                String?  @default("") // JSON array stored as string, e.g: "[\"Google\",\"Meta\"]"
   description            String
   examples               String?
   constraints            String?
@@ -88,22 +107,22 @@ model Problem {
   spaceComplexity        String?
   testCases              String
   hiddenTestCases        String?
-  order                  Int             @default(0)
-  isActive               Boolean         @default(true)
-  createdAt              DateTime        @default(now())
-  updatedAt              DateTime        @updatedAt
-  topicOrder             Int             @default(0)
-  category               String?         @default("DSA")
+  order                  Int      @default(0)
+  isActive               Boolean  @default(true)
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+  topicOrder             Int      @default(0)
+  category               String?  @default("DSA")
   solutionApproach       String?
   visualizationType      String?
-  phase                  Int             @default(3)
-  weekNumber             Int             @default(1)
+  phase                  Int      @default(3)
+  weekNumber             Int      @default(1)
   prerequisiteProblems   String?
   conceptTaught          String?
   correctPattern         String?
   correctTimeComplexity  String?
   correctSpaceComplexity String?
-  isOptimal              Boolean         @default(true)
+  isOptimal              Boolean  @default(true)
 
   submissions  Submission[]
   patternModel Pattern?        @relation(fields: [pattern], references: [slug])
@@ -149,8 +168,8 @@ model Course {
 }
 
 model Lesson {
-  id            String   @id @default(uuid())
-  slug          String   @unique
+  id            String  @id @default(uuid())
+  slug          String  @unique
   courseId      String
   title         String
   content       String
@@ -180,10 +199,10 @@ model Progress {
 }
 
 model LessonProblem {
-  id        String  @id @default(uuid())
+  id        String @id @default(uuid())
   lessonId  String
   problemId String
-  order     Int     @default(0)
+  order     Int    @default(0)
 
   lesson  Lesson  @relation(fields: [lessonId], references: [id], onDelete: Cascade)
   problem Problem @relation(fields: [problemId], references: [id], onDelete: Cascade)
@@ -311,16 +330,16 @@ model PredictionCard {
 }
 
 model CardReview {
-  id             String         @id @default(uuid())
+  id             String   @id @default(uuid())
   userId         String
   cardId         String
   correct        Boolean
   responseTimeMs Int?
-  easeFactor     Float          @default(2.5)
-  interval       Int            @default(1)
-  repetitions    Int            @default(0)
-  nextReviewAt   DateTime       @default(now())
-  createdAt      DateTime       @default(now())
+  easeFactor     Float    @default(2.5)
+  interval       Int      @default(1)
+  repetitions    Int      @default(0)
+  nextReviewAt   DateTime @default(now())
+  createdAt      DateTime @default(now())
 
   user User           @relation(fields: [userId], references: [id], onDelete: Cascade)
   card PredictionCard @relation(fields: [cardId], references: [id], onDelete: Cascade)
@@ -330,15 +349,15 @@ model CardReview {
 }
 
 model SessionProgress {
-  id                String   @id @default(uuid())
+  id                String    @id @default(uuid())
   userId            String
   sessionSlug       String
-  currentStageIndex Int      @default(0)
-  completed         Boolean  @default(false)
-  stageResults      String   @default("{}")
-  startedAt         DateTime @default(now())
+  currentStageIndex Int       @default(0)
+  completed         Boolean   @default(false)
+  stageResults      String    @default("{}")
+  startedAt         DateTime  @default(now())
   completedAt       DateTime?
-  totalXPEarned     Int      @default(0)
+  totalXPEarned     Int       @default(0)
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -347,17 +366,17 @@ model SessionProgress {
 }
 
 model ProblemReview {
-  id             String   @id @default(uuid())
+  id             String    @id @default(uuid())
   userId         String
   problemId      String
-  easeFactor     Float    @default(2.5)
-  interval       Int      @default(1)
-  repetitions    Int      @default(0)
-  nextReviewAt   DateTime @default(now())
+  easeFactor     Float     @default(2.5)
+  interval       Int       @default(1)
+  repetitions    Int       @default(0)
+  nextReviewAt   DateTime  @default(now())
   lastRating     Int?
-  totalReviews   Int      @default(0)
+  totalReviews   Int       @default(0)
   lastReviewedAt DateTime?
-  enrolledAt     DateTime @default(now())
+  enrolledAt     DateTime  @default(now())
 
   user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
   problem Problem @relation(fields: [problemId], references: [id], onDelete: Cascade)
@@ -411,14 +430,14 @@ model WalkthroughProgress {
 }
 
 model AdminAuditLog {
-  id         String   @id @default(uuid())
-  adminId    String
-  action     String
-  targetId   String?
-  metadata   Json?
-  ipAddress  String?
-  userAgent  String?
-  createdAt  DateTime @default(now())
+  id        String   @id @default(uuid())
+  adminId   String
+  action    String
+  targetId  String?
+  metadata  Json?
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
 
   @@index([adminId, createdAt])
   @@index([action, createdAt])

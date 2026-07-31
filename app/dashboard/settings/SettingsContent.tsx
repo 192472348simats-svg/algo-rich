@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { signOut } from "next-auth/react";
 
@@ -46,6 +46,17 @@ export default function SettingsContent({
   const [changingPassword, setChangingPassword] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [soundEnabled, setSoundEnabled] = useState(true);
+
+  useEffect(() => {
+    const stored = localStorage.getItem("algo-rich-sound-enabled");
+    if (stored !== null) setSoundEnabled(stored !== "false");
+  }, []);
+
+  function handleSoundToggle(enabled: boolean) {
+    setSoundEnabled(enabled);
+    localStorage.setItem("algo-rich-sound-enabled", String(enabled));
+  }
 
   async function handleProfileUpdate(e: React.FormEvent) {
     e.preventDefault();
@@ -191,6 +202,29 @@ export default function SettingsContent({
             {saving ? "Saving..." : "Save Changes"}
           </button>
         </form>
+      </motion.div>
+
+      {/* Accessibility and feedback */}
+      <motion.div
+        variants={itemVariants}
+        className="bg-card/60 border border-primary/10 rounded-xl p-6 backdrop-blur-sm"
+      >
+        <h2 className="text-xl font-semibold text-white mb-2">Feedback</h2>
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <p className="text-sm text-white">Enable sound effects</p>
+            <p className="text-xs text-foreground opacity-60">Play feedback tones for correct and incorrect submissions.</p>
+          </div>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={soundEnabled}
+            onClick={() => handleSoundToggle(!soundEnabled)}
+            className={`relative w-11 h-6 rounded-full transition-colors ${soundEnabled ? "bg-primary" : "bg-white/20"}`}
+          >
+            <span className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-transform ${soundEnabled ? "translate-x-6" : "translate-x-1"}`} />
+          </button>
+        </div>
       </motion.div>
 
       {/* Password Section */}

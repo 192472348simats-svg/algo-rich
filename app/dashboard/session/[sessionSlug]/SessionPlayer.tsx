@@ -24,6 +24,7 @@ import GuidedBuildStage from "@/app/components/session/GuidedBuildStage";
 import CodeStage from "@/app/components/session/CodeStage";
 import ReflectStage from "@/app/components/session/ReflectStage";
 import SummaryStage from "@/app/components/session/SummaryStage";
+import { recordDailyQuestProgress } from "@/app/dashboard/components/dailyQuestEvents";
 
 interface SessionPlayerProps {
   sessionSlug: string;
@@ -157,6 +158,7 @@ export default function SessionPlayer({ sessionSlug }: SessionPlayerProps) {
         if (!response.ok) {
           throw new Error(`Progress save failed (${response.status})`);
         }
+        recordDailyQuestProgress("session");
       } catch (err) {
         console.error("Failed to save progress:", err);
         completingStageRef.current = false;

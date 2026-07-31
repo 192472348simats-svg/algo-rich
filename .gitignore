@@ -46,3 +46,11 @@ next-env.d.ts
 SQLITE_*.md
 test-*-connection.js
 verify-sqlite-*.js
+
+# Desktop tool databases
+.freebuff/
+
+# Debug / generated artifacts
+seed-output.txt
+prisma/schema-fixed.prisma
+prisma/schema.postgres.generated.prisma

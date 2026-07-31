@@ -6,6 +6,7 @@ import { invalidateUserCache } from "@/lib/cache";
 import { enrollProblemForReview } from "@/lib/reviewEngine";
 import { checkPatternDiscovery } from "@/lib/patternDiscovery";
 import { checkAhaMoment } from "@/lib/ahaDetector";
+import { getLevelForXP } from "@/lib/xpSystem";
 
 const submissionRateLimit = new Map<string, { count: number; resetAt: number }>();
 
@@ -18,6 +19,31 @@ let pistonBreaker = {
 
 const CIRCUIT_BREAKER_THRESHOLD = 3;
 const CIRCUIT_BREAKER_COOLDOWN = 5 * 60 * 1000; // 5 minutes
+
+/** Remove the interactive stdin runner from starter templates before appending
+ * the server's hidden-test harness. The runner is useful in the editor, but it
+ * would consume stdin or print a second result during hidden validation. */
+function stripInputHarness(code: string): string {
+  const lines = code.split("\n");
+  let callableSeen = false;
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const trimmed = line.trim();
+    if (/^(def|class)\s+\w+/.test(trimmed)) callableSeen = true;
+
+    const topLevel = line === trimmed;
+    const startsRunner =
+      /^(import\s+json(?:\s|,|$)|from\s+sys\s+import\s)/.test(trimmed) ||
+      /\binput\s*\(/.test(trimmed);
+
+    if (callableSeen && topLevel && startsRunner) {
+      return lines.slice(0, i).join("\n").trimEnd();
+    }
+  }
+
+  return code;
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -116,7 +142,8 @@ export async function POST(request: NextRequest) {
           const funcName = match ? match[1] : "";
 
           if (funcName) {
-            let testHarness = `import json\n\n${code}\n\n`;
+            const functionCode = stripInputHarness(code);
+            let testHarness = `import json\n\n${functionCode}\n\n`;
             testHarness += `tests = ${JSON.stringify(problem.hiddenTestCases)}\n`;
             testHarness += `passed = 0\n`;
             testHarness += `for t in tests:\n`;
@@ -231,11 +258,14 @@ export async function POST(request: NextRequest) {
       ? xpMap[problem.difficulty] || 10
       : Math.floor((xpMap[problem.difficulty] || 10) / 4);
 
-    // Update user totalXP
-    await prisma.user.update({
+    // Update user totalXP and calculate level-up from the authoritative value.
+    const updatedUser = await prisma.user.update({
       where: { id: session.user.id },
       data: { totalXP: { increment: xpEarned } },
+      select: { totalXP: true },
     });
+    const previousLevel = getLevelForXP(updatedUser.totalXP - xpEarned).current.level;
+    const newLevel = getLevelForXP(updatedUser.totalXP).current.level;
 
     // Update pattern progress if applicable
     let ahaMoment = null;
@@ -374,6 +404,8 @@ export async function POST(request: NextRequest) {
       xpEarned,
       difficulty: problem.difficulty,
       pattern: problem.pattern,
+      levelUp: newLevel > previousLevel,
+      newLevel,
       patternDiscovery,
       ahaMoment,
     };

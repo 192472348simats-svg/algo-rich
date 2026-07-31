@@ -1,5 +1,3 @@
-import { createHash } from "crypto";
-
 type LocalEntry = { count: number; resetAt: number };
 
 const localEntries = new Map<string, LocalEntry>();
@@ -18,8 +16,10 @@ export type RateLimitResult = {
   backend: "upstash" | "memory";
 };
 
-function keyFor(scope: string, identifier: string) {
-  const digest = createHash("sha256").update(identifier).digest("hex");
+async function keyFor(scope: string, identifier: string) {
+  const bytes = new TextEncoder().encode(identifier);
+  const digestBuffer = await globalThis.crypto.subtle.digest("SHA-256", bytes);
+  const digest = Array.from(new Uint8Array(digestBuffer), (byte) => byte.toString(16).padStart(2, "0")).join("");
   return `algo-rich:rate-limit:${scope}:${digest}`;
 }
 
@@ -51,7 +51,7 @@ function checkMemory(key: string, limit: number, windowMs: number): RateLimitRes
  * UPSTASH_REDIS_REST_TOKEN configured it is shared across server instances.
  */
 export async function enforceRateLimit(options: RateLimitOptions): Promise<RateLimitResult> {
-  const key = keyFor(options.scope, options.identifier);
+  const key = await keyFor(options.scope, options.identifier);
   const url = process.env.UPSTASH_REDIS_REST_URL;
   const token = process.env.UPSTASH_REDIS_REST_TOKEN;
 

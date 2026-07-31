@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
+import { comparableOutput } from "@/lib/codeRunner";
 
 export interface TestCase {
   input: Record<string, unknown> | string;
@@ -47,13 +48,14 @@ interface Judge0Result {
   time: string | null;
 }
 
-async function judge0Run(code: string): Promise<{ stdout: string; stderr: string; exitOk: boolean; ms: number }> {
+async function judge0Run(code: string, stdin = ""): Promise<{ stdout: string; stderr: string; exitOk: boolean; ms: number; status: string }> {
   const res = await fetch(JUDGE0_URL, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       source_code: b64encode(code),
       language_id: PYTHON_LANG_ID,
+      ...(stdin ? { stdin: b64encode(stdin) } : {}),
       cpu_time_limit: 5,
       memory_limit: 128000,
     }),
@@ -67,7 +69,7 @@ async function judge0Run(code: string): Promise<{ stdout: string; stderr: string
   const ms = Math.round(parseFloat(data.time ?? "0") * 1000);
   // Status IDs: 3 = Accepted, anything else = error
   const exitOk = data.status.id === 3;
-  return { stdout, stderr, exitOk, ms };
+  return { stdout, stderr, exitOk, ms, status: data.status.description };
 }
 
 export function usePyodide() {
@@ -87,10 +89,18 @@ export function usePyodide() {
 
       try {
         // ── 1. Run user code ──────────────────────────────────────────
-        const { stdout, stderr, exitOk, ms } = await judge0Run(code);
+        let output = "";
+        let error: string | null = null;
+        let ms = 0;
 
-        const output = stdout.trimEnd();
-        const error = !exitOk ? (stderr || "Runtime error").trim() : (stderr.trim() || null);
+        // Full-program starter templates read from stdin. Do not execute them
+        // once without input before the individual test cases are run.
+        if (!testCases || testCases.length === 0) {
+          const run = await judge0Run(code);
+          output = run.stdout.trimEnd();
+          error = !run.exitOk ? (run.stderr || run.status || "Runtime error").trim() : (run.stderr.trim() || null);
+          ms = run.ms;
+        }
 
         // ── 2. Run test cases ─────────────────────────────────────────
         let testResults: TestResult[] | null = null;
@@ -104,8 +114,13 @@ export function usePyodide() {
           for (let i = 0; i < testCases.length; i++) {
             const tc = testCases[i];
             let testCode = "";
+            let testStdin = "";
 
-            if (typeof tc.input === "object" && tc.input !== null) {
+            const usesStdin = /(?:^|\n)\s*(?:import\s+json|from\s+sys\s+import|\w+\s*=\s*input\s*\()/m.test(code);
+            if (usesStdin) {
+              testCode = code;
+              testStdin = `${typeof tc.input === "string" ? tc.input : JSON.stringify(tc.input)}\n`;
+            } else if (typeof tc.input === "object" && tc.input !== null) {
               const args = Object.values(tc.input)
                 .map((v) => JSON.stringify(v))
                 .join(", ");
@@ -126,23 +141,11 @@ export function usePyodide() {
             }
 
             try {
-              const { stdout: tOut, stderr: tErr, exitOk: tOk } = await judge0Run(testCode);
+              const { stdout: tOut, stderr: tErr, exitOk: tOk, status: tStatus } = await judge0Run(testCode, testStdin);
               const testOutput = tOut.trim();
               const expectedVal = tc.expectedOutput;
 
-              let passed = false;
-              try {
-                const actualParsed = JSON.parse(testOutput);
-                const expectedParsed =
-                  typeof expectedVal === "string" ? JSON.parse(expectedVal) : expectedVal;
-                passed = JSON.stringify(actualParsed) === JSON.stringify(expectedParsed);
-              } catch {
-                passed =
-                  testOutput ===
-                  (typeof expectedVal === "string"
-                    ? expectedVal.trim()
-                    : JSON.stringify(expectedVal));
-              }
+              const passed = comparableOutput(testOutput, expectedVal);
 
               testResults.push({
                 index: i + 1,
@@ -153,7 +156,7 @@ export function usePyodide() {
                   typeof expectedVal === "object"
                     ? JSON.stringify(expectedVal)
                     : String(expectedVal),
-                actualOutput: !tOk ? `Error: ${tErr}` : testOutput,
+                actualOutput: !tOk ? `Error: ${tErr || tStatus || "Runtime error"}` : testOutput,
               });
             } catch (e) {
               testResults.push({

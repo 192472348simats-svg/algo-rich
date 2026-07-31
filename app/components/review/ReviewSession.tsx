@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import dynamic from "next/dynamic";
 import PostSolveReflection from "@/app/components/practice/PostSolveReflection";
+import { recordDailyQuestProgress } from "@/app/dashboard/components/dailyQuestEvents";
 
 const EmbeddedProblemSolver = dynamic(
   () => import("@/app/components/plan/EmbeddedProblemSolver"),
@@ -186,6 +187,7 @@ export default function ReviewSession({
       if (res.ok) {
         const data = await res.json();
         nextInterval = data.interval;
+        recordDailyQuestProgress("review");
       }
 
       setResults((prev) => [

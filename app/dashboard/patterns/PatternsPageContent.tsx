@@ -6,16 +6,17 @@ import PatternCard from "@/app/components/patterns/PatternCard";
 import { patterns } from "@/lib/patterns/patternDefinitions";
 import Link from "next/link";
 import PatternFlowchart from "./PatternFlowchart";
+import PatternTree from "./PatternTree";
 
-type CategoryFilter = "all" | "arrays" | "linkedlists" | "trees" | "graphs" | "dynamic";
+type CategoryFilter = "all" | "pointers" | "sorting" | "trees" | "search" | "advanced";
 
 const categoryLabels: Record<CategoryFilter, string> = {
   all: "All Patterns",
-  arrays: "Arrays & Strings",
-  linkedlists: "Linked Lists",
-  trees: "Trees & Graphs",
-  graphs: "Advanced",
-  dynamic: "Dynamic Programming",
+  pointers: "Pointers",
+  sorting: "Sorting",
+  trees: "Trees",
+  search: "Search",
+  advanced: "Advanced",
 };
 
 interface PatternsPageContentProps {
@@ -37,6 +38,7 @@ export default function PatternsPageContent({
   const [filter, setFilter] = useState<CategoryFilter>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [showFlowchart, setShowFlowchart] = useState(false);
+  const [showTree, setShowTree] = useState(false);
 
   const filteredPatterns = useMemo(() => {
     return patterns.filter((p) => {
@@ -115,6 +117,16 @@ export default function PatternsPageContent({
           >
             🤔 Which pattern?
           </button>
+          <button
+            onClick={() => setShowTree((v) => !v)}
+            className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-colors ${
+              showTree
+                ? "bg-primary/20 text-primary border border-primary/40"
+                : "text-muted-foreground border border-border hover:text-foreground"
+            }`}
+          >
+            🌱 Pattern tree
+          </button>
         </div>
         <input
           type="text"
@@ -127,6 +139,7 @@ export default function PatternsPageContent({
 
       {/* Pattern Flowchart */}
       {showFlowchart && <PatternFlowchart />}
+      {showTree && <PatternTree progress={patternProgress} />}
 
       {/* Pattern grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
