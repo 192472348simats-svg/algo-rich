@@ -317,7 +317,17 @@ function getReviewPriority(daysSince: number): number {
 }
 
 async function getNextLesson(userId: string) {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { experienceLevel: true },
+  });
+  const minimumCourseOrder = user?.experienceLevel === "advanced"
+    ? 3
+    : user?.experienceLevel === "intermediate"
+      ? 2
+      : 1;
   const allLessons = await prisma.lesson.findMany({
+    where: { course: { order: { gte: minimumCourseOrder } } },
     orderBy: [{ course: { order: "asc" } }, { order: "asc" }],
     include: {
       course: {

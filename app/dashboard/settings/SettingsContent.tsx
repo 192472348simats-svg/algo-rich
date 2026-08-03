@@ -31,6 +31,8 @@ export default function SettingsContent({
   userEmail,
 }: SettingsContentProps) {
   const [name, setName] = useState(userName);
+  const [experienceLevel, setExperienceLevel] = useState("beginner");
+  const [targetInterviewDate, setTargetInterviewDate] = useState("");
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -51,6 +53,16 @@ export default function SettingsContent({
   useEffect(() => {
     const stored = localStorage.getItem("algo-rich-sound-enabled");
     if (stored !== null) setSoundEnabled(stored !== "false");
+    fetch("/api/user/settings")
+      .then((response) => (response.ok ? response.json() : null))
+      .then((user) => {
+        if (!user) return;
+        if (["beginner", "intermediate", "advanced"].includes(user.experienceLevel)) {
+          setExperienceLevel(user.experienceLevel);
+        }
+        if (user.targetInterviewDate) setTargetInterviewDate(user.targetInterviewDate.slice(0, 10));
+      })
+      .catch(() => {});
   }, []);
 
   function handleSoundToggle(enabled: boolean) {
@@ -68,7 +80,7 @@ export default function SettingsContent({
       const res = await fetch("/api/user/settings", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: name.trim() }),
+        body: JSON.stringify({ name: name.trim(), experienceLevel, targetInterviewDate: targetInterviewDate || null }),
       });
       const data = await res.json();
       if (res.ok) {
@@ -183,6 +195,29 @@ export default function SettingsContent({
               Email cannot be changed
             </p>
           </div>
+          <div>
+            <label className="block text-sm text-foreground mb-1.5">Starting level</label>
+            <select
+              value={experienceLevel}
+              onChange={(e) => setExperienceLevel(e.target.value)}
+              className="w-full px-4 py-2.5 bg-background/60 border border-white/10 rounded-lg text-white focus:outline-none focus:border-primary/50 transition-colors"
+            >
+              <option value="beginner">Beginner — Python foundations</option>
+              <option value="intermediate">Intermediate — logic building</option>
+              <option value="advanced">Advanced — data structures</option>
+            </select>
+            <p className="text-xs text-foreground opacity-40 mt-1">Changing this adjusts your suggested starting phase; your existing progress remains intact.</p>
+          </div>
+          <div>
+            <label className="block text-sm text-foreground mb-1.5">Target interview date</label>
+            <input
+              type="date"
+              value={targetInterviewDate}
+              onChange={(e) => setTargetInterviewDate(e.target.value)}
+              className="w-full px-4 py-2.5 bg-background/60 border border-white/10 rounded-lg text-white focus:outline-none focus:border-primary/50 transition-colors"
+            />
+            <p className="text-xs text-foreground opacity-40 mt-1">Optional — used to pace your interview preparation.</p>
+          </div>
           {profileMsg && (
             <p
               className={`text-sm ${
@@ -196,7 +231,7 @@ export default function SettingsContent({
           )}
           <button
             type="submit"
-            disabled={saving || name.trim() === userName}
+            disabled={saving || !name.trim()}
             className="px-6 py-2.5 bg-primary text-background font-semibold rounded-lg hover:bg-primary/80 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {saving ? "Saving..." : "Save Changes"}

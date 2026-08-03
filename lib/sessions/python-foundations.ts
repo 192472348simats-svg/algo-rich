@@ -182,7 +182,7 @@ export const sessions: SessionDefinition[] = [
   description: "Learn to store and reuse values with variables.",
   estimatedMinutes: 15,
   xpTotal: 20,
-  nextSessionSlug: "loops-basics",
+  nextSessionSlug: "data-types",
 
   stages: [
     {

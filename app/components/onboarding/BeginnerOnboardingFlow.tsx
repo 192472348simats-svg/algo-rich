@@ -11,6 +11,7 @@ interface Props {
 const PHASES = [
   {
     id: 1,
+    experience: "beginner",
     emoji: "🐣",
     title: "Complete Beginner",
     description: "Never written code before. Start with Python from absolute zero.",
@@ -20,6 +21,7 @@ const PHASES = [
   },
   {
     id: 2,
+    experience: "intermediate",
     emoji: "🐍",
     title: "Some Python",
     description: "You know basic Python. Ready to tackle logic and problem solving.",
@@ -29,6 +31,7 @@ const PHASES = [
   },
   {
     id: 3,
+    experience: "advanced",
     emoji: "⚡",
     title: "DSA Basics",
     description: "Familiar with arrays & loops. Time to go deeper into data structures.",
@@ -74,7 +77,11 @@ export default function BeginnerOnboardingFlow({ onComplete }: Props) {
       await fetch("/api/onboarding/complete", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ experience: "onboarding", phase: selectedPhase ?? 1 }),
+        body: JSON.stringify({
+          experience: PHASES.find((phase) => phase.id === selectedPhase)?.experience ?? "beginner",
+          goal: "learn",
+          phase: selectedPhase ?? 1,
+        }),
       });
       onComplete();
       if (selectedPhase === 1) {

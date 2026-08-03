@@ -22,7 +22,7 @@ export async function GET() {
 
     const user = await prisma.user.findUnique({
       where: { id: session.user.id },
-      select: { id: true, name: true, email: true, timeZone: true, createdAt: true },
+      select: { id: true, name: true, email: true, timeZone: true, createdAt: true, experienceLevel: true, targetInterviewDate: true },
     });
 
     if (!user) {
@@ -44,7 +44,7 @@ export async function PATCH(req: Request) {
     }
 
     const body = await req.json();
-    const { name, currentPassword, newPassword, timeZone } = body;
+    const { name, currentPassword, newPassword, timeZone, experienceLevel, targetInterviewDate } = body;
 
     const user = await prisma.user.findUnique({
       where: { id: session.user.id },
@@ -67,6 +67,21 @@ export async function PATCH(req: Request) {
         return NextResponse.json({ error: "Invalid timezone" }, { status: 400 });
       }
       updateData.timeZone = timeZone;
+    }
+
+    if (experienceLevel !== undefined) {
+      if (!["beginner", "intermediate", "advanced"].includes(experienceLevel)) {
+        return NextResponse.json({ error: "Invalid experience level" }, { status: 400 });
+      }
+      updateData.experienceLevel = experienceLevel;
+      updateData.currentPhase = experienceLevel === "advanced" ? 3 : experienceLevel === "intermediate" ? 2 : 1;
+    }
+
+    if (targetInterviewDate !== undefined) {
+      if (targetInterviewDate !== null && (typeof targetInterviewDate !== "string" || Number.isNaN(Date.parse(targetInterviewDate)))) {
+        return NextResponse.json({ error: "Invalid interview date" }, { status: 400 });
+      }
+      updateData.targetInterviewDate = targetInterviewDate ? new Date(targetInterviewDate) : null;
     }
 
     // Update password if provided
@@ -103,7 +118,7 @@ export async function PATCH(req: Request) {
     const updated = await prisma.user.update({
       where: { id: session.user.id },
       data: updateData,
-      select: { id: true, name: true, email: true, timeZone: true },
+      select: { id: true, name: true, email: true, timeZone: true, experienceLevel: true, targetInterviewDate: true },
     });
 
     return NextResponse.json({ message: "Settings updated", user: updated });
