@@ -59,6 +59,27 @@ model User {
   reflections         Reflection[]
   walkthroughProgress WalkthroughProgress[]
   dailyQuests         DailyQuest[]
+  mockInterviews      MockInterviewSession[]
+}
+
+model MockInterviewSession {
+  id            String    @id @default(cuid())
+  userId        String
+  company       String    // "Amazon" | "Google" | "Flipkart" | "Microsoft" | "TCS" | "General"
+  difficulty    String    // "easy" | "medium" | "hard" | "mixed"
+  problemIds    String    // JSON array of problem IDs
+  timeLimitMins Int       @default(45)
+  submissions   String    @default("{}") // JSON map: problemId -> { code, passed, timeTakenMs }
+  score         Int?      // 0-100
+  aiFeedback    String?   // Groq-generated debrief (stored as text)
+  status        String    @default("active") // "active" | "completed" | "abandoned"
+  startedAt     DateTime  @default(now())
+  endedAt       DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, status])
+  @@index([userId, startedAt])
 }
 
 model DailyQuest {

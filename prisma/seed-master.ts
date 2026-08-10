@@ -21,6 +21,7 @@ import { seedCards } from "./seed-cards-60";
 import { seedReflections } from "./seed-reflections";
 import { seedExpansionProblems } from "./seed-problems-expansion";
 import { seedExpansionCards } from "./seed-cards-expansion";
+import { seedPhase3CompanyProblems } from "./seed-phase3-company-problems";
 
 let databaseUrl = process.env.DATABASE_URL || "";
 if (databaseUrl && !databaseUrl.includes("connect_timeout")) {
@@ -94,8 +95,12 @@ async function main() {
   await withRetry(() => seedExpansionProblems(), "Expansion Problems");
 
   // Step 9: Expansion Cards (100 new prediction cards)
-  console.log("\n🃏 Step 9/9: Seeding expansion prediction cards (100 new cards)...");
+  console.log("\n🃏 Step 9/10: Seeding expansion prediction cards (100 new cards)...");
   await withRetry(() => seedExpansionCards(), "Expansion Cards");
+
+  // Step 10: Phase 3 Company-targeted problems
+  console.log("\n🎯 Step 10/10: Seeding Phase 3 company problems (10 targeted problems)...");
+  await withRetry(() => seedPhase3CompanyProblems(), "Phase 3 Company Problems");
 
   console.log("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
   console.log("✅ ALL SEEDS COMPLETE");
@@ -107,12 +112,14 @@ async function main() {
   const problems = await prisma.problem.count();
   const lessonProblems = await prisma.lessonProblem.count();
   const cards = await prisma.predictionCard.count();
+  const mockInterviews = await prisma.mockInterviewSession.count();
   console.log(`  Courses:          ${courses}`);
   console.log(`  Lessons:          ${lessons}`);
   console.log(`  Patterns:         ${patterns}`);
   console.log(`  Problems:         ${problems}`);
   console.log(`  Lesson-Problems:  ${lessonProblems}`);
   console.log(`  Prediction Cards: ${cards}`);
+  console.log(`  Mock Interviews:  ${mockInterviews}`);
 }
 
 main()
