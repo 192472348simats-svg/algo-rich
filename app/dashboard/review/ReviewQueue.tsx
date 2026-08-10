@@ -68,8 +68,7 @@ export default function ReviewQueue({ userId }: { userId: string }) {
   // After session ends, refresh the list
   const handleSessionComplete = () => {
     analytics.track('review_completed', {
-      problemsCount: reviews.length,
-      userId
+      problems_count: reviews.length,
     });
     setSessionActive(false);
     setLoading(true);
@@ -182,8 +181,7 @@ export default function ReviewQueue({ userId }: { userId: string }) {
           onClick={() => {
             setSessionActive(true);
             analytics.track('review_session_started', {
-              problemsCount: reviews.length,
-              userId
+              problems_count: reviews.length,
             });
           }}
           className="w-full mb-8 py-4 bg-gradient-to-r from-purple-500 to-cyan-500 text-white font-bold rounded-xl text-lg hover:shadow-lg hover:shadow-purple-500/30 transition-all duration-300"

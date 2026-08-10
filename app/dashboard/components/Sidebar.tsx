@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
+import posthog from "posthog-js";
 import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useState, type ReactNode } from "react";
 import {
@@ -316,7 +317,10 @@ export default function Sidebar({
             </div>
           </div>
           <button
-            onClick={() => signOut({ callbackUrl: "/" })}
+            onClick={() => {
+              posthog.reset();
+              signOut({ callbackUrl: "/" });
+            }}
             className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-white/40 hover:text-red-400 hover:bg-red-500/10 transition-all duration-200"
           >
             <LogOut size={16} />

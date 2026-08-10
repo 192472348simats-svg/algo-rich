@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { analytics } from "@/lib/analytics";
 
 const feedbackTypes = [
   { value: "bug", label: "🐛 Bug" },
@@ -22,7 +23,7 @@ export default function FeedbackButton() {
     if (!message.trim()) return;
     setSending(true);
     try {
-      await fetch("/api/feedback", {
+      const response = await fetch("/api/feedback", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -31,6 +32,8 @@ export default function FeedbackButton() {
           page: window.location.pathname,
         }),
       });
+      if (!response.ok) throw new Error("Failed to submit feedback");
+      analytics.track("feedback_submitted", { feedback_type: type });
       setSent(true);
       setTimeout(() => {
         setOpen(false);

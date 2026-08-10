@@ -632,12 +632,12 @@ function ZyraComponent({
       }
       addMessage(data.reply.trim().slice(0, 2_000), "zyra");
       recordDailyQuestProgress("zyra");
-      analytics.track("zyra_hint_requested", { text: normalizedText, context, source: "gemini" });
+      analytics.track("zyra_hint_requested", { context, source: "gemini" });
     } catch {
       const fallback = getZyraResponse(normalizedText);
       addMessage(fallback, "zyra");
       recordDailyQuestProgress("zyra");
-      analytics.track("zyra_hint_requested", { text: normalizedText, context, source: "fallback" });
+      analytics.track("zyra_hint_requested", { context, source: "fallback" });
     } finally {
       setIsTyping(false);
     }
