@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
 
     const { email, otp } = await request.json();
 
-    if (!email || !otp || typeof otp !== "string" || otp.length !== 6) {
+    if (typeof email !== "string" || !email.trim() || !otp || typeof otp !== "string" || otp.length !== 6) {
       return NextResponse.json(
         { error: "email and a 6-digit otp are required" },
         { status: 400 }
@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Normalize email to match signup, reset-password, and resend-verification
-    const normalizedEmail = (email as string).toLowerCase().trim();
+    const normalizedEmail = email.toLowerCase().trim();
 
     const user = await prisma.user.findUnique({
       where: { email: normalizedEmail },

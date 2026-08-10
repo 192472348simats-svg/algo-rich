@@ -18,8 +18,9 @@ const requiredVars = [
   "AUTH_SECRET",
   "NEXTAUTH_URL",
   "ADMIN_EMAILS",
-  "STRIPE_SECRET_KEY",
-  "STRIPE_WEBHOOK_SECRET",
+  "RAZORPAY_KEY_ID",
+  "RAZORPAY_KEY_SECRET",
+  "RAZORPAY_WEBHOOK_SECRET",
   "RESEND_API_KEY"
 ];
 
@@ -37,6 +38,13 @@ function validate() {
   }
 
   const missing = requiredVars.filter(v => !envVars[v]);
+  if (envVars.NODE_ENV === "production") {
+    missing.push(...["UPSTASH_REDIS_REST_URL", "UPSTASH_REDIS_REST_TOKEN", "CRON_SECRET"].filter(v => !envVars[v]));
+  }
+
+  if (!envVars.GROQ_API_KEY) {
+    console.warn("⚠️  Groq is not configured; Zyra will use its local fallback responses.");
+  }
 
   if (missing.length > 0) {
     console.error("❌ Missing required environment variables:");

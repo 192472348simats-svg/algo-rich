@@ -3,12 +3,22 @@
 import { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Send } from "lucide-react";
+import { X, Send, Sparkles } from "lucide-react";
 import { ErrorBoundary } from "@/app/components/ErrorBoundary";
 import { analytics } from "@/lib/analytics";
 import { recordDailyQuestProgress } from "@/app/dashboard/components/dailyQuestEvents";
+import {
+  zyraFallback,
+  ZYRA_GREETINGS_PROBLEM,
+  ZYRA_GREETINGS_SESSION,
+  ZYRA_GREETINGS_DASHBOARD,
+  ZYRA_IDLE_NUDGES,
+  ZYRA_WRONG_ANSWER_RESPONSES,
+  ZYRA_SUCCESS_RESPONSES,
+  ZYRA_MOTIVATE_RESPONSES,
+} from "@/lib/zyraPersonality";
 
-// ─── Zyra message types ────────────────────────────────────
+// ─── Types ─────────────────────────────────────────────────
 
 type ZyraMood = "idle" | "thinking" | "happy" | "naughty" | "alert";
 type ZyraContext = "problem" | "session" | "dashboard";
@@ -27,49 +37,23 @@ interface ZyraMessage {
   from: "zyra" | "user";
 }
 
-// ─── Context-aware messages ────────────────────────────────
+// ─── Quick action chips per context ───────────────────────
 
-const GREETINGS = [
-  "Hey… I'm Zyra ⭐\nYou're here to get better… right? Good. I don't like wasting potential.",
-  "Oh, you're back. Good. Let's not waste this session.",
-  "Zyra here. Ready when you are.",
-];
+const CHIPS_PROBLEM = ["Give me a hint", "I'm stuck", "What's the pattern?", "Explain my error"];
+const CHIPS_SESSION = ["What is this concept?", "Give me an example", "Why does this work?", "I'm stuck"];
+const CHIPS_DASHBOARD = ["What should I study?", "Motivate me", "Which pattern next?", "How's my progress?"];
 
-const IDLE_NUDGES = [
-  "You opened this for a reason. Don't walk away now.",
-  "Still there? The problem won't solve itself. 😏",
-  "3 minutes of staring… are you thinking or just hoping?",
-  "Tap me if you're stuck. I don't judge. Much.",
-];
+function getChips(context?: ZyraContext) {
+  if (context === "problem") return CHIPS_PROBLEM;
+  if (context === "session") return CHIPS_SESSION;
+  return CHIPS_DASHBOARD;
+}
 
-const HINT_RESPONSES = [
-  "Start by writing what you know — inputs, outputs. Don't touch code yet.",
-  "What's the pattern here? You've seen something like this before.",
-  "Brute force first. Make it work, then make it fast.",
-  "Draw it out. Seriously. Paper beats staring.",
-  "Break it into smaller problems. What's the smallest version you can solve?",
-];
-
-const STUCK_RESPONSES = [
-  "You've been staring at this for a while… thinking or overthinking? 😏\nTry breaking it into smaller steps.",
-  "You're close. Stop rushing.",
-  "What do you actually know about this problem? Start from there.",
-  "Wrong answer doesn't mean wrong approach. Check your edge cases.",
-];
-
-const SUCCESS_RESPONSES = [
-  "Nice. That wasn't luck… don't pretend it was.",
-  "Clean. Now do it faster.",
-  "I knew you had it. You doubted yourself though, didn't you? 😏",
-  "That's the one. Now remember why it works.",
-];
-
-const NAUGHTY_REMARKS = [
-  "You sure about that… or just hoping it works? 😏",
-  "Confidence is good. Blind confidence… not so much 😏",
-  "Interesting choice. Bold. Let's see how that goes.",
-  "That's one way to do it. Definitely a way.",
-];
+function getGreetings(context?: ZyraContext) {
+  if (context === "problem") return ZYRA_GREETINGS_PROBLEM;
+  if (context === "session") return ZYRA_GREETINGS_SESSION;
+  return ZYRA_GREETINGS_DASHBOARD;
+}
 
 function randomFrom(arr: string[]) {
   return arr[Math.floor(Math.random() * arr.length)];
@@ -118,7 +102,6 @@ function ZyraFace({ mood }: { mood: ZyraMood }) {
         animate={{ scaleY: mood === "thinking" ? 0.7 : 1 }}
         transition={{ duration: 0.3 }}
       />
-      {/* Left eye shine */}
       <circle cx="16.5" cy={eyeY - 1} r="1" fill="white" opacity="0.8" />
       {/* Right eye */}
       <motion.ellipse
@@ -127,7 +110,6 @@ function ZyraFace({ mood }: { mood: ZyraMood }) {
         animate={{ scaleY: mood === "thinking" ? 0.7 : 1 }}
         transition={{ duration: 0.3 }}
       />
-      {/* Right eye shine */}
       <circle cx="26.5" cy={eyeY - 1} r="1" fill="white" opacity="0.8" />
       {/* Mouth */}
       <motion.path
@@ -247,6 +229,58 @@ function ZyraStar({ mood, onClick }: { mood: ZyraMood; onClick: () => void }) {
   );
 }
 
+// ─── Typing dots ──────────────────────────────────────────
+
+function TypingDots() {
+  return (
+    <div className="flex justify-start">
+      <div className="px-3 py-2 rounded-xl" style={{ background: "#1a1400", border: "1px solid #E5A82940" }}>
+        <div className="flex gap-1 items-center h-4">
+          {[0, 1, 2].map((i) => (
+            <motion.div key={i} className="w-1.5 h-1.5 rounded-full"
+              style={{ background: "#E5A829" }}
+              animate={{ y: [0, -4, 0] }}
+              transition={{ duration: 0.6, delay: i * 0.15, repeat: Infinity }}
+            />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Message bubble ───────────────────────────────────────
+
+function MessageBubble({ msg }: { msg: ZyraMessage }) {
+  const isZyra = msg.from === "zyra";
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 6, scale: 0.97 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      transition={{ duration: 0.2 }}
+      className={`flex ${isZyra ? "justify-start" : "justify-end"}`}
+    >
+      <div
+        className="max-w-[85%] px-3 py-2.5 rounded-xl text-sm leading-relaxed"
+        style={{
+          background: isZyra ? "#140f00" : "#0e2040",
+          color: isZyra ? "#f5e6c0" : "#c8d8f0",
+          border: `1px solid ${isZyra ? "#E5A82930" : "#1E4A7F"}`,
+          whiteSpace: "pre-line",
+          overflowWrap: "anywhere",
+        }}
+      >
+        {isZyra && (
+          <span className="inline-flex items-center gap-1 text-[10px] font-bold tracking-widest mb-1 opacity-60 text-[#E5A829]">
+            <Sparkles size={9} /> ZYRA
+          </span>
+        )}
+        <div>{msg.text}</div>
+      </div>
+    </motion.div>
+  );
+}
+
 // ─── Chat panel ───────────────────────────────────────────
 
 function ChatPanel({
@@ -256,6 +290,7 @@ function ChatPanel({
   isTyping,
   isMobile,
   disabled,
+  context,
 }: {
   messages: ZyraMessage[];
   onSend: (text: string) => void;
@@ -263,117 +298,144 @@ function ChatPanel({
   isTyping: boolean;
   isMobile: boolean;
   disabled: boolean;
+  context?: ZyraContext;
 }) {
   const [input, setInput] = useState("");
   const bottomRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isTyping]);
 
+  // Auto-focus input when panel opens
+  useEffect(() => {
+    const t = setTimeout(() => inputRef.current?.focus(), 200);
+    return () => clearTimeout(t);
+  }, []);
+
   const handleSend = () => {
-    if (!input.trim()) return;
+    if (!input.trim() || disabled) return;
     onSend(input.trim());
     setInput("");
   };
 
+  const chips = getChips(context);
+
   return (
     <motion.div
-      initial={{ opacity: 0, scale: 0.9, y: 20 }}
+      initial={{ opacity: 0, scale: 0.92, y: 16 }}
       animate={{ opacity: 1, scale: 1, y: 0 }}
-      exit={{ opacity: 0, scale: 0.9, y: 20 }}
-      transition={{ type: "spring", stiffness: 300, damping: 30 }}
-      className={`absolute bottom-20 right-0 ${isMobile ? 'w-[calc(100vw-2rem)]' : 'w-80'} rounded-2xl overflow-hidden shadow-2xl flex flex-col`}
+      exit={{ opacity: 0, scale: 0.92, y: 16 }}
+      transition={{ type: "spring", stiffness: 320, damping: 30 }}
+      className={`absolute bottom-20 right-0 ${isMobile ? "w-[calc(100vw-2rem)]" : "w-[340px]"} rounded-2xl overflow-hidden shadow-2xl flex flex-col`}
       style={{
-        background: "#0f1629",
-        border: "1px solid #E5A82960",
-        boxShadow: "0 20px 60px rgba(0,0,0,0.5), 0 0 30px rgba(229,168,41,0.1)",
-        height: "min(70dvh, 520px)",
-        maxHeight: "calc(100dvh - 96px)",
+        background: "#0a0d1a",
+        border: "1px solid #E5A82940",
+        boxShadow: "0 24px 64px rgba(0,0,0,0.6), 0 0 40px rgba(229,168,41,0.08)",
+        height: "min(72dvh, 540px)",
+        maxHeight: "calc(100dvh - 100px)",
       }}
     >
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3"
-        style={{ borderBottom: "1px solid #1E3A5F", background: "#0a0f24" }}>
+      <div
+        className="flex items-center justify-between px-4 py-2.5 flex-shrink-0"
+        style={{ borderBottom: "1px solid #1a2840", background: "#070a14" }}
+      >
         <div className="flex items-center gap-2">
-          <div className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold"
-            style={{ background: "linear-gradient(135deg, #FFD700, #FFC300)", color: "#7a4f00" }}>
+          <div
+            className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-black"
+            style={{ background: "linear-gradient(135deg, #FFD700, #FFA500)", color: "#3a2000" }}
+          >
             Z
           </div>
-          <span className="text-sm font-semibold text-white">Zyra</span>
-          <div className="w-1.5 h-1.5 rounded-full bg-green-400" />
+          <div>
+            <span className="text-sm font-bold text-white">Zyra</span>
+            <div className="flex items-center gap-1.5">
+              <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+              <span className="text-[10px] text-emerald-400 font-medium">AI DSA Tutor · Online</span>
+            </div>
+          </div>
         </div>
-        <button onClick={onClose} className="transition-colors hover:text-white" style={{ color: "#6b7a99" }}>
-          <X size={16} />
+        <button
+          onClick={onClose}
+          aria-label="Close Zyra"
+          className="w-7 h-7 rounded-full flex items-center justify-center transition-all hover:bg-white/10"
+          style={{ color: "#6b7a99" }}
+        >
+          <X size={15} />
         </button>
       </div>
 
       {/* Messages */}
-      <div className="flex-1 min-h-0 flex flex-col gap-3 p-4 overflow-y-auto overscroll-contain">
-        {messages.map((msg) => (
-          <div key={msg.id} className={`flex ${msg.from === "user" ? "justify-end" : "justify-start"}`}>
-            <div
-              className="max-w-[85%] px-3 py-2 rounded-xl text-sm leading-relaxed"
-              style={{
-                background: msg.from === "zyra" ? "#1a1400" : "#1a2847",
-                color: msg.from === "zyra" ? "#fff" : "#c8d0e0",
-                border: `1px solid ${msg.from === "zyra" ? "#E5A82940" : "#1E3A5F"}`,
-                whiteSpace: "pre-line",
-                overflowWrap: "anywhere",
-              }}
-            >
-              {msg.text}
-            </div>
-          </div>
-        ))}
-        {isTyping && (
-          <div className="flex justify-start">
-            <div className="px-3 py-2 rounded-xl" style={{ background: "#1a1400", border: "1px solid #E5A82940" }}>
-              <div className="flex gap-1 items-center h-4">
-                {[0, 1, 2].map((i) => (
-                  <motion.div key={i} className="w-1.5 h-1.5 rounded-full"
-                    style={{ background: "#E5A829" }}
-                    animate={{ y: [0, -4, 0] }}
-                    transition={{ duration: 0.6, delay: i * 0.15, repeat: Infinity }}
-                  />
-                ))}
-              </div>
-            </div>
+      <div className="flex-1 min-h-0 flex flex-col gap-2.5 p-3.5 overflow-y-auto overscroll-contain scrollbar-thin">
+        {messages.length === 0 && !isTyping && (
+          <div className="flex flex-col items-center justify-center h-full gap-3 text-center px-4">
+            <div className="text-3xl">⭐</div>
+            <p className="text-xs text-white/40 leading-relaxed">
+              Zyra is your Socratic DSA guide.<br />She won't give you answers — she'll make you think.
+            </p>
           </div>
         )}
+        {messages.map((msg) => (
+          <MessageBubble key={msg.id} msg={msg} />
+        ))}
+        {isTyping && <TypingDots />}
         <div ref={bottomRef} />
       </div>
 
       {/* Quick action chips */}
-      <div className="flex gap-2 px-4 pb-2 overflow-x-auto scrollbar-none">
-        {["Give me a hint", "I'm stuck", "What's the pattern?", "Motivate me"].map((chip, index) => (
-          <motion.button key={chip} onClick={() => onSend(chip)} disabled={disabled}
-            initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.06 }}
-            className="flex-shrink-0 text-xs px-3 py-1.5 rounded-full transition-all hover:opacity-80"
-            style={{ background: "#1a1400", color: "#E5A829", border: "1px solid #E5A82940", whiteSpace: "nowrap" }}>
+      <div className="flex gap-1.5 px-3.5 pb-2 overflow-x-auto flex-shrink-0" style={{ scrollbarWidth: "none" }}>
+        {chips.map((chip, index) => (
+          <motion.button
+            key={chip}
+            onClick={() => onSend(chip)}
+            disabled={disabled}
+            initial={{ opacity: 0, y: 4 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: index * 0.05 }}
+            className="flex-shrink-0 text-[11px] px-2.5 py-1 rounded-full transition-all hover:opacity-80 active:scale-95 disabled:opacity-40"
+            style={{
+              background: "#1a1400",
+              color: "#E5A829",
+              border: "1px solid #E5A82930",
+              whiteSpace: "nowrap",
+            }}
+          >
             {chip}
           </motion.button>
         ))}
       </div>
 
       {/* Input */}
-      <div className="flex gap-2 px-3 pb-3">
+      <div className="flex gap-2 px-3 pb-3 flex-shrink-0">
         <input
+          ref={inputRef}
+          id="zyra-chat-input"
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && handleSend()}
-          placeholder="Ask Zyra anything..."
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && !e.shiftKey) {
+              e.preventDefault();
+              handleSend();
+            }
+          }}
+          placeholder={disabled ? "Zyra is thinking..." : "Ask Zyra anything..."}
           disabled={disabled}
-          className="flex-1 px-3 py-2.5 rounded-xl text-sm text-white placeholder-[#6b7a99] focus:outline-none"
-          style={{ background: "#0a0f24", border: "1px solid #1E3A5F" }}
-          onFocus={e => (e.currentTarget.style.borderColor = "#E5A829")}
-          onBlur={e => (e.currentTarget.style.borderColor = "#1E3A5F")}
+          className="flex-1 px-3 py-2.5 rounded-xl text-sm text-white placeholder-[#4a5570] focus:outline-none transition-all"
+          style={{ background: "#070a14", border: "1px solid #1E3A5F" }}
+          onFocus={(e) => (e.currentTarget.style.borderColor = "#E5A829")}
+          onBlur={(e) => (e.currentTarget.style.borderColor = "#1E3A5F")}
         />
-        <button onClick={handleSend} disabled={disabled}
-          className="w-10 h-10 rounded-xl flex items-center justify-center transition-all hover:opacity-90"
-          style={{ background: "#E5A829" }}>
-          <Send size={15} color="#0a0f24" />
-        </button>
+        <motion.button
+          onClick={handleSend}
+          disabled={disabled || !input.trim()}
+          whileTap={{ scale: 0.92 }}
+          className="w-10 h-10 rounded-xl flex items-center justify-center transition-all disabled:opacity-40"
+          style={{ background: input.trim() && !disabled ? "#E5A829" : "#3a3010" }}
+        >
+          <Send size={14} color={input.trim() && !disabled ? "#0a0f24" : "#E5A82960"} />
+        </motion.button>
       </div>
     </motion.div>
   );
@@ -396,8 +458,18 @@ function ZyraComponent({
   const [bubble, setBubble] = useState<string | null>(null);
   const [isMobile, setIsMobile] = useState(false);
   const [levelUpModal, setLevelUpModal] = useState<string | null>(null);
-  const idleTimerRef = useRef<NodeJS.Timeout | undefined>(undefined);
 
+  // Live context from problem solver events
+  const [liveProblemContext, setLiveProblemContext] = useState<
+    Pick<ZyraProps, "problemTitle" | "problemDescription" | "userCode" | "lastError">
+  >({ problemTitle, problemDescription, userCode, lastError });
+
+  const idleTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const restoredStateRef = useRef(false);
+  const openRef = useRef(open);
+  openRef.current = open;
+
+  // ── Mobile detection ──────────────────────────────────────
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 768);
     checkMobile();
@@ -405,39 +477,78 @@ function ZyraComponent({
     return () => window.removeEventListener("resize", checkMobile);
   }, []);
 
-  // Save persistence
+  // ── Restore persisted state ───────────────────────────────
   useEffect(() => {
+    try {
+      const saved = localStorage.getItem("zyra_state");
+      if (!saved) return;
+      const state: unknown = JSON.parse(saved);
+      if (!state || typeof state !== "object") return;
+      const candidate = state as { messages?: unknown; hasGreeted?: unknown };
+      if (Array.isArray(candidate.messages)) {
+        const restored = candidate.messages
+          .filter(
+            (m): m is ZyraMessage =>
+              !!m &&
+              typeof m === "object" &&
+              typeof (m as ZyraMessage).id === "string" &&
+              typeof (m as ZyraMessage).text === "string" &&
+              ((m as ZyraMessage).from === "user" || (m as ZyraMessage).from === "zyra")
+          )
+          .slice(-30);
+        setMessages(restored);
+      }
+      if (typeof candidate.hasGreeted === "boolean") setHasGreeted(candidate.hasGreeted);
+    } catch {
+      localStorage.removeItem("zyra_state");
+    } finally {
+      restoredStateRef.current = true;
+    }
+  }, []);
+
+  // ── Persist state ─────────────────────────────────────────
+  useEffect(() => {
+    if (!restoredStateRef.current) return;
     localStorage.setItem("zyra_state", JSON.stringify({ messages, hasGreeted }));
   }, [messages, hasGreeted]);
 
-  // Greet after 3 seconds on first load
+  // ── Listen for live problem context updates ────────────────
+  useEffect(() => {
+    const updateContext = (event: Event) => {
+      const detail = (
+        event as CustomEvent<Pick<ZyraProps, "problemTitle" | "problemDescription" | "userCode" | "lastError">>
+      ).detail;
+      if (detail && typeof detail === "object") setLiveProblemContext(detail);
+    };
+    window.addEventListener("algo-rich:zyra-context", updateContext);
+    return () => window.removeEventListener("algo-rich:zyra-context", updateContext);
+  }, []);
+
+  // ── First greeting bubble (3s delay) ─────────────────────
   useEffect(() => {
     const t = setTimeout(() => {
       if (!hasGreeted) {
         setHasGreeted(true);
-        setBubble("Hey… I'm Zyra ⭐ Tap me if you need help.");
+        const greeting = context === "problem"
+          ? "Stuck? Don't code yet — tell me what you know about this problem first. ⭐"
+          : "Hey… I'm Zyra ⭐  Tap me if you need a push.";
+        setBubble(greeting);
         setMood("happy");
-        setTimeout(() => {
-          setBubble(null);
-          setMood("idle");
-        }, 4000);
+        setTimeout(() => { setBubble(null); setMood("idle"); }, 4500);
       }
     }, 3000);
     return () => clearTimeout(t);
-  }, [hasGreeted]);
+  }, [hasGreeted, context]);
 
-  // Idle nudge — if user hasn't interacted for 3 minutes
+  // ── Idle nudge after 3 min ────────────────────────────────
   useEffect(() => {
     const resetTimer = () => {
       clearTimeout(idleTimerRef.current);
       idleTimerRef.current = setTimeout(() => {
-        if (!open) {
-          setBubble(randomFrom(IDLE_NUDGES));
+        if (!openRef.current) {
+          setBubble(randomFrom(ZYRA_IDLE_NUDGES));
           setMood("thinking");
-          setTimeout(() => {
-            setBubble(null);
-            setMood("idle");
-          }, 5000);
+          setTimeout(() => { setBubble(null); setMood("idle"); }, 5000);
         }
       }, 3 * 60 * 1000);
     };
@@ -449,129 +560,70 @@ function ZyraComponent({
       window.removeEventListener("keydown", resetTimer);
       clearTimeout(idleTimerRef.current);
     };
-  }, [open]);
+  }, []);
 
-  const addMessage = (text: string, from: "zyra" | "user") => {
-    setMessages((prev) => [
-      ...prev,
-      { id: Date.now().toString(), text, from },
-    ].slice(-30));
-  };
-
+  // ── Evening nudge at 8 PM IST ────────────────────────────
   useEffect(() => {
-    const handleSolveCelebration = (event: Event) => {
-      const message = (event as CustomEvent<{ message?: unknown }>).detail?.message;
-      if (typeof message !== "string" || !message) return;
-      setMood("happy");
-      if (open) addMessage(message, "zyra");
-      setBubble(message);
-      const timer = window.setTimeout(() => {
-        setBubble(null);
-        setMood("idle");
-      }, 4000);
-      return () => window.clearTimeout(timer);
-    };
-
-    window.addEventListener("algo-rich:zyra-celebration", handleSolveCelebration);
-    return () => window.removeEventListener("algo-rich:zyra-celebration", handleSolveCelebration);
-  }, [open]);
-
-  // React to failed submissions from the problem solver.
-  useEffect(() => {
-    const handleWrongAnswer = (event: Event) => {
-      const attempts = (event as CustomEvent<{ attempts?: unknown }>).detail?.attempts;
-      const isProactive = typeof attempts === "number" && attempts >= 3;
-      const message = isProactive
-        ? "Stuck? I can break this down. Tap me and we'll find the first step."
-        : "Not quite. Slow down and check the failing case — you’re closer than you think.";
-      setMood("alert");
-      setBubble(message);
-      if (open || isProactive) addMessage(message, "zyra");
-      if (isProactive) setOpen(true);
-      window.setTimeout(() => {
-        setBubble(null);
-        setMood("idle");
-      }, isProactive ? 6000 : 3500);
-    };
-
-    window.addEventListener("algo-rich:zyra-wrong-answer", handleWrongAnswer);
-    return () => window.removeEventListener("algo-rich:zyra-wrong-answer", handleWrongAnswer);
-  }, [open]);
-
-  // A lightweight local-time reminder; the server remains the source of truth for streaks.
-  useEffect(() => {
-    const scheduleEveningNudge = () => {
+    const scheduleEveningNudge = (): ReturnType<typeof setTimeout> => {
       const now = new Date();
       const next = new Date(now);
       next.setHours(20, 0, 0, 0);
       if (next <= now) next.setDate(next.getDate() + 1);
-      return window.setTimeout(() => {
+      return setTimeout(() => {
         const today = new Date().toISOString().slice(0, 10);
-        if (localStorage.getItem("algo-rich:last-solved-date") !== today && !open) {
-          setBubble("No solve yet today. Ten focused minutes beats a perfect plan.");
-          setMood("thinking");
+        if (localStorage.getItem("algo-rich:last-solved-date") !== today && !openRef.current) {
+          setBubble("No solve yet today. Ek problem — 10 minutes. That's all.");
+          setMood("naughty");
+          setTimeout(() => { setBubble(null); setMood("idle"); }, 5000);
         }
         scheduleEveningNudge();
       }, Math.max(1000, next.getTime() - now.getTime()));
     };
     const timer = scheduleEveningNudge();
-    return () => window.clearTimeout(timer);
-  }, [open]);
+    return () => clearTimeout(timer);
+  }, []);
 
-  const getZyraResponse = (userText: string): string => {
-    const lower = userText.toLowerCase();
-    if (
-      lower.includes("hint") ||
-      lower.includes("help") ||
-      lower.includes("stuck")
-    ) {
-      setMood("thinking");
-      setTimeout(() => setMood("idle"), 2000);
-      return randomFrom(HINT_RESPONSES);
-    }
-    if (
-      lower.includes("motivat") ||
-      lower.includes("tired") ||
-      lower.includes("give up")
-    ) {
-      setMood("naughty");
-      setTimeout(() => setMood("idle"), 2000);
-      return "Tired? Good. That means you're actually working.\nPush through this one. The next one gets easier.";
-    }
-    if (lower.includes("pattern")) {
-      setMood("thinking");
-      setTimeout(() => setMood("idle"), 2000);
-      return context === "problem"
-        ? "Look at the constraints. Small n? Brute force might work.\nLarge n? You probably need O(n) or O(n log n).\nWhat does the problem want to minimize or maximize?"
-        : "Most DSA problems map to 15 patterns. Two pointers, sliding window, BFS, DFS, DP...\nWhich one feels closest to what you're seeing?";
-    }
-    if (
-      lower.includes("hello") ||
-      lower.includes("hi") ||
-      lower.includes("hey")
-    ) {
-      setMood("happy");
-      setTimeout(() => setMood("idle"), 1500);
-      return "You called me? Alright… let's fix this.";
-    }
-    if (
-      lower.includes("wrong") ||
-      lower.includes("fail") ||
-      lower.includes("error")
-    ) {
-      setMood("naughty");
-      setTimeout(() => setMood("idle"), 2000);
-      return randomFrom(STUCK_RESPONSES);
-    }
-    // Occasionally be naughty
-    if (Math.random() < 0.2) {
-      setMood("naughty");
-      setTimeout(() => setMood("idle"), 2000);
-      return randomFrom(NAUGHTY_REMARKS);
-    }
-    return randomFrom(HINT_RESPONSES);
+  const addMessage = (text: string, from: "zyra" | "user") => {
+    setMessages((prev) => [
+      ...prev,
+      { id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, text, from },
+    ].slice(-30));
   };
 
+  // ── Celebration event ─────────────────────────────────────
+  useEffect(() => {
+    const handle = (event: Event) => {
+      const message = (event as CustomEvent<{ message?: unknown }>).detail?.message;
+      if (typeof message !== "string" || !message) return;
+      const reply = randomFrom(ZYRA_SUCCESS_RESPONSES);
+      setMood("happy");
+      if (openRef.current) addMessage(reply, "zyra");
+      setBubble(reply);
+      setTimeout(() => { setBubble(null); setMood("idle"); }, 4500);
+    };
+    window.addEventListener("algo-rich:zyra-celebration", handle);
+    return () => window.removeEventListener("algo-rich:zyra-celebration", handle);
+  }, []);
+
+  // ── Wrong answer event ────────────────────────────────────
+  useEffect(() => {
+    const handle = (event: Event) => {
+      const attempts = (event as CustomEvent<{ attempts?: unknown }>).detail?.attempts;
+      const isProactive = typeof attempts === "number" && attempts >= 3;
+      const message = isProactive
+        ? randomFrom(ZYRA_WRONG_ANSWER_RESPONSES)
+        : "Not quite. Slow down — what test case is failing?";
+      setMood("alert");
+      setBubble(message);
+      if (openRef.current || isProactive) addMessage(message, "zyra");
+      if (isProactive) setOpen(true);
+      setTimeout(() => { setBubble(null); setMood("idle"); }, isProactive ? 6000 : 3500);
+    };
+    window.addEventListener("algo-rich:zyra-wrong-answer", handle);
+    return () => window.removeEventListener("algo-rich:zyra-wrong-answer", handle);
+  }, []);
+
+  // ── Open & greet ──────────────────────────────────────────
   const handleOpen = () => {
     setOpen(true);
     setMood("happy");
@@ -580,15 +632,21 @@ function ZyraComponent({
         setIsTyping(true);
         setTimeout(() => {
           setIsTyping(false);
-          addMessage(randomFrom(GREETINGS), "zyra");
+          addMessage(randomFrom(getGreetings(context)), "zyra");
           setMood("idle");
-        }, 1200);
-      }, 300);
+        }, 900);
+      }, 200);
     } else {
-      setTimeout(() => setMood("idle"), 1000);
+      setTimeout(() => setMood("idle"), 800);
     }
   };
 
+  const handleClose = () => {
+    setOpen(false);
+    setTimeout(() => setMood("idle"), 300);
+  };
+
+  // ── Send message ──────────────────────────────────────────
   const handleSend = async (text: string) => {
     const normalizedText = text.trim().slice(0, 2_000);
     if (!normalizedText || isTyping) return;
@@ -603,52 +661,81 @@ function ZyraComponent({
     setIsTyping(true);
     setMood("thinking");
 
+    // Use live context (updated by problem solver) over initial props
+    const ctx = liveProblemContext;
+
     try {
       const response = await fetch("/api/zyra/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          messages: history.map((message) => ({
-            role: message.from === "user" ? "user" : "zyra",
-            text: message.text,
+          messages: history.map((m) => ({
+            role: m.from === "user" ? "user" : "zyra",
+            text: m.text,
           })),
           context,
-          problemTitle,
-          problemDescription,
-          userCode,
-          lastError,
+          problemTitle: ctx.problemTitle,
+          problemDescription: ctx.problemDescription,
+          userCode: ctx.userCode,
+          lastError: ctx.lastError,
         }),
       });
-      const data = (await response.json().catch(() => null)) as { reply?: unknown; mood?: unknown } | null;
+
+      const data = (await response.json().catch(() => null)) as {
+        reply?: unknown;
+        mood?: unknown;
+      } | null;
+
       if (!response.ok || typeof data?.reply !== "string" || !data.reply.trim()) {
         throw new Error("Zyra request failed");
       }
 
       const serverMood = data.mood;
-      if (serverMood === "idle" || serverMood === "thinking" || serverMood === "happy" || serverMood === "naughty" || serverMood === "alert") {
-        setMood(serverMood);
+      if (
+        serverMood === "idle" || serverMood === "thinking" ||
+        serverMood === "happy" || serverMood === "naughty" || serverMood === "alert"
+      ) {
+        setMood(serverMood as ZyraMood);
       } else {
         setMood("idle");
       }
+
       addMessage(data.reply.trim().slice(0, 2_000), "zyra");
       recordDailyQuestProgress("zyra");
-      analytics.track("zyra_hint_requested", { text: normalizedText, context, source: "gemini" });
+      analytics.track("zyra_hint_requested", { text: normalizedText, context, source: "groq" });
+
+      // Reset mood after 3s
+      setTimeout(() => setMood("idle"), 3000);
     } catch {
-      const fallback = getZyraResponse(normalizedText);
-      addMessage(fallback, "zyra");
+      const fallback = zyraFallback({
+        message: normalizedText,
+        problemTitle: ctx.problemTitle,
+        userCode: ctx.userCode,
+        lastError: ctx.lastError,
+        context,
+      });
+      addMessage(fallback.reply, "zyra");
+      setMood(fallback.mood);
       recordDailyQuestProgress("zyra");
       analytics.track("zyra_hint_requested", { text: normalizedText, context, source: "fallback" });
+      setTimeout(() => setMood("idle"), 3000);
     } finally {
       setIsTyping(false);
     }
   };
 
+  // ─── Render ───────────────────────────────────────────────
+
   return (
-    <div className={`fixed ${isMobile ? 'bottom-4 right-4' : 'bottom-6 right-6'} z-50 flex flex-col items-end`}>
-      {/* Level-Up Floating Portal Bubble */}
+    <div
+      className={`fixed ${isMobile ? "bottom-4 right-4" : "bottom-6 right-6"} z-50 flex flex-col items-end`}
+      style={{ pointerEvents: "none" }}
+    >
+      {/* Level-Up Modal Portal */}
       {levelUpModal && typeof document !== "undefined" && createPortal(
         <div
           className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+          style={{ pointerEvents: "auto" }}
           onClick={() => setLevelUpModal(null)}
         >
           <motion.div
@@ -656,17 +743,14 @@ function ZyraComponent({
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0, opacity: 0 }}
             transition={{ type: "spring", stiffness: 300, damping: 20 }}
-            onClick={(e) => {
-              e.stopPropagation();
-              setLevelUpModal(null);
-            }}
+            onClick={(e) => { e.stopPropagation(); setLevelUpModal(null); }}
             className="bg-[#0f1629] border-2 border-[#E5A829] rounded-3xl p-6 max-w-sm w-full text-center shadow-2xl flex flex-col items-center gap-4 cursor-pointer"
           >
             <ZyraStar mood="happy" onClick={() => { }} />
             <h3 className="text-xl font-bold text-[#E5A829]">Level Up!</h3>
             <p className="text-white text-sm font-medium">{levelUpModal}</p>
             <button className="px-5 py-2 rounded-full bg-[#E5A829] text-[#0a0f24] font-bold text-xs hover:opacity-90">
-              Awesome!
+              Let's Go! ⭐
             </button>
           </motion.div>
         </div>,
@@ -680,21 +764,23 @@ function ZyraComponent({
             initial={{ opacity: 0, y: 10, scale: 0.9 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 5, scale: 0.95 }}
-            className="mb-3 max-w-[220px] px-3 py-2.5 rounded-2xl text-xs leading-relaxed text-white cursor-pointer"
+            className="mb-3 max-w-[230px] px-3.5 py-2.5 rounded-2xl text-xs leading-relaxed text-white cursor-pointer relative"
             style={{
-              background: "#0f1629",
-              border: "1px solid #E5A82960",
-              boxShadow: "0 8px 24px rgba(0,0,0,0.3)",
+              background: "#0a0d1a",
+              border: "1px solid #E5A82950",
+              boxShadow: "0 8px 24px rgba(0,0,0,0.4), 0 0 20px rgba(229,168,41,0.06)",
+              pointerEvents: "auto",
             }}
             onClick={handleOpen}
           >
+            <span className="text-[#E5A829] font-bold text-[10px] block mb-0.5">Zyra ⭐</span>
             {bubble}
             <div
               className="absolute bottom-[-7px] right-6 w-0 h-0"
               style={{
                 borderLeft: "6px solid transparent",
                 borderRight: "6px solid transparent",
-                borderTop: "7px solid #E5A82960",
+                borderTop: "7px solid #E5A82950",
               }}
             />
           </motion.div>
@@ -704,23 +790,27 @@ function ZyraComponent({
       {/* Chat panel */}
       <AnimatePresence>
         {open && (
-          <ChatPanel
-            messages={messages}
-            onSend={handleSend}
-            onClose={() => {
-            }}
-            isTyping={isTyping}
-            isMobile={isMobile}
-            disabled={isTyping}
-          />
+          <div style={{ pointerEvents: "auto" }}>
+            <ChatPanel
+              messages={messages}
+              onSend={handleSend}
+              onClose={handleClose}
+              isTyping={isTyping}
+              isMobile={isMobile}
+              disabled={isTyping}
+              context={context}
+            />
+          </div>
         )}
       </AnimatePresence>
 
-      {/* Zyra star */}
-      <ZyraStar
-        mood={mood}
-        onClick={open ? () => setOpen(false) : handleOpen}
-      />
+      {/* Zyra star button */}
+      <div style={{ pointerEvents: "auto" }}>
+        <ZyraStar
+          mood={mood}
+          onClick={open ? handleClose : handleOpen}
+        />
+      </div>
     </div>
   );
 }

@@ -2,6 +2,15 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { parseAndNormalizeTestCases } from "@/lib/types/problem";
+import { z } from "zod";
+
+const mockInterviewSchema = z.object({
+  problemId: z.string().trim().min(1).max(128),
+  passed: z.boolean(),
+  timeTakenSeconds: z.number().int().nonnegative().max(14_400).optional(),
+  notes: z.string().max(5_000).optional().default(""),
+  code: z.string().max(100_000).optional().default(""),
+});
 
 // Circuit breaker state for Piston (shared with submissions route pattern)
 let pistonBreaker = {
@@ -201,12 +210,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const body = await req.json();
-    const { problemId, passed: clientPassed, timeTakenSeconds, notes, code } = body;
-
-    if (!problemId || typeof clientPassed !== "boolean") {
-      return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
-    }
+    const parsedBody = mockInterviewSchema.safeParse(await req.json().catch(() => null));
+    if (!parsedBody.success) return NextResponse.json({ error: "Invalid request" }, { status: 400 });
+    const { problemId, passed: clientPassed, timeTakenSeconds, notes, code } = parsedBody.data;
 
     // Fetch the problem to get test cases and starter code for server-side verification
     const problem = await prisma.problem.findUnique({

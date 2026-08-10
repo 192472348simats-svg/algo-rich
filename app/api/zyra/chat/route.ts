@@ -1,6 +1,11 @@
 import { NextResponse } from "next/server";
 import { enforceRateLimit, clientAddress } from "@/lib/rateLimit";
 import { auth } from "@/lib/auth";
+import {
+  ZYRA_SYSTEM_PROMPT,
+  zyraFallback,
+  detectMoodFromReply,
+} from "@/lib/zyraPersonality";
 
 export interface ZyraChatPayload {
   messages: Array<{ role: "user" | "model" | "zyra"; text: string }>;
@@ -16,16 +21,7 @@ const MAX_MESSAGE_LENGTH = 2_000;
 const MAX_DESCRIPTION_LENGTH = 1_500;
 const MAX_CODE_LENGTH = 6_000;
 const MAX_ERROR_LENGTH = 1_000;
-const GEMINI_TIMEOUT_MS = 8_000;
-
-const SYSTEM_PROMPT = `You are Zyra, a sharp, witty, and highly effective AI Data Structures & Algorithms (DSA) tutor for Algo Rich.
-
-Personality & Rules:
-1. Tone: Witty, encouraging, sharp, concise.
-2. Goal: Coach the user to think like an engineer. NEVER provide full solution code directly unless explicitly requested after 3+ hints.
-3. Hints over Answers: Give Socratic hints. Ask guiding questions: "What is the time complexity if you sort first?", "Notice any overlapping subproblems?", "What happens if both pointers start from opposite ends?"
-4. Keep responses brief: 2 to 4 sentences maximum. Formatted cleanly with simple markdown.
-5. If the user mentions feeling tired or wanting to give up, give them a short, punchy motivational push.`;
+const GROQ_TIMEOUT_MS = 10_000;
 
 export async function POST(req: Request) {
   try {
@@ -44,7 +40,10 @@ export async function POST(req: Request) {
 
     if (!limit.allowed) {
       return NextResponse.json(
-        { reply: "Whoa, slow down! Take a breath, think through your code, then ask me again in a moment.", mood: "naughty" },
+        {
+          reply: "Whoa, slow down! Take a breath, think through what you know, then come back. Rushing never helped anyone crack DSA. 😏",
+          mood: "naughty",
+        },
         { status: 429, headers: { "Retry-After": String(limit.retryAfterSeconds) } }
       );
     }
@@ -72,92 +71,101 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Each message must have a valid role and short text" }, { status: 400 });
     }
 
-    const problemTitle = typeof body.problemTitle === "string" ? body.problemTitle.slice(0, 200) : undefined;
-    const problemDescription = typeof body.problemDescription === "string" ? body.problemDescription.slice(0, MAX_DESCRIPTION_LENGTH) : undefined;
-    const userCode = typeof body.userCode === "string" ? body.userCode.slice(0, MAX_CODE_LENGTH) : undefined;
-    const lastError = typeof body.lastError === "string" ? body.lastError.slice(0, MAX_ERROR_LENGTH) : undefined;
-    const context = typeof body.context === "string" ? body.context.slice(0, 100) : undefined;
+    const problemTitle =
+      typeof body.problemTitle === "string" && body.problemTitle.length <= 200
+        ? body.problemTitle
+        : undefined;
+    const problemDescription =
+      typeof body.problemDescription === "string" && body.problemDescription.length <= MAX_DESCRIPTION_LENGTH
+        ? body.problemDescription
+        : undefined;
+    const userCode =
+      typeof body.userCode === "string" && body.userCode.length <= MAX_CODE_LENGTH
+        ? body.userCode
+        : undefined;
+    const lastError =
+      typeof body.lastError === "string" && body.lastError.length <= MAX_ERROR_LENGTH
+        ? body.lastError
+        : undefined;
+    const context =
+      typeof body.context === "string" ? body.context.slice(0, 100) : undefined;
 
-    const apiKey = (process.env.GEMINI_API_KEY || process.env.GOOGLE_GENERATIVE_AI_API_KEY || "").trim();
+    const apiKey = (process.env.GROQ_API_KEY || "").trim();
 
-    // ── Build Contextual Instructions ─────────────────────────────────────
-    let contextPrompt = "";
+    // ── Build rich contextual system addendum ─────────────────────────────────
+    let contextAddendum = "";
+
     if (context) {
-      contextPrompt += `\nLearning context: ${context}`;
+      const ctxLabels: Record<string, string> = {
+        problem: "The student is on the Problem Solving page, working on a specific coding problem.",
+        session: "The student is inside a structured learning session — they're studying a concept, not just solving randomly.",
+        dashboard: "The student is on their dashboard. They may want study strategy advice, motivation, or to pick what to focus on.",
+      };
+      contextAddendum += `\n\nCONTEXT: ${ctxLabels[context] || `Learning context: ${context}`}`;
     }
+
     if (problemTitle) {
-      contextPrompt += `\n\nCurrent Problem: ${problemTitle}`;
+      contextAddendum += `\n\nPROBLEM TITLE: "${problemTitle}"`;
     }
+
     if (problemDescription) {
-      contextPrompt += `\nProblem Description: ${problemDescription.slice(0, 500)}`;
+      contextAddendum += `\nPROBLEM DESCRIPTION:\n${problemDescription}`;
     }
+
     if (userCode) {
-      contextPrompt += `\nUser's Current Code:\n\`\`\`python\n${userCode.slice(0, 1000)}\n\`\`\``;
+      contextAddendum += `\n\nSTUDENT'S CURRENT CODE:\n\`\`\`python\n${userCode}\n\`\`\`\nWhen relevant, comment specifically on their code — don't give generic advice.`;
     }
+
     if (lastError) {
-      contextPrompt += `\nUser's Last Error / Execution Output: ${lastError.slice(0, 300)}`;
+      contextAddendum += `\n\nLAST ERROR / EXECUTION OUTPUT:\n${lastError}\nHelp them isolate what caused this specific error.`;
     }
 
-    const fullSystemInstruction = `${SYSTEM_PROMPT}${contextPrompt}`;
+    const fullSystemInstruction = ZYRA_SYSTEM_PROMPT + contextAddendum;
 
-    // ── If Gemini API key is configured, call Gemini API ─────────────────────
+    // ── Call Groq API ────────────────────────────────────────────────────────
     if (apiKey) {
-      // 1. Convert messages & filter empty
-      const rawContents = messages
-        .map((m) => ({
-          role: m.role === "user" ? ("user" as const) : ("model" as const),
-          parts: [{ text: m.text }],
-        }))
-        .filter((c) => c.parts[0].text.trim().length > 0);
+      const chatMessages: Array<{ role: "system" | "user" | "assistant"; content: string }> = [
+        { role: "system", content: fullSystemInstruction },
+      ];
 
-      // 2. Gemini requires contents to START with "user"
-      while (rawContents.length > 0 && rawContents[0].role !== "user") {
-        rawContents.shift();
+      for (const m of messages) {
+        chatMessages.push({
+          role: m.role === "user" ? "user" : "assistant",
+          content: m.text,
+        });
       }
 
-      // If empty, add a default user message
-      if (rawContents.length === 0) {
-        rawContents.push({ role: "user", parts: [{ text: "Hi Zyra, can you help me with DSA?" }] });
+      // Ensure conversation ends with a user turn
+      if (chatMessages.length === 1) {
+        chatMessages.push({ role: "user", content: "Hi Zyra, I need help with DSA." });
+      }
+      if (chatMessages[chatMessages.length - 1].role !== "user") {
+        chatMessages.push({ role: "user", content: "Please continue." });
       }
 
-      // 3. Ensure strict role alternation (user -> model -> user -> model)
-      const contents: Array<{ role: "user" | "model"; parts: Array<{ text: string }> }> = [];
-      for (const item of rawContents) {
-        if (contents.length === 0) {
-          contents.push(item);
-        } else {
-          const prev = contents[contents.length - 1];
-          if (prev.role === item.role) {
-            prev.parts[0].text += `\n${item.parts[0].text}`;
-          } else {
-            contents.push(item);
-          }
-        }
-      }
-
-      // Updated model list (supported by current Gemini API)
-      const models = ["gemini-2.0-flash", "gemini-2.5-flash", "gemini-flash-latest"];
+      // Primary: llama-3.3-70b-versatile (best quality)
+      // Fallback: llama-3.1-8b-instant (faster, lower rate-limit pressure)
+      const models = ["llama-3.3-70b-versatile", "llama-3.1-8b-instant"];
 
       for (const modelName of models) {
         try {
-          const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
-
           const controller = new AbortController();
-          const timeout = setTimeout(() => controller.abort(), GEMINI_TIMEOUT_MS);
+          const timeout = setTimeout(() => controller.abort(), GROQ_TIMEOUT_MS);
           let res: Response;
           try {
-            res = await fetch(geminiUrl, {
+            res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
               method: "POST",
-              headers: { "Content-Type": "application/json" },
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${apiKey}`,
+              },
               body: JSON.stringify({
-                system_instruction: {
-                  parts: [{ text: fullSystemInstruction }],
-                },
-                contents,
-                generationConfig: {
-                  maxOutputTokens: 350,
-                  temperature: 0.7,
-                },
+                model: modelName,
+                messages: chatMessages,
+                max_tokens: 500,
+                temperature: 0.75,
+                // Stop sequences to keep replies concise
+                stop: ["\n\n\n", "---"],
               }),
               signal: controller.signal,
             });
@@ -167,58 +175,51 @@ export async function POST(req: Request) {
 
           if (res.ok) {
             const data = await res.json();
-            const reply =
-              data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() ||
-              "I'm analyzing your code... What pattern do you think fits best here?";
+            const rawReply: string =
+              data.choices?.[0]?.message?.content?.trim() ?? "";
 
-            let mood = "thinking";
-            if (reply.toLowerCase().includes("great") || reply.toLowerCase().includes("nice") || reply.toLowerCase().includes("exactly")) {
-              mood = "happy";
-            } else if (reply.toLowerCase().includes("tired") || reply.toLowerCase().includes("push")) {
-              mood = "naughty";
-            }
+            if (!rawReply) continue;
+
+            // Cap reply to 2000 chars
+            const reply = rawReply.slice(0, 2_000);
+
+            // Use smart mood detection
+            const mood = detectMoodFromReply(reply);
 
             return NextResponse.json({ reply, mood });
           } else {
             const errText = await res.text();
-            console.warn(`[Zyra Gemini API] ${modelName} returned ${res.status}:`, errText.slice(0, 200));
+            console.warn(
+              `[Zyra Groq API] ${modelName} returned ${res.status}:`,
+              errText.slice(0, 300)
+            );
           }
         } catch (e) {
-          console.warn(`[Zyra Gemini API] ${modelName} request failed:`, e);
+          if ((e as Error)?.name === "AbortError") {
+            console.warn(`[Zyra Groq API] ${modelName} timed out after ${GROQ_TIMEOUT_MS}ms`);
+          } else {
+            console.warn(`[Zyra Groq API] ${modelName} request failed:`, e);
+          }
         }
       }
     }
 
-    // ── Fallback Socratic Response Generator ─────────────────────────────────
-    const lastUserMsg = messages.filter((m) => m.role === "user").pop()?.text.toLowerCase() || "";
-
-    let reply = "Look at the problem constraints. Small input size means brute force works, but for large N, what time complexity do you need?";
-    let mood = "thinking";
-
-    if (lastError) {
-      reply = `I see an error: "${lastError.slice(0, 100)}". Check if your loop bounds are off or if an index is going out of range.`;
-      mood = "alert";
-    } else if (userCode && userCode.includes("def ")) {
-      reply = "Your code structure looks like a good start! Walk through line by line with a small test case like `[1, 2, 3]`. What value does your function return?";
-      mood = "thinking";
-    } else if (lastUserMsg.includes("hint") || lastUserMsg.includes("stuck") || lastUserMsg.includes("help")) {
-      reply = problemTitle
-        ? `For "${problemTitle}", ask yourself: do you need to look at elements from both ends (Two Pointers), or keep a window of elements (Sliding Window)?`
-        : "What data structure helps keep track of frequency or seen elements in O(1) time? A Hash Map is often your best friend!";
-      mood = "thinking";
-    } else if (lastUserMsg.includes("pattern")) {
-      reply = "Most DSA problems fall into 15 patterns: Two Pointers, Sliding Window, Fast & Slow Pointers, Monotonic Stack, Binary Search, BFS/DFS, DP. Which one fits this problem's goal?";
-      mood = "happy";
-    } else if (lastUserMsg.includes("hi") || lastUserMsg.includes("hello") || lastUserMsg.includes("hey")) {
-      reply = "Hey there! Ready to level up your DSA skills? What problem are we tackling today?";
-      mood = "happy";
-    }
-
-    return NextResponse.json({ reply, mood });
+    // ── Smart local fallback ──────────────────────────────────────────────────
+    const fallback = zyraFallback({
+      message: messages.filter((m) => m.role === "user").pop()?.text ?? "",
+      problemTitle,
+      userCode,
+      lastError,
+      context,
+    });
+    return NextResponse.json(fallback);
   } catch (error) {
     console.error("[Zyra API Error]", error);
     return NextResponse.json(
-      { reply: "My circuits flickered for a second! Try asking me again.", mood: "alert" },
+      {
+        reply: "Something went wrong on my end. Try again in a second — and use that time to re-read the problem statement. 😏",
+        mood: "alert",
+      },
       { status: 500 }
     );
   }

@@ -2,7 +2,7 @@ import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import prisma from "@/lib/prisma";
-import { enforceRateLimit } from "@/lib/rateLimit";
+import { clientAddress, enforceRateLimit } from "@/lib/rateLimit";
 import { EmailNotVerifiedError, TooManyAttemptsError } from "@/lib/authErrors";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
@@ -23,7 +23,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
       },
-      async authorize(credentials) {
+      async authorize(credentials, request) {
         if (!credentials?.email || !credentials?.password) {
           return null;
         }
@@ -31,13 +31,21 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         const email = (credentials.email as string).toLowerCase().trim();
         const password = credentials.password as string;
 
-        const limit = await enforceRateLimit({
+        const [emailLimit, ipLimit] = await Promise.all([
+          enforceRateLimit({
           scope: "login",
           identifier: email,
           limit: 5,
           windowMs: 5 * 60 * 1000,
-        });
-        if (!limit.allowed) {
+          }),
+          enforceRateLimit({
+            scope: "login-ip",
+            identifier: clientAddress(request.headers),
+            limit: 20,
+            windowMs: 5 * 60 * 1000,
+          }),
+        ]);
+        if (!emailLimit.allowed || !ipLimit.allowed) {
           throw new TooManyAttemptsError();
         }
 

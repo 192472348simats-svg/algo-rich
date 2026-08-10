@@ -7,7 +7,23 @@ import { enrollProblemForReview } from "@/lib/reviewEngine";
 import { checkPatternDiscovery } from "@/lib/patternDiscovery";
 import { checkAhaMoment } from "@/lib/ahaDetector";
 import { getLevelForXP } from "@/lib/xpSystem";
+import { clientAddress, enforceRateLimit } from "@/lib/rateLimit";
+import { z } from "zod";
 
+const submissionSchema = z.object({
+  problemId: z.string().trim().min(1).max(128),
+  code: z.string().trim().min(1).max(100_000),
+  language: z.literal("python").optional().default("python"),
+  testResults: z.array(z.object({
+    index: z.number().int().positive().max(1_000).optional(),
+    passed: z.boolean(),
+  })).max(100).optional(),
+  passed: z.boolean().optional(),
+  executionTime: z.number().finite().nonnegative().max(300_000).optional(),
+});
+
+// Secondary per-process smoothing remains useful in development; production
+// enforcement is handled by the distributed limits below.
 const submissionRateLimit = new Map<string, { count: number; resetAt: number }>();
 
 // Circuit breaker state for Piston
@@ -52,6 +68,17 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const [userLimit, ipLimit] = await Promise.all([
+      enforceRateLimit({ scope: "submission-user", identifier: session.user.id, limit: 10, windowMs: 60_000 }),
+      enforceRateLimit({ scope: "submission-ip", identifier: clientAddress(request.headers), limit: 30, windowMs: 60_000 }),
+    ]);
+    if (!userLimit.allowed || !ipLimit.allowed) {
+      return NextResponse.json(
+        { error: "Too many requests" },
+        { status: 429, headers: { "Retry-After": String(Math.max(userLimit.retryAfterSeconds, ipLimit.retryAfterSeconds)) } }
+      );
+    }
+
     const now = Date.now();
     const window = 60 * 1000; // 1 minute
     const userId = session.user.id;
@@ -68,7 +95,11 @@ export async function POST(request: NextRequest) {
       submissionRateLimit.set(userId, { count: 1, resetAt: now + window });
     }
 
-  const body = await request.json();
+  const parsedBody = submissionSchema.safeParse(await request.json().catch(() => null));
+  if (!parsedBody.success) {
+    return NextResponse.json({ error: "Invalid request" }, { status: 400 });
+  }
+  const body = parsedBody.data;
   const { problemId, code, language = "python", testResults } = body;
 
   if (typeof problemId !== "string" || typeof code !== "string" || !code.trim()) {

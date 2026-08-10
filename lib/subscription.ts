@@ -2,9 +2,9 @@ import prisma from "@/lib/prisma";
 
 export interface SubscriptionStatus {
   isSubscribed: boolean;
-  stripeCustomerId: string | null;
-  stripeSubscriptionId: string | null;
-  stripePriceId: string | null;
+  razorpayCustomerId: string | null;
+  razorpaySubscriptionId: string | null;
+  razorpayPlanId: string | null;
   currentPeriodEnd: Date | null;
 }
 
@@ -12,43 +12,43 @@ export interface SubscriptionStatus {
  * Check whether a user has an active (paid) subscription.
  *
  * A subscription is considered active when:
- *   1. `stripeCurrentPeriodEnd` exists AND
+ *   1. `razorpayCurrentPeriodEnd` exists AND
  *   2. It is in the future (with a 1-day grace period for webhook delays)
  */
 export async function checkSubscription(userId: string): Promise<SubscriptionStatus> {
   const user = await prisma.user.findUnique({
     where: { id: userId },
     select: {
-      stripeCustomerId: true,
-      stripeSubscriptionId: true,
-      stripePriceId: true,
-      stripeCurrentPeriodEnd: true,
+      razorpayCustomerId: true,
+      razorpaySubscriptionId: true,
+      razorpayPlanId: true,
+      razorpayCurrentPeriodEnd: true,
     },
   });
 
   if (!user) {
     return {
       isSubscribed: false,
-      stripeCustomerId: null,
-      stripeSubscriptionId: null,
-      stripePriceId: null,
+      razorpayCustomerId: null,
+      razorpaySubscriptionId: null,
+      razorpayPlanId: null,
       currentPeriodEnd: null,
     };
   }
 
-  // 1-day grace period so Stripe webhook delays don't immediately lock users out
+  // 1-day grace period so webhook delays don't immediately lock users out
   const GRACE_MS = 24 * 60 * 60 * 1000;
   const isSubscribed =
-    !!user.stripeSubscriptionId &&
-    !!user.stripeCurrentPeriodEnd &&
-    user.stripeCurrentPeriodEnd.getTime() + GRACE_MS > Date.now();
+    !!user.razorpaySubscriptionId &&
+    !!user.razorpayCurrentPeriodEnd &&
+    user.razorpayCurrentPeriodEnd.getTime() + GRACE_MS > Date.now();
 
   return {
     isSubscribed,
-    stripeCustomerId: user.stripeCustomerId,
-    stripeSubscriptionId: user.stripeSubscriptionId,
-    stripePriceId: user.stripePriceId,
-    currentPeriodEnd: user.stripeCurrentPeriodEnd,
+    razorpayCustomerId: user.razorpayCustomerId,
+    razorpaySubscriptionId: user.razorpaySubscriptionId,
+    razorpayPlanId: user.razorpayPlanId,
+    currentPeriodEnd: user.razorpayCurrentPeriodEnd,
   };
 }
 

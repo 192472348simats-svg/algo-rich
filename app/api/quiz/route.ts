@@ -1,6 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import prisma from "@/lib/prisma";
+import { z } from "zod";
+
+const quizSchema = z.object({
+  quizType: z.string().trim().min(1).max(100),
+  topic: z.string().trim().min(1).max(120),
+  question: z.string().max(5_000).optional().default(""),
+  userAnswer: z.string().max(5_000).optional().default(""),
+  correct: z.boolean(),
+  timeSpent: z.number().int().nonnegative().max(3_600).optional().default(0),
+});
 
 // POST /api/quiz — Save quiz result
 export async function POST(request: NextRequest) {
@@ -10,25 +20,19 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const body = await request.json();
-    const { quizType, topic, question, userAnswer, correct, timeSpent } = body;
-
-    if (!quizType || !topic || correct === undefined) {
-      return NextResponse.json(
-        { error: "quizType, topic, and correct are required" },
-        { status: 400 }
-      );
-    }
+    const parsedBody = quizSchema.safeParse(await request.json().catch(() => null));
+    if (!parsedBody.success) return NextResponse.json({ error: "Invalid request" }, { status: 400 });
+    const { quizType, topic, question, userAnswer, correct, timeSpent } = parsedBody.data;
 
     const result = await prisma.quizResult.create({
       data: {
         userId: session.user.id,
         quizType,
         topic,
-        question: question || "",
-        userAnswer: userAnswer || "",
-        correct: Boolean(correct),
-        timeSpent: timeSpent ?? 0,
+        question,
+        userAnswer,
+        correct,
+        timeSpent,
       },
     });
 
@@ -49,7 +53,8 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     const topic = searchParams.get("topic") || undefined;
-    const limit = parseInt(searchParams.get("limit") || "50");
+    const requestedLimit = Number(searchParams.get("limit") || 50);
+    const limit = Number.isInteger(requestedLimit) ? Math.min(Math.max(requestedLimit, 1), 100) : 50;
 
     const results = await prisma.quizResult.findMany({
       where: {

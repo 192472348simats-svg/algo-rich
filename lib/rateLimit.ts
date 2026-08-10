@@ -2,6 +2,8 @@ type LocalEntry = { count: number; resetAt: number };
 
 const localEntries = new Map<string, LocalEntry>();
 const MAX_LOCAL_ENTRIES = 10_000;
+const isProduction = process.env.NODE_ENV === "production";
+let warnedAboutMemoryFallback = false;
 
 export type RateLimitOptions = {
   scope: string;
@@ -55,7 +57,16 @@ export async function enforceRateLimit(options: RateLimitOptions): Promise<RateL
   const url = process.env.UPSTASH_REDIS_REST_URL;
   const token = process.env.UPSTASH_REDIS_REST_TOKEN;
 
-  if (!url || !token) return checkMemory(key, options.limit, options.windowMs);
+  if (!url || !token) {
+    if (isProduction) {
+      throw new Error("Distributed rate limiting is required in production. Configure UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN.");
+    }
+    if (!warnedAboutMemoryFallback) {
+      warnedAboutMemoryFallback = true;
+      console.warn("[rate-limit] Upstash is not configured; using an in-memory development-only fallback.");
+    }
+    return checkMemory(key, options.limit, options.windowMs);
+  }
 
   try {
     const response = await fetch(`${url.replace(/\/$/, "")}/pipeline`, {
@@ -81,7 +92,10 @@ export async function enforceRateLimit(options: RateLimitOptions): Promise<RateL
       backend: "upstash",
     };
   } catch (error) {
-    console.warn("[rate-limit] Upstash unavailable; using per-instance fallback", error instanceof Error ? error.message : error);
+    if (isProduction) {
+      throw new Error("Distributed rate limiting is unavailable in production.");
+    }
+    console.warn("[rate-limit] Upstash unavailable; using development-only memory fallback", error instanceof Error ? error.message : error);
     return checkMemory(key, options.limit, options.windowMs);
   }
 }
