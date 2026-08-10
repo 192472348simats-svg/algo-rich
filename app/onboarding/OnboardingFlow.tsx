@@ -3,6 +3,7 @@
 
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
+import { analytics } from '@/lib/analytics'
 
 export default function OnboardingFlow({ userName }: { userName: string }) {
   const router = useRouter()
@@ -15,10 +16,16 @@ export default function OnboardingFlow({ userName }: { userName: string }) {
   const handleComplete = async () => {
     setLoading(true)
     try {
-      await fetch('/api/onboarding/complete', {
+      const response = await fetch('/api/onboarding/complete', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ experience, goal, targetInterviewDate: targetInterviewDate || null }),
+      })
+      if (!response.ok) throw new Error('Failed to complete onboarding')
+      analytics.track('onboarding_completed', {
+        experience_level: experience || 'beginner',
+        learning_goal: goal || 'learn',
+        has_target_interview_date: Boolean(targetInterviewDate),
       })
       try {
         const res = await fetch('/api/recommendations')

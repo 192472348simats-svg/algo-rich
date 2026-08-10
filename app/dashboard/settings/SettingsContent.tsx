@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { signOut } from "next-auth/react";
+import posthog from "posthog-js";
+import { analytics } from "@/lib/analytics";
 
 interface SettingsContentProps {
   userName: string;
@@ -84,6 +86,10 @@ export default function SettingsContent({
       });
       const data = await res.json();
       if (res.ok) {
+        analytics.track("profile_updated", {
+          experience_level: experienceLevel,
+          has_target_interview_date: Boolean(targetInterviewDate),
+        });
         setProfileMsg({ type: "success", text: "Profile updated successfully!" });
       } else {
         setProfileMsg({ type: "error", text: data.error || "Failed to update" });
@@ -121,6 +127,7 @@ export default function SettingsContent({
       });
       const data = await res.json();
       if (res.ok) {
+        analytics.track("password_changed");
         setPasswordMsg({ type: "success", text: "Password changed!" });
         setCurrentPassword("");
         setNewPassword("");
@@ -140,6 +147,8 @@ export default function SettingsContent({
     try {
       const res = await fetch("/api/user/settings", { method: "DELETE" });
       if (res.ok) {
+        analytics.track("account_deleted");
+        posthog.reset();
         signOut({ callbackUrl: "/" });
       }
     } catch {

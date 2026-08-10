@@ -87,11 +87,11 @@ export default function LessonViewer({
 
   useEffect(() => {
     analytics.track("lesson_started", {
-      lessonId: lesson.id,
-      courseId: course.id,
-      title: lesson.title,
+      lesson_id: lesson.id,
+      course_id: course.id,
+      lesson_difficulty: lesson.difficulty,
     });
-  }, [lesson.id, course.id, lesson.title]);
+  }, [lesson.id, course.id, lesson.difficulty]);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -138,9 +138,9 @@ export default function LessonViewer({
         setCompleted(true);
         triggerSuccessConfetti();
         analytics.track("lesson_completed", {
-          lessonId: lesson.id,
-          courseId: course.id,
-          timeSpent: timeOnPage,
+          lesson_id: lesson.id,
+          course_id: course.id,
+          time_spent_seconds: timeOnPage,
         });
         return;
       }

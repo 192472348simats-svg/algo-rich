@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { ToastProvider } from "./components/ui/Toast";
-import { PostHogProvider } from "./components/PostHogProvider";
+import { PostHogIdentifier } from "./components/PostHogProvider";
 import { SessionProvider } from "next-auth/react";
 import TimezoneSync from "./components/TimezoneSync";
 
@@ -55,11 +55,10 @@ export default function RootLayout({
       <body className={`${inter.variable} ${jetbrainsMono.variable} antialiased`}>
         <SessionProvider>
           <TimezoneSync />
-          <PostHogProvider>
-            <ToastProvider>
-              {children}
-            </ToastProvider>
-          </PostHogProvider>
+          <PostHogIdentifier />
+          <ToastProvider>
+            {children}
+          </ToastProvider>
         </SessionProvider>
         {/* Register Pyodide service worker for CDN caching — second visit loads Python runtime instantly */}
         <script
